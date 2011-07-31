@@ -1,16 +1,17 @@
 package il.technion.ewolf.kbr;
 
-import il.technion.ewolf.kbr.openkad.KadKeyComparator;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
-
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 
 public class Main {
 
@@ -18,36 +19,47 @@ public class Main {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		Properties props = new Properties();
+		Properties props1 = new Properties();
+		Properties props2 = new Properties();
+		Injector injector;
 		
-		props.setProperty("kadnet.keyfactory.keysize", "5");
-		props.setProperty("kadnet.localkey", "an5vkzg=");
 		
-		KeybasedRouting kbr = Guice
-				.createInjector(new KadNetModule(props))
-				.getInstance(KeybasedRouting.class);
+		props1.setProperty("kadnet.otcpkad.port", "10001");
+		injector = Guice.createInjector(new KadNetModule(props1));
+		KeybasedRouting kbr1 = injector.getInstance(KeybasedRouting.class);
+		kbr1.create();
+		kbr1.register("some tag", new DefaultNodeConnectionListener() {
+			@Override
+			public void onIncomingMessage(String tag, Node from, InputStream in) throws IOException {
+				byte[] b = new byte[4096];
+				int n = in.read(b);
+				System.out.println("Got message from "+from.getKey());
+				System.out.println(new String(Arrays.copyOf(b, n)));
+			}
+		});
 		
-		KeyFactory kf = kbr.getKeyFactory();
+		props2.setProperty("kadnet.otcpkad.port", "10002");
+		injector = Guice.createInjector(new KadNetModule(props2));
+		KeybasedRouting kbr2 = injector.getInstance(KeybasedRouting.class);
+		kbr2.create();
+		kbr2.register("some tag", new DefaultNodeConnectionListener() {});
 		
-		Key k1 = kf.getFromKey("zikEXAE=");
-		Key k2 = kf.getFromKey("y+Qa030=");
-		List<Key> nodes = new ArrayList<Key>();
-		nodes.add(k2);
-		nodes.add(k1);
-		System.out.println(nodes);
-		Collections.sort(nodes, new KadKeyComparator(k1));
-		System.out.println(nodes);
-		/*
-		kbr.create();
+		kbr2.join(new URI("otcpkad://127.0.0.1:10001/")).get();
 		
-		kbr.join(new URI("otcpkad://ds-is16:10000/")).get();
+		KeyFactory keyFactory = kbr1.getKeyFactory();
+		Key k1 = keyFactory.getFromData("any arbitrary data");
 		
-		List<Node> nodes = kbr.findNodes(kf.getFromData("zikEXAE="), 5).get();
+		List<Node> nodes = kbr1.findNodes(k1, 10).get();
 		
-		System.out.println(nodes);
-		Collections.sort(nodes, new KadKeyComparator(kf.getFromData("zikEXAE=")));
-		System.out.println(nodes);
-		*/
+		
+
+		// send message to all nodes
+		for (Node n : nodes) {
+		    OutputStream out = n.sendMessage("some tag");
+		    out.write(("hello node "+n.getKey()+" !!").getBytes());
+		    out.close();
+		}
+		
 	}
 
 }

@@ -5,12 +5,9 @@ import il.technion.ewolf.kbr.openkad.KadConnectionListener;
 import il.technion.ewolf.kbr.openkad.KadEndpoint;
 import il.technion.ewolf.kbr.openkad.KadKeyFactory;
 import il.technion.ewolf.kbr.openkad.KadMessage;
+import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
 import il.technion.ewolf.kbr.openkad.KadMessageBuilder;
 import il.technion.ewolf.kbr.openkad.KadNode;
-import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
-import il.technion.ewolf.kbr.openkad.net.KadConnection;
-import il.technion.ewolf.kbr.openkad.net.KadProtocol;
-import il.technion.ewolf.kbr.openkad.net.KadServer;
 
 import java.io.IOException;
 import java.net.InetAddress;
