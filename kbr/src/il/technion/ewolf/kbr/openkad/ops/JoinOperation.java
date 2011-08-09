@@ -3,13 +3,14 @@ package il.technion.ewolf.kbr.openkad.ops;
 import il.technion.ewolf.kbr.openkad.KBuckets;
 import il.technion.ewolf.kbr.openkad.KadEndpoint;
 import il.technion.ewolf.kbr.openkad.KadMessage;
+import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
 import il.technion.ewolf.kbr.openkad.KadMessageBuilder;
 import il.technion.ewolf.kbr.openkad.KadNode;
-import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
 import il.technion.ewolf.kbr.openkad.net.KadConnection;
 
 import java.net.InetAddress;
 import java.net.URI;
+import java.util.logging.Logger;
 
 
 class JoinOperation extends KadOperation<Void> {
@@ -21,11 +22,13 @@ class JoinOperation extends KadOperation<Void> {
 	//private final KadProxyServer proxyServer;
 
 	JoinOperation(
+			Logger logger,
 			KadNode localNode,
 			KBuckets kbuckets,
 			KadOperationsExecutor opExecutor,
 			URI bootstrap
 			/*KadProxyServer proxyServer*/) {
+		super(logger);
 		this.localNode = localNode;
 		this.kbuckets = kbuckets;
 		this.opExecutor = opExecutor;
@@ -36,7 +39,8 @@ class JoinOperation extends KadOperation<Void> {
 	
 	@Override
 	public Void call() throws Exception {
-		// contact the bootstrap node and find its key
+		logger.info("starting join operation");
+		logger.info("contact the bootstrap node and find its key");
 		KadConnection conn = null;
 		boolean keepalive = false;
 		try {
@@ -68,9 +72,10 @@ class JoinOperation extends KadOperation<Void> {
 			if (conn != null && keepalive == false)
 				conn.close();
 		}
-		
+		logger.info("node lookup for myself");
 		opExecutor.createNodeLookupOperation(localNode.getKey(), kbuckets.getBucketSize()).call();
 		
+		logger.info("buckets refresh");
 		for (int i=0; i < kbuckets.getNrBuckets(); ++i) {
 			opExecutor.createBucketRefreshOperation(i).call();
 		}

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-
+import java.util.logging.Logger;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -29,8 +29,10 @@ public class KadOperationsExecutor {
 	private final int connPort;
 	//private final KadProxyServer proxyServer;
 	private final OpenedKadConnections openedKadConnections;
+	private final Logger logger;
 	@Inject
 	public KadOperationsExecutor(
+			Logger logger,
 			@Named("kadnet.executors.outgoing") ExecutorService executor,
 			@Named("kadnet.concurrency") int concurrency,
 			@Named("kadnet.srv.conn.port") int connPort,
@@ -40,6 +42,7 @@ public class KadOperationsExecutor {
 			//KadProxyServer proxyServer,
 			OpenedKadConnections openedKadConnections) {
 		
+		this.logger = logger;
 		this.executor = executor;
 		this.concurrency = concurrency;
 		this.kbuckets = kbuckets;
@@ -60,7 +63,7 @@ public class KadOperationsExecutor {
 	
 
 	public KadOperation<List<KadNode>> createNodeLookupOperation(Key key, int n) {
-		return new NodeLookupOperation(localNode, openedKadConnections, kbuckets, this, concurrency, key, n);
+		return new NodeLookupOperation(logger, localNode, openedKadConnections, kbuckets, this, concurrency, key, n);
 	}
 	public Future<List<KadNode>> submitNodeLookupOperation(Key key, int n) {
 		return executor.submit(createNodeLookupOperation(key, n));
@@ -77,7 +80,7 @@ public class KadOperationsExecutor {
 	
 	
 	public KadOperation<Void> createJoinOperation(URI bootstrap) {
-		return new JoinOperation(localNode, kbuckets, this, bootstrap/*, proxyServer*/);
+		return new JoinOperation(logger, localNode, kbuckets, this, bootstrap/*, proxyServer*/);
 	}
 	public Future<Void> submitJoinOperation(URI bootstrap) {
 		return executor.submit(createJoinOperation(bootstrap));
@@ -94,7 +97,7 @@ public class KadOperationsExecutor {
 	
 	
 	public KadOperation<Void> createBucketRefreshOperation(int bucketNum) {
-		return new BucketRefreshOperation(localNode, this, keyFactory, kbuckets.getBucketSize(), bucketNum);
+		return new BucketRefreshOperation(logger, localNode, this, keyFactory, kbuckets.getBucketSize(), bucketNum);
 	}
 	public Future<Void> submitBucketRefreshOperation(int bucketNum) {
 		return executor.submit(createBucketRefreshOperation(bucketNum));
@@ -110,7 +113,7 @@ public class KadOperationsExecutor {
 	}
 	
 	public KadOperation<Void> createInsertNodeOperation(KadNode ... nodes) {
-		return new InsertNodeOperation(kbuckets, nodes);
+		return new InsertNodeOperation(logger, kbuckets, nodes);
 	}
 	public Future<Void> submitInsertNodeOperation(KadNode ... nodes) {
 		return executor.submit(createInsertNodeOperation(nodes));
@@ -126,7 +129,7 @@ public class KadOperationsExecutor {
 	}
 	
 	public KadOperation<Void> createInsertNodeIfNotFullOperation(Collection<KadNode> nodes) {
-		return new InsertNodeIfNotFullOperation(kbuckets, nodes);
+		return new InsertNodeIfNotFullOperation(logger, kbuckets, nodes);
 	}
 	public Future<Void> submitInsertNodeIfNotFullOperation(Collection<KadNode> nodes) {
 		return executor.submit(createInsertNodeIfNotFullOperation(nodes));
@@ -143,7 +146,7 @@ public class KadOperationsExecutor {
 	
 	
 	public KadOperation<Socket> createOpenConnectionOperation(KadNode with, String tag) {
-		return new OpenConnectionOperation(localNode, connPort, with, tag);
+		return new OpenConnectionOperation(logger, localNode, connPort, with, tag);
 	}
 	public Future<Socket> submitOpenConnectionOperation(KadNode with, String tag) {
 		return executor.submit(createOpenConnectionOperation(with, tag));

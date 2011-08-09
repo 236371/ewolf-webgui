@@ -4,6 +4,7 @@ import il.technion.ewolf.kbr.openkad.KBuckets;
 import il.technion.ewolf.kbr.openkad.KadNode;
 
 import java.util.Collection;
+import java.util.logging.Logger;
 
 
 public class InsertNodeIfNotFullOperation extends KadOperation<Void> {
@@ -11,7 +12,8 @@ public class InsertNodeIfNotFullOperation extends KadOperation<Void> {
 	private final KBuckets kbuckets;
 	private final Collection<KadNode> nodes;
 	
-	InsertNodeIfNotFullOperation(KBuckets kbuckets, Collection<KadNode> nodes) {
+	InsertNodeIfNotFullOperation(Logger logger, KBuckets kbuckets, Collection<KadNode> nodes) {
+		super(logger);
 		this.kbuckets = kbuckets;
 		this.nodes = nodes;
 	}
@@ -20,7 +22,9 @@ public class InsertNodeIfNotFullOperation extends KadOperation<Void> {
 	public Void call() throws Exception {
 		
 		for (KadNode s : nodes) {
-			kbuckets.insertIfNotFull(s);
+			logger.info("trying to insert node "+s.getKey());
+			if (kbuckets.insertIfNotFull(s))
+				logger.info("node "+s.getKey()+" inserted to kbuckets");
 		}
 		
 		return null;

@@ -4,10 +4,10 @@ import il.technion.ewolf.kbr.Key;
 import il.technion.ewolf.kbr.openkad.KBuckets;
 import il.technion.ewolf.kbr.openkad.KadKeyComparator;
 import il.technion.ewolf.kbr.openkad.KadMessage;
+import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
 import il.technion.ewolf.kbr.openkad.KadMessageBuilder;
 import il.technion.ewolf.kbr.openkad.KadNode;
 import il.technion.ewolf.kbr.openkad.OpenedKadConnections;
-import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
 import il.technion.ewolf.kbr.openkad.net.KadConnection;
 
 import java.util.ArrayList;
@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
 
 
 class NodeLookupOperation extends KadOperation<List<KadNode>>  {
@@ -29,6 +30,7 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 	private final int maxNodeCount;
 	
 	NodeLookupOperation(
+			Logger logger,
 			KadNode localNode,
 			OpenedKadConnections openedKadConnections,
 			KBuckets kbuckets,
@@ -36,7 +38,7 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 			int concurrency,
 			Key key,
 			int maxNodeCount) {
-		
+		super(logger);
 		this.localNode = localNode;
 		this.kbuckets = kbuckets;
 		this.opExecutor = opExecutor;
@@ -60,8 +62,11 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 	private List<List<KadConnection>> getConnections(List<KadNode> nodesToConnect) {
 		List<List<KadConnection>> $ = new ArrayList<List<KadConnection>>();
 		for (int i=0; i < nodesToConnect.size(); ++i) {
-			$.add(nodesToConnect.get(i).getKadConnections());
+			List<KadConnection> conns = nodesToConnect.get(i).getKadConnections();
+			$.add(conns);
+			logger.info("node "+nodesToConnect.get(i)+" has "+conns.size()+" connections");
 		}
+		
 		return $;
 	}
 	
@@ -84,11 +89,13 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 						.sendTo(conn);
 					break;
 				} catch (Exception e) {
-					// error sending message, try the next connection
+					logger.warning("error sending message to "+dstNode.getKey()+", try the next connection");
 					conn.close();
 					connList.remove(0);
 				}
 			}
+			if (connList.isEmpty())
+				logger.warning("error sending message to "+dstNode.getKey()+", no more connection to try");
 		}
 	}
 	
@@ -119,7 +126,8 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 			KadConnection conn = connList.remove(0);
 			try {
 				KadMessage recved = conn.recvMessage();
-				//System.err.println("recved from: "+recved.getSrc());
+				logger.info("recved message from "+recved.getFirstHop().getKey());
+				logger.info(recved.getFirstHop().getKey()+" find nodes: "+recved.getNodes());
 				// clearing the list marks it as finished work
 				closeAllConnections(connList);
 				
@@ -142,7 +150,7 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 				
 				
 			} catch (Exception e) {
-				connList.remove(0);
+				logger.warning("error recving message from "+conn+", try the next connection");
 			} finally {
 				conn.close();
 			}
@@ -151,6 +159,7 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 	
 	@Override
 	public List<KadNode> call() throws Exception {
+		logger.info("starting node lookup for "+key);
 		Set<KadNode> queriedNodes = new HashSet<KadNode>();
 		queriedNodes.add(localNode);
 		
@@ -166,13 +175,15 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 			//System.err.println("queriedNodes: "+queriedNodes);
 			
 			queriedNodes.addAll(nodesToQuery);
-			
+			logger.info("quering nodes "+nodesToQuery);
+			logger.info("known closest nodes: "+knownClosestNodes);
 			List<List<KadConnection>> connections = getConnections(nodesToQuery);
 			
 			while (hasMoreConnections(connections)) {
 				sendFindNode(connections, nodesToQuery);
 				recvFindNode(connections, queriedNodes, knownClosestNodes);
 			}
+			
 			//System.err.println("");
 		}
 		
@@ -182,7 +193,6 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 		// remove x-tra nodes
 		for (int i=knownClosestNodes.size()-1; i >= maxNodeCount; --i)
 			knownClosestNodes.remove(i);
-		
 		return knownClosestNodes;
 	}
 

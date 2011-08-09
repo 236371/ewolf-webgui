@@ -15,6 +15,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class KadConnection {
@@ -28,18 +29,22 @@ public class KadConnection {
 	private final InetSocketAddress remoteAddr;
 	private final AtomicBoolean connected = new AtomicBoolean(false);
 	
+	//public static AtomicInteger cnt = new AtomicInteger(0);
+	
 	KadConnection(SelectableChannel chan, KadProtocol protocol, InetSocketAddress remoteAddr) {
 		this.protocol = protocol;
 		this.chan = chan;
 		this.remoteAddr = remoteAddr;
 		if (!(chan instanceof SocketChannel) && !(chan instanceof DatagramChannel))
 			throw new UnsupportedOperationException();
+		//cnt.incrementAndGet();
 	}
 	
 	KadConnection(SelectableChannel chan, KadProtocol protocol) {
 		this.protocol = protocol;
 		this.chan = chan;
 		connected.set(true);
+		
 		if (chan instanceof SocketChannel) {
 			
 			if (!((SocketChannel)chan).isConnected())
@@ -54,7 +59,7 @@ public class KadConnection {
 			
 		} else
 			throw new UnsupportedOperationException();
-		
+		//cnt.incrementAndGet();
 	}
 	
 	public boolean isConnected() {
@@ -94,6 +99,7 @@ public class KadConnection {
 		protocol.getSerializer().writeKadMessage(msg, bytes);
 		bytes.close();
 		ByteBuffer buff = ByteBuffer.wrap(bytes.toByteArray());
+		
 		while (buff.hasRemaining()) {
 			if ((chan.validOps() & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE) {
 				Selector selector = Selector.open();
@@ -109,7 +115,11 @@ public class KadConnection {
 			}
 			
 			if (chan instanceof SocketChannel) {
+				
+				//int n = ((SocketChannel)chan).write(buff);
 				((SocketChannel)chan).write(buff);
+				//System.out.print("sending "+n+ " to "+((SocketChannel)chan).socket().getRemoteSocketAddress());
+				//System.out.println(" from "+((SocketChannel)chan).socket().getLocalSocketAddress());
 			} else if (chan instanceof DatagramChannel) {
 				((DatagramChannel)chan).write(buff);
 			} else {
@@ -120,6 +130,8 @@ public class KadConnection {
 	
 	public synchronized KadMessage recvMessage() throws IOException {
 		
+		//System.out.print("recv from "+((SocketChannel)chan).socket().getRemoteSocketAddress());
+		//System.out.println(" to "+((SocketChannel)chan).socket().getLocalSocketAddress());
 		
 		InputStream in = new InputStream() {
 			
@@ -128,24 +140,30 @@ public class KadConnection {
 			
 			@Override
 			public int read() throws IOException {
+				//System.out.println("read()");
 				byte[] b = new byte[1];
 				return read(b) == -1 ? -1 : (int)b[0];
 			}
 			
 			@Override
 			public int read(byte[] b) throws IOException {
+				//System.out.println("read(b)");
 				return read(b, 0, b.length);
 			}
 			
 			private int fillLocalBuffer() throws IOException {
 				buff.rewind();
 				buffOff = 0;
+				
 				if ((chan.validOps() & SelectionKey.OP_READ) == SelectionKey.OP_READ) {
 					Selector selector = Selector.open();
 					SelectionKey key = chan.register(selector, SelectionKey.OP_READ);
 					try {
-						if (selector.select(timeout) != 1)
+						int n = selector.select(timeout); 
+						if (n != 1) {
+							//System.err.println("im here n = " +n);
 							return -1;
+						}
 					} finally {
 						key.cancel();
 						selector.close();
@@ -153,7 +171,9 @@ public class KadConnection {
 				}
 				
 				if (chan instanceof SocketChannel) {
-					return ((SocketChannel)chan).read(buff);
+					int n = ((SocketChannel)chan).read(buff);
+					//System.out.println("n = "+n);
+					return n;
 				} else if (chan instanceof DatagramChannel) {
 					return ((DatagramChannel)chan).read(buff);
 				}
@@ -161,17 +181,25 @@ public class KadConnection {
 			}
 			
 			private int fillUserBuffer(byte[] b, int off, int len) {
+				//System.out.println("buffOff = "+buffOff+" off = "+off+" len = "+len);
 				len = Math.min(len, buff.position() - buffOff);
+				/*
+				for (int i = buffOff; i < len; ++i) {
+					b[off+i] = buff.get(buffOff+i);
+				}
+				*/
 				System.arraycopy(buff.array(), buffOff, b, off, len);
 				buffOff += len;
+				//System.out.println("buffOff = "+buffOff+" off = "+off+" len = "+len);
 				return len;
 			}
 			
 			@Override
 			public synchronized int read(byte[] b, int off, int len) throws IOException {
 				if (buff.position() == buffOff) {
-					if (fillLocalBuffer() == -1)
+					if (fillLocalBuffer() == -1) {
 						return -1;
+					}
 				}
 				return fillUserBuffer(b, off, len);
 			}
@@ -197,11 +225,17 @@ public class KadConnection {
 	public void close() {
 		try {
 			chan.close();
+			//cnt.decrementAndGet();
 		} catch (IOException e) {
+			System.err.println(e);
 		}
 	}
 
 	public KadProtocol getProtocol() {
 		return protocol;
+	}
+	
+	public String toString() {
+		return protocol.name()+"://"+remoteAddr.getAddress().getHostName()+":"+remoteAddr.getPort()+"/";
 	}
 }

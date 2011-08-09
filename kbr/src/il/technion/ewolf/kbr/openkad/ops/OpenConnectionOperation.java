@@ -1,15 +1,16 @@
 package il.technion.ewolf.kbr.openkad.ops;
 
 import il.technion.ewolf.kbr.openkad.KadMessage;
+import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
 import il.technion.ewolf.kbr.openkad.KadMessageBuilder;
 import il.technion.ewolf.kbr.openkad.KadNode;
-import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
 import il.technion.ewolf.kbr.openkad.net.KadConnection;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
+import java.util.logging.Logger;
 
 
 public class OpenConnectionOperation extends KadOperation<Socket> {
@@ -20,7 +21,8 @@ public class OpenConnectionOperation extends KadOperation<Socket> {
 	private final String tag;
 	private final int connPort;
 	
-	OpenConnectionOperation(KadNode localNode, int connPort, KadNode dstNode, String tag) {
+	OpenConnectionOperation(Logger logger, KadNode localNode, int connPort, KadNode dstNode, String tag) {
+		super(logger);
 		this.localNode = localNode;
 		this.connPort = connPort;
 		this.dstNode = dstNode;

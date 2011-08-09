@@ -86,9 +86,11 @@ public class KadNode implements Serializable, KeyHolder {
 	
 	public List<KadConnection> getKadConnections() {
 		List<KadConnection> $ = getDirectKadConnections();
+		
 		for (KadNode n : proxies) {
 			$.addAll(n.getDirectKadConnections());
 		}
+		
 		return $;
 	}
 	

@@ -15,6 +15,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.logging.Logger;
 
 import junit.framework.Assert;
 
@@ -36,7 +37,7 @@ public class KadConnectionTest implements KadConnectionListener {
 	
 	@Test(timeout=5000)
 	public void test1() throws Exception {
-		KadServer endpoint  = new KadServer(1024*16, Executors.newFixedThreadPool(2));
+		KadServer endpoint  = new KadServer(Logger.getLogger("test"), 1024*16, Executors.newFixedThreadPool(2));
 		endpoint.setKadConnectionListener(this);
 		endpoint.register(KadProtocol.otcpkad, new InetSocketAddress(10000));
 		endpoint.register(KadProtocol.oudpkad, new InetSocketAddress(10000));
@@ -48,7 +49,7 @@ public class KadConnectionTest implements KadConnectionListener {
 		KadMessage recved;
 		
 		
-		byte[] b = new byte[4096];
+		byte[] b = new byte[1024];
 		
 		new KadMessageBuilder()
 			.setRpc(RPC.PING)
@@ -75,13 +76,18 @@ public class KadConnectionTest implements KadConnectionListener {
 	@Override
 	public void onIncomingConnection(KadConnection conn) throws IOException {
 		KadMessageBuilder response = new KadMessageBuilder();
-		onIncomingMessage(conn.recvMessage(), response);
+		KadMessage msg = conn.recvMessage();
+		System.out.println("recved");
+		onIncomingMessage(msg, response);
+		
 		conn.sendMessage(response.build());
+		System.out.println("sent");
 		conn.close();
 	}
 
 	@Override
 	public void onIncomingMessage(KadMessage msg, KadMessageBuilder response) throws IOException {
+		
 		response
 			.addHop(localNode)
 			.setTag("abc")

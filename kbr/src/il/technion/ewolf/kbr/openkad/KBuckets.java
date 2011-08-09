@@ -14,13 +14,15 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-
+import java.util.logging.Logger;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
 
 public class KBuckets {
+	
+	private final Logger logger;
 	private final KeyFactory keyFactory;
 	private final List<List<KadNode>> kbuckets;
 	private final KadNode localNode;
@@ -28,10 +30,12 @@ public class KBuckets {
 	
 	@Inject
 	KBuckets(
+			Logger logger,
 			@Named("kadnet.bucketsize") int bucketSize,
 			@Named("kadnet.localnode") KadNode localNode,
 			KeyFactory keyFactory) {
 		
+		this.logger = logger;
 		this.keyFactory = keyFactory;
 		this.localNode = localNode;
 		this.bucketSize = bucketSize;
@@ -75,10 +79,9 @@ public class KBuckets {
 	
 	
 	private boolean ping(KadNode x) {
+		logger.info("sending PING to "+x.getKey());
 		for (KadConnection conn : x.getKadConnections()) {
 			try {
-				conn = x.getKadConnections().get(0);
-				
 				new KadMessageBuilder()
 					.addHop(KBuckets.this.localNode)
 					.setRpc(RPC.PING)
@@ -89,12 +92,12 @@ public class KBuckets {
 				conn.recvMessage();
 				return true;
 			} catch (Exception e) {
-				
+				logger.info("failed to recv ping from "+x.getKey()+" on "+conn.toString());
 			} finally {
-				if (conn != null)
-					conn.close();
+				try { conn.close(); } catch (Exception e) {}
 			}
 		}
+		logger.warning("failed to recv PING from "+x.getKey()+" in all connections !");
 		return false;
 	}
 	
@@ -155,16 +158,16 @@ public class KBuckets {
 		
 		synchronized(bucket) {
 			int i = bucket.indexOf(s);
-			if (i != -1) {
-				// s already in bucket
-				//bucket.get(i).mergeProxies(s);
-			} else {
+			if (i == -1) { // s is not in bucket
 				if (bucket.size() < bucketSize) {
 					// still has place and s is not inside
 					bucket.add(s);
 					return true;
 				}
-			}
+			} /* else {
+				// s already in bucket
+				//bucket.get(i).mergeProxies(s);
+			} */
 		}
 		return false;
 		

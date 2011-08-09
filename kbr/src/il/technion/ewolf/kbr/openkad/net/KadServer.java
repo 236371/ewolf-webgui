@@ -21,13 +21,14 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
-
+import java.util.logging.Logger;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
 public class KadServer implements Runnable {
 
+	private final Logger logger;
 	private final Selector selector; 
 	private final ExecutorService executor;
 	private final int buffSize;
@@ -37,11 +38,13 @@ public class KadServer implements Runnable {
 	
 	@Inject
 	KadServer(
+			Logger logger,
 			@Named("kadnet.srv.buffsize") int buffSize,
 			@Named("kadnet.executors.incoming") ExecutorService executor) throws IOException {
 		selector = Selector.open();
 		this.buffSize = buffSize;
 		this.executor = executor;
+		this.logger = logger;
 	}
 	
 	public void setKadConnectionListener(KadConnectionListener l) {
@@ -118,6 +121,11 @@ public class KadServer implements Runnable {
 	
 	private void handleIO(KadProtocol protocol, ServerSocketChannel chan) throws IOException {
 		SocketChannel sockChan = chan.accept();
+		logger.info("recving message from "+
+				sockChan.socket().getRemoteSocketAddress()+
+				" in socket channel port "+
+				chan.socket().getLocalPort());
+		
 		sockChan.configureBlocking(false);
 		executeIncomingConnection(new KadConnection(sockChan, protocol));
 	}
@@ -125,7 +133,7 @@ public class KadServer implements Runnable {
 	private void handleIO(KadProtocol protocol, DatagramChannel chan) throws IOException, ClassNotFoundException {
 		ByteBuffer buff = ByteBuffer.allocate(buffSize);
 		InetSocketAddress remoteAddr = (InetSocketAddress)chan.receive(buff);
-		
+		logger.info("recving message from "+remoteAddr+" in datagram channel port "+chan.socket().getLocalPort());
 		ByteArrayInputStream in = new ByteArrayInputStream(buff.array(), 0, buff.position());
 		KadMessage incomingMessage = protocol.getSerializer().readKadMessage(remoteAddr.getAddress(), in);
 		
@@ -161,6 +169,7 @@ public class KadServer implements Runnable {
 								handleIO(protocol, (DatagramChannel)key.channel());
 								
 						} catch (Exception e) {
+							logger.warning("failed to recv message from");
 							e.printStackTrace();
 						}
 					}

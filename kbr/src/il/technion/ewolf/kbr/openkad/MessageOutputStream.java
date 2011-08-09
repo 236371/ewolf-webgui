@@ -46,7 +46,7 @@ class MessageOutputStream extends ByteArrayOutputStream {
 		List<KadConnection> kadConnections = dstNode.getKadConnections();
 		
 		while (!kadConnections.isEmpty()) {
-			KadConnection conn = kadConnections.get(0);
+			KadConnection conn = kadConnections.remove(0);
 			try {
 				conn.sendMessage(msg);
 				// recv ack
@@ -59,9 +59,8 @@ class MessageOutputStream extends ByteArrayOutputStream {
 				return;
 			} catch (IOException e) {
 				// error sending or recving in conn
-				// remove this connection and try the next one
+			} finally {
 				conn.close();
-				kadConnections.remove(conn);
 			}
 		}
 		throw new IOException("error sending/recving");
