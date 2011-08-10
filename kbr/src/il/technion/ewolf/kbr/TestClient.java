@@ -4,6 +4,7 @@ import il.technion.ewolf.kbr.openkad.KadNetModule;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -14,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-
 
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
@@ -42,6 +42,8 @@ import org.apache.http.protocol.ResponseContent;
 import org.apache.http.protocol.ResponseDate;
 import org.apache.http.protocol.ResponseServer;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Guice;
 
 public class TestClient implements HttpRequestHandler {
@@ -115,6 +117,23 @@ public class TestClient implements HttpRequestHandler {
 		return $;
 	}
 	
+	private Map<String, String> sendMessage(String keyString, int n, String msg) throws Exception {
+		Map<String, String> $ = new HashMap<String, String>();
+		List<Node> nodes = kbr.findNodes(kbr.getKeyFactory().getFromKey(keyString), n).get();
+		for (Node node : nodes) {
+			try {
+				OutputStream out = node.sendMessage("tag");
+				out.write(msg.getBytes());
+				out.close();
+				$.put(node.getKey().toBase64(), "sent successfully");
+			} catch (Exception e) {
+				$.put(node.getKey().toBase64(), "error: "+e.getMessage());
+			}
+		}
+		return $;
+	}
+	
+	
 	private Set<String> getNeighbors() {
 		Set<String> $ = new HashSet<String>();
 		for (Node n : kbr.getNeighbors())
@@ -148,6 +167,12 @@ public class TestClient implements HttpRequestHandler {
 				//Gson gson = new Gson();
 				//res.setEntity(new StringEntity(gson.toJson(l)));
 				res.setEntity(new StringEntity(l.toString()));
+			}
+			
+			else if ("sendMessage".equals(op)) {
+				Map<String, String> l = sendMessage(reqParams.get("key"), Integer.parseInt(reqParams.get("n")), reqParams.get("msg"));
+				Gson gson = new GsonBuilder().setPrettyPrinting().create();
+				res.setEntity(new StringEntity(gson.toJson(l)));
 			}
 			
 			else {

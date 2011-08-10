@@ -44,7 +44,7 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("kadnet.oudpkad.port", "-1");
 		defaultProps.setProperty("kadnet.otcpkad.port", "-1");
 		defaultProps.setProperty("kadnet.localkey", "");
-		defaultProps.setProperty("kadnet.refreshinterval", "6000000");
+		defaultProps.setProperty("kadnet.refreshinterval", "60000");
 		//defaultProps.setProperty("kadnet.proxy.checkinterval", "60000");
 		
 		return defaultProps;

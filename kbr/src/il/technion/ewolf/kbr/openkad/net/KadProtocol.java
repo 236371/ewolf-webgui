@@ -59,8 +59,7 @@ public enum KadProtocol {
 
 		@Override
 		public KadMessageSerializer getSerializer() {
-			// TODO Auto-generated method stub
-			return null;
+			return new KadHttpSerializer();
 		}
 
 		@Override

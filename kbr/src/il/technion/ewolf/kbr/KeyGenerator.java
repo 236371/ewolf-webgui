@@ -32,7 +32,7 @@ public class KeyGenerator {
 		
 		FileOutputStream out = new FileOutputStream(outputFilename);
 		
-		for (int i=0; i < 4000; ++i) {
+		for (int i=0; i < 1000; ++i) {
 			Key k = kbr.getKeyFactory().generate();
 			keys.add(k);
 			out.write(k.toBase64().getBytes());

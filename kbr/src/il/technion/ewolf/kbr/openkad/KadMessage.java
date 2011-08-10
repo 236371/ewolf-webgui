@@ -12,6 +12,7 @@ public class KadMessage implements Serializable {
 
 	public enum RPC {
 		PING,
+		
 		FIND_NODE,
 		MSG,
 		CONN,
