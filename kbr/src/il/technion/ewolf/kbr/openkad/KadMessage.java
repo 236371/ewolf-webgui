@@ -11,12 +11,13 @@ public class KadMessage implements Serializable {
 	private static final long serialVersionUID = 7311694650346299141L;
 
 	public enum RPC {
-		PING,
+		PING, 			PONG,
+		FIND_NODE,		FIND_NODE_RESPONSE,
+		MSG,			MSG_RESPONSE,
+		CONN,			CONN_RESPONSE,
+		SOCKET_CONN,	SOCKET_CONN_RESPONSE,
 		
-		FIND_NODE,
-		MSG,
-		CONN,
-		ACK,
+		ACK, NOP,
 	};
 	
 	private final RPC rpc;

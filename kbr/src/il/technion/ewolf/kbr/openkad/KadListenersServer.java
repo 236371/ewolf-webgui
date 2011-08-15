@@ -5,12 +5,14 @@ import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
 import il.technion.ewolf.kbr.openkad.ops.KadOperationsExecutor;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -22,7 +24,7 @@ class KadListenersServer {
 
 	private final ExecutorService executor;
 	private final List<Entry> listeners = Collections.synchronizedList(new ArrayList<Entry>());
-	private final List<RPC> listenerServerMessages = Arrays.asList(new RPC[] { RPC.MSG, RPC.CONN });
+	private final List<RPC> listenerServerMessages = Arrays.asList(new RPC[] { RPC.MSG, RPC.CONN, RPC.SOCKET_CONN });
 	private final int connPort;
 	private final KadOperationsExecutor opExecutor;
 	
@@ -34,6 +36,11 @@ class KadListenersServer {
 			this.pattern = pattern;
 			this.listener = listener;
 		}
+		
+		public String getPattern() {
+			return pattern;
+		}
+		
 		
 		boolean matches(String tag) {
 			return tag.matches(pattern);
@@ -68,7 +75,9 @@ class KadListenersServer {
 	
 	
 	public void register(String pattern, NodeConnectionListener listener) {
-		listeners.add(new Entry(pattern, listener));
+		synchronized (listeners) {
+			listeners.add(new Entry(pattern, listener));
+		}
 	}
 	
 	private void executeIncomingMessage(final Entry matchedEntry, final KadMessage msg) {
@@ -142,7 +151,21 @@ class KadListenersServer {
 			executeIncomingMessage(matchedEntry, msg);
 			response.setRpc(RPC.ACK);
 			break;
+			
 		case CONN:
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			
+			matchedEntry.listener.onIncomingMessage(
+					msg.getTag(),
+					msg.getFirstHop().getNode(opExecutor),
+					new ByteArrayInputStream(msg.getConent()),
+					out);
+			
+			response.setRpc(RPC.CONN_RESPONSE)
+				.setContent(out.toByteArray());
+			break;
+			
+		case SOCKET_CONN:
 			try {
 				//System.err.println(msg.getConnPort());
 				final Socket sock = new Socket(msg.getFirstHop().getAddress(), msg.getConnPort());
@@ -154,12 +177,25 @@ class KadListenersServer {
 				ServerSocket srvSock = new ServerSocket(connPort);
 				executeIncomingConnection(matchedEntry, msg, srvSock);
 				response.setConnPort(srvSock.getLocalPort());
-				response.setRpc(RPC.ACK);
+				response.setRpc(RPC.SOCKET_CONN_RESPONSE);
 			}
 			break;
 		}
 		
 		
+	}
+
+
+	public void unregister(String pattern) {
+		synchronized (listeners) {
+			Iterator<Entry> itr = listeners.iterator();
+			while (itr.hasNext()) {
+				Entry entry = itr.next();
+				if (entry.getPattern().equals(pattern)) {
+					itr.remove();
+				}
+			}
+		}
 	}
 	
 }

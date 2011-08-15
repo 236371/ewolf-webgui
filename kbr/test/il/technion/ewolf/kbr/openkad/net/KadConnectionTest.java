@@ -15,6 +15,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import junit.framework.Assert;
@@ -37,7 +38,7 @@ public class KadConnectionTest implements KadConnectionListener {
 	
 	@Test(timeout=5000)
 	public void test1() throws Exception {
-		KadServer endpoint  = new KadServer(Logger.getLogger("test"), 1024*16, Executors.newFixedThreadPool(2));
+		KadServer endpoint  = new KadServer(Logger.getLogger("test"), Level.OFF, 1024*16, Executors.newFixedThreadPool(2));
 		endpoint.setKadConnectionListener(this);
 		endpoint.register(KadProtocol.otcpkad, new InetSocketAddress(10000));
 		endpoint.register(KadProtocol.oudpkad, new InetSocketAddress(10000));

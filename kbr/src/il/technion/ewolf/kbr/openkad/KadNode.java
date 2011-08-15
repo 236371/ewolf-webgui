@@ -153,6 +153,13 @@ public class KadNode implements Serializable, KeyHolder {
 				return null;
 			}
 			
+			@Override
+			public byte[] sendMessage(String tag, byte[] message)
+					throws IOException {
+				// TODO implement
+				return null;
+			}
+			
 		};
 	}
 }

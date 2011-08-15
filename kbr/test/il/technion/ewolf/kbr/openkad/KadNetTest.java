@@ -1,10 +1,8 @@
 package il.technion.ewolf.kbr.openkad;
 
+import il.technion.ewolf.kbr.DefaultNodeConnectionListener;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.Node;
-import il.technion.ewolf.kbr.NodeConnectionListener;
-import il.technion.ewolf.kbr.openkad.KadKeyComparator;
-import il.technion.ewolf.kbr.openkad.KadNetModule;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,7 +16,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
-
 
 import org.junit.After;
 import org.junit.Assert;
@@ -292,7 +289,7 @@ public class KadNetTest {
 		
 		KeybasedRouting kadnet2 = nodes.get(9);
 		System.out.println("registering in "+kadnet2.getLocalNode());
-		kadnet2.register("tag", new NodeConnectionListener() {
+		kadnet2.register("tag", new DefaultNodeConnectionListener() {
 			
 			@Override
 			public void onIncomingMessage(String tag, Node from, InputStream in)
@@ -357,7 +354,7 @@ public class KadNetTest {
 		
 		KeybasedRouting kadnet2 = nodes.get(8);
 		System.out.println("registering in "+kadnet2.getLocalNode());
-		kadnet2.register("tag", new NodeConnectionListener() {
+		kadnet2.register("tag", new DefaultNodeConnectionListener() {
 			
 			@Override
 			public void onIncomingMessage(String tag, Node from, InputStream in) throws IOException {}
@@ -427,7 +424,7 @@ public class KadNetTest {
 		KeybasedRouting kadnet1 = nodes.get(12);
 		KeybasedRouting kadnet2 = nodes.get(8);
 		System.out.println("registering in "+kadnet2.getLocalNode());
-		kadnet2.register("tag", new NodeConnectionListener() {
+		kadnet2.register("tag", new DefaultNodeConnectionListener() {
 			
 			@Override
 			public void onIncomingMessage(String tag, Node from, InputStream in) throws IOException {}
@@ -488,7 +485,7 @@ public class KadNetTest {
 		kadnet2.join(new URI("otcpkad://127.0.0.1:10001/")).get();
 		List<Node> nodes;
 		
-		kadnet1.register("tag", new NodeConnectionListener() {
+		kadnet1.register("tag", new DefaultNodeConnectionListener() {
 			
 			@Override
 			public void onIncomingMessage(String tag, Node from, InputStream in)
@@ -503,7 +500,7 @@ public class KadNetTest {
 			}
 		});
 		
-		kadnet2.register("tag", new NodeConnectionListener() {
+		kadnet2.register("tag", new DefaultNodeConnectionListener() {
 			
 			@Override
 			public void onIncomingMessage(String tag, Node from, InputStream in)

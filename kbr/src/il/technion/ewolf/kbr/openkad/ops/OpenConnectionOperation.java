@@ -61,7 +61,7 @@ public class OpenConnectionOperation extends KadOperation<Socket> {
 		
 		KadMessageBuilder msgBuilder = new KadMessageBuilder()
 			.addHop(localNode)
-			.setRpc(RPC.CONN)
+			.setRpc(RPC.SOCKET_CONN)
 			.setDst(dstNode.getKey())
 			.setTag(tag);
 		

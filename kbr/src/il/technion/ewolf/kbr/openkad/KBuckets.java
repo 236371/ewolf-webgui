@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.inject.Inject;
@@ -31,11 +32,13 @@ public class KBuckets {
 	@Inject
 	KBuckets(
 			Logger logger,
+			/*@Named("kadnet.logging.level.kbuckets")*/ Level lvl,
 			@Named("kadnet.bucketsize") int bucketSize,
 			@Named("kadnet.localnode") KadNode localNode,
 			KeyFactory keyFactory) {
 		
 		this.logger = logger;
+		this.logger.setLevel(lvl);
 		this.keyFactory = keyFactory;
 		this.localNode = localNode;
 		this.bucketSize = bucketSize;

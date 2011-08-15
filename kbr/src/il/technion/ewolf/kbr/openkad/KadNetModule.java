@@ -14,7 +14,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
+import java.util.logging.Level;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -63,6 +63,7 @@ public class KadNetModule extends AbstractModule {
 	@Override
 	protected void configure() {
 		Names.bindProperties(binder(), properties);
+		bind(Level.class).toInstance(Level.OFF);
 		bind(KadServer.class).in(Singleton.class);
 		//bind(KadProxyServer.class).in(Singleton.class);
 		bind(KBuckets.class).in(Singleton.class);
@@ -70,6 +71,7 @@ public class KadNetModule extends AbstractModule {
 		bind(KadRefresher.class).in(Singleton.class);
 		bind(KadListenersServer.class).in(Singleton.class);
 		bind(KeybasedRouting.class).to(KadNet.class).in(Singleton.class);
+		
 	}
 	
 	

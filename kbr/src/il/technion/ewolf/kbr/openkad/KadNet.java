@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -37,9 +39,13 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 	// private final KadProxyServer kadProxyServer;
 	// private final OpenedKadConnections openedKadConnections;
 	private final KadRefresher kadRefresher;
+	private final Logger logger;
 
 	@Inject
-	KadNet(@Named("kadnet.srv.buffsize") int buffSize,
+	KadNet(
+			Logger logger,
+			/*@Named("kadnet.logging.level.kadnet")*/ Level lvl,
+			@Named("kadnet.srv.buffsize") int buffSize,
 			@Named("kadnet.executors.incoming") ExecutorService executor,
 			@Named("kadnet.localnode") KadNode localNode,
 			KeyFactory keyFactory, KBuckets kbuckets, KadServer kadServer,
@@ -48,7 +54,8 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 			// OpenedKadConnections openedKadConnections,
 			KadListenersServer listenersServer, KadRefresher kadRefresher)
 			throws IOException {
-
+		this.logger = logger;
+		this.logger.setLevel(lvl);
 		this.keyFactory = keyFactory;
 
 		this.localNode = localNode;
@@ -122,6 +129,11 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 	public void register(String pattern, NodeConnectionListener listener) {
 		listenersServer.register(pattern, listener);
 	}
+	
+	@Override
+	public void unregister(String pattern) {
+		listenersServer.unregister(pattern);
+	}
 
 	@Override
 	public void onIncomingConnection(KadConnection conn) throws IOException {
@@ -169,8 +181,9 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 	@Override
 	public void onIncomingMessage(KadMessage msg, KadMessageBuilder response)
 			throws IOException {
-		// System.out.println("recved message from: "+addr);
 
+		logger.info("message recved, rpc = "+msg.getRpc()+" route = "+msg.getPath());
+		
 		opExecutor.executeInsertNodeOperation(msg.getLastHop());
 
 		if (msg.getDst() != null && !localNode.getKey().equals(msg.getDst())) {
@@ -181,27 +194,28 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 		response.addHop(localNode);
 
 		switch (msg.getRpc()) {
+		case PONG: case FIND_NODE_RESPONSE: case CONN_RESPONSE: case MSG_RESPONSE:
+			logger.warning("recved response while expecting requests only");
+			throw new IllegalArgumentException();
+			
 		case PING:
-			response.setRpc(RPC.PING);
+			response.setRpc(RPC.PONG);
 			break;
+			
 		case FIND_NODE:
 			Set<KeyHolder> exclude = new HashSet<KeyHolder>();
 			exclude.add(msg.getFirstHop());
-			if (msg.getFirstHop().equals(msg.getLastHop())) // direct
-				// connection, no
-				// need to add
-				// myself
+			
+			// direct connection, no need to add myself
+			if (msg.getFirstHop().equals(msg.getLastHop())) 
 				exclude.add(localNode);
 
-			response.setRpc(RPC.FIND_NODE)
-					.addNodes(
-							kbuckets.getKClosestNodes(msg.getKey(), exclude,
-									msg.getMaxNodeCount()))
+			response.setRpc(RPC.FIND_NODE_RESPONSE)
+					.addNodes(kbuckets.getKClosestNodes(msg.getKey(), exclude, msg.getMaxNodeCount()))
 					.setKey(msg.getKey());
 			break;
 
-		case MSG:
-		case CONN:
+		case MSG: case CONN: case SOCKET_CONN:
 			listenersServer.incomingListenerMessage(msg, response);
 			break;
 		}

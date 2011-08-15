@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.inject.Inject;
@@ -30,9 +31,11 @@ public class KadOperationsExecutor {
 	//private final KadProxyServer proxyServer;
 	private final OpenedKadConnections openedKadConnections;
 	private final Logger logger;
+	
 	@Inject
 	public KadOperationsExecutor(
 			Logger logger,
+			/*@Named("kadnet.logging.level.operations") */Level lvl,
 			@Named("kadnet.executors.outgoing") ExecutorService executor,
 			@Named("kadnet.concurrency") int concurrency,
 			@Named("kadnet.srv.conn.port") int connPort,
@@ -43,6 +46,7 @@ public class KadOperationsExecutor {
 			OpenedKadConnections openedKadConnections) {
 		
 		this.logger = logger;
+		this.logger.setLevel(lvl);
 		this.executor = executor;
 		this.concurrency = concurrency;
 		this.kbuckets = kbuckets;

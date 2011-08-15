@@ -7,8 +7,10 @@ import java.net.Socket;
 import java.util.concurrent.Future;
 
 public interface Node extends KeyHolder {
+	
 	public Future<Socket> openConnection(String tag) throws IOException;
 	public Future<DatagramSocket> openUdpConnection(String tag) throws IOException;
 	public OutputStream sendMessage(String tag) throws IOException;
+	public byte[] sendMessage(String tag, byte[] message) throws IOException;
 	
 }

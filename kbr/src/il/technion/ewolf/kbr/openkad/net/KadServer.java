@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.inject.Inject;
@@ -39,12 +40,14 @@ public class KadServer implements Runnable {
 	@Inject
 	KadServer(
 			Logger logger,
+			/*@Named("kadnet.logging.level.kadserver")*/ Level lvl,
 			@Named("kadnet.srv.buffsize") int buffSize,
 			@Named("kadnet.executors.incoming") ExecutorService executor) throws IOException {
 		selector = Selector.open();
 		this.buffSize = buffSize;
 		this.executor = executor;
 		this.logger = logger;
+		this.logger.setLevel(lvl);
 	}
 	
 	public void setKadConnectionListener(KadConnectionListener l) {

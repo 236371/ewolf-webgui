@@ -18,6 +18,7 @@ public interface KeybasedRouting {
 	
 	public void register(String pattern, NodeConnectionListener listener);
 	
+	public void unregister(String pattern);
 	
 	public void shutdown();
 }

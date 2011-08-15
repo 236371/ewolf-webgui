@@ -10,6 +10,13 @@ import java.util.Random;
 
 import encoding.Base64;
 
+/**
+ * The Key class represents nodes in our network, every node has 
+ * a unique key and nodes can be looked up using their keys.
+ * 
+ * @author eyal
+ *
+ */
 public class Key implements Serializable, KeyHolder {
 
 	private static final long serialVersionUID = 1136956138268529759L;
