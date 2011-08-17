@@ -155,4 +155,45 @@ public class DHTTest {
 		Assert.assertTrue(Arrays.equals(data1, res.get(0)) || Arrays.equals(data1, res.get(1)));
 		Assert.assertTrue(Arrays.equals(data2, res.get(0)) || Arrays.equals(data2, res.get(1)));
 	}
+	
+	@Test
+	public void put2DifferentValuesWith16Nodes() throws Exception {
+		createNetwork(16);
+		Properties props = new Properties();
+		props.setProperty("dht.replication.factor", "1");
+		props.setProperty("dht.replication.saftymargin", "1");
+		List<DHT> dhts = createDHTs(props);
+		
+		System.out.println("created !");
+		
+		System.out.print("put ... ");
+		byte[] data1 = "XYZ".getBytes();
+		byte[] data2 = "UVW".getBytes();
+		
+		dhts.get(0).put("abc", data1).get();
+		dhts.get(5).put("edf", data2).get();
+		System.out.println("done");
+		
+		Thread.sleep(5000);
+		
+		List<byte[]> res = null;
+		
+		System.out.print("get ... ");
+		res = dhts.get(9).get("abc").get();
+		Assert.assertEquals(1, res.size());
+		Assert.assertTrue(Arrays.equals(data1, res.get(0)));
+		
+		res = dhts.get(14).get("abc").get();
+		Assert.assertEquals(1, res.size());
+		Assert.assertTrue(Arrays.equals(data1, res.get(0)));
+		
+		res = dhts.get(8).get("edf").get();
+		Assert.assertEquals(1, res.size());
+		Assert.assertTrue(Arrays.equals(data2, res.get(0)));
+		
+		res = dhts.get(13).get("edf").get();
+		Assert.assertEquals(1, res.size());
+		Assert.assertTrue(Arrays.equals(data2, res.get(0)));
+		System.out.println("done");
+	}
 }
