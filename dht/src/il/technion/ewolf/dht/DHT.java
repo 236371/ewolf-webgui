@@ -33,8 +33,8 @@ public class DHT {
 	private final int replicationSaftyMargin;
 	private final ExecutorService executor;
 	private final Random rnd;
-	private final Map<Key, Set<byte[]>> localStorage = new HashMap<Key, Set<byte[]>>();
 	private final long getOperationTimeout;
+	private final DHTStorage storage;
 	
 	@Inject
 	DHT(@Named("dht.random") Random rnd,
@@ -43,7 +43,9 @@ public class DHT {
 		@Named("dht.replication.factor") int replication,
 		@Named("dht.replication.saftymargin") int replicationSaftyMargin,
 		@Named("dht.executor") ExecutorService executor,
+		DHTStorage storage,
 		KeybasedRouting kbr) {
+		
 		
 		this.rnd = rnd;
 		this.getOperationTimeout = getOperationTimeout;
@@ -52,25 +54,8 @@ public class DHT {
 		this.replication = replication;
 		this.replicationSaftyMargin = replicationSaftyMargin;
 		this.executor = executor;
+		this.storage = storage;
 		
-		
-	}
-	
-	
-	private synchronized Set<byte[]> findValues(Key key) {
-		Set<byte[]> $ = localStorage.get(key);
-		if ($ == null)
-			$ = new HashSet<byte[]>();
-		return $;
-	}
-
-	private synchronized void store(Key key, Set<byte[]> data) {
-		Set<byte[]> values = localStorage.get(key);
-		if (values == null) {
-			values = new HashSet<byte[]>();
-			localStorage.put(key, values);
-		}
-		values.addAll(data);
 	}
 	
 	private int sendMessageToAll(String tag, byte[] serializedMessage, Node ... nodes) {
@@ -113,7 +98,7 @@ public class DHT {
 				
 				switch (msg.getRpc()) {
 				case STORE:
-					store(msg.getKey(), msg.getData());
+					storage.store(msg.getKey(), msg.getData());
 					break;
 					
 				case FIND_VALUE:
@@ -121,7 +106,7 @@ public class DHT {
 					byte[] serializedResponse = new DHTMessageBuilder()
 						.setKey(msg.getKey())
 						.setRpc(RPC.FIND_VALUE_RESPONSE)
-						.addAllData(findValues(msg.getKey()))
+						.addAllData(storage.get(msg.getKey()))
 						.build()
 						.toJson()
 						.getBytes();

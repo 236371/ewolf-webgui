@@ -3,6 +3,7 @@ package il.technion.ewolf.dht;
 import il.technion.ewolf.kbr.Key;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -42,7 +43,7 @@ class DHTMessage {
 		return msgString;
 	}
 	
-	public Set<byte[]> getData() throws IOException {
+	public Collection<byte[]> getData() throws IOException {
 		Set<byte[]> $ = new HashSet<byte[]>();
 		for (String d : data) {
 			$.add(Base64.decode(d));
