@@ -1,25 +1,29 @@
 package il.technion.ewolf.kbr.openkad;
 
+import static ch.lambdaj.Lambda.filter;
+import static ch.lambdaj.Lambda.having;
+import static ch.lambdaj.Lambda.on;
+import static ch.lambdaj.Lambda.sort;
 import il.technion.ewolf.kbr.Key;
 import il.technion.ewolf.kbr.KeyFactory;
-import il.technion.ewolf.kbr.KeyHolder;
 import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
 import il.technion.ewolf.kbr.openkad.net.KadConnection;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.hamcrest.Matcher;
+
+import ch.lambdaj.function.matcher.LambdaJMatcher;
+
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-
 
 public class KBuckets {
 	
@@ -177,18 +181,23 @@ public class KBuckets {
 	}
 	
 	public List<KadNode> getKClosestNodes(Key key) {
-		return getKClosestNodes(key, new HashSet<KadNode>());
+		return getKClosestNodes(key, new HashSet<Key>());
 	}
 			
-	public List<KadNode> getKClosestNodes(Key key, Collection<? extends KeyHolder> exclude) {
+	public List<KadNode> getKClosestNodes(Key key, Collection<Key> exclude) {
 		return getKClosestNodes(key, exclude, bucketSize);
 	}
-	public List<KadNode> getKClosestNodes(Key key, Collection<? extends KeyHolder> exclude, int k) {
+	public List<KadNode> getKClosestNodes(Key key, final Collection<Key> exclude, int k) {
 		if (!keyFactory.isValid(key) || k <= 0)
 			throw new IllegalArgumentException();
 		
 		List<KadNode> $ = new ArrayList<KadNode>();
-		
+		Matcher<Key> isInExcluded = new LambdaJMatcher<Key>() {
+			@Override
+			public boolean matches(Object item) {
+				return !exclude.contains(item);
+			}
+		};
 		
 		List<KadNode> bucket = getBucket(key);
 		if (bucket != null) {
@@ -214,20 +223,24 @@ public class KBuckets {
 					}
 				} catch (Exception e) {}
 				
+				$ = filter(having(on(KadNode.class).getKey(), isInExcluded), $);
+				/*
 				Iterator<KadNode> itr = $.iterator();
 				while (itr.hasNext()) {
 					if (exclude.contains(itr.next().getKey()))
 						itr.remove();
 				}
-				
+				*/
 				if (kbuckets.size() <= index + i && index - i < 0)
 					break;
 				
 				
 			}
 		}
-		Collections.sort($, new KadKeyComparator(key));
-		for (int j=$.size()-1; j >= k; $.remove(j--));
+		$ = sort($, on(KadNode.class).getKey(), new KadKeyComparator(key));
+		if ($.size() >= k)
+			$.subList(k, $.size()).clear();
+		//for (int j=$.size()-1; j >= k; $.remove(j--));
 		
 		return $;
 	}

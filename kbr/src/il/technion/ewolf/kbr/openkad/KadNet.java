@@ -2,7 +2,6 @@ package il.technion.ewolf.kbr.openkad;
 
 import il.technion.ewolf.kbr.Key;
 import il.technion.ewolf.kbr.KeyFactory;
-import il.technion.ewolf.kbr.KeyHolder;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.Node;
 import il.technion.ewolf.kbr.NodeConnectionListener;
@@ -15,7 +14,6 @@ import il.technion.ewolf.kbr.openkad.ops.KadOperationsExecutor;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -27,6 +25,7 @@ import java.util.logging.Logger;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import static ch.lambdaj.Lambda.*;
 
 public class KadNet implements KeybasedRouting, KadConnectionListener {
 
@@ -106,12 +105,14 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 
 			@Override
 			public List<Node> call() throws Exception {
-
+				return extract(op.call(), on(KadNode.class).getNode(opExecutor));
+				/*
 				List<Node> $ = new ArrayList<Node>();
 				for (KadNode n : op.call()) {
 					$.add(n.getNode(opExecutor));
 				}
 				return $;
+				*/
 			}
 		});
 	}
@@ -203,12 +204,12 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 			break;
 			
 		case FIND_NODE:
-			Set<KeyHolder> exclude = new HashSet<KeyHolder>();
-			exclude.add(msg.getFirstHop());
+			Set<Key> exclude = new HashSet<Key>();
+			exclude.add(msg.getFirstHop().getKey());
 			
 			// direct connection, no need to add myself
 			if (msg.getFirstHop().equals(msg.getLastHop())) 
-				exclude.add(localNode);
+				exclude.add(localNode.getKey());
 
 			response.setRpc(RPC.FIND_NODE_RESPONSE)
 					.addNodes(kbuckets.getKClosestNodes(msg.getKey(), exclude, msg.getMaxNodeCount()))

@@ -1,7 +1,6 @@
 package il.technion.ewolf.kbr.openkad;
 
 import il.technion.ewolf.kbr.Key;
-import il.technion.ewolf.kbr.KeyHolder;
 import il.technion.ewolf.kbr.Node;
 import il.technion.ewolf.kbr.openkad.net.KadConnection;
 import il.technion.ewolf.kbr.openkad.ops.KadOperationsExecutor;
@@ -18,7 +17,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 
 
-public class KadNode implements Serializable, KeyHolder {
+public class KadNode implements Serializable {
 	
 	private static final long serialVersionUID = -1726068490394037080L;
 	
@@ -69,7 +68,6 @@ public class KadNode implements Serializable, KeyHolder {
 		return endpoints;
 	}
 	
-	@Override
 	public Key getKey() {
 		return key;
 	}

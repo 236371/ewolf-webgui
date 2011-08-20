@@ -19,7 +19,7 @@ import com.google.gson.stream.JsonReader;
 class DHTMessageBuilder {
 
 	private RPC rpc = null;
-	private Set<byte[]> data = new HashSet<byte[]>();
+	private Set<String> data = new HashSet<String>();
 	private Key key = null;
 	private String responseTag;
 	
@@ -50,12 +50,12 @@ class DHTMessageBuilder {
 		return this;
 	}
 	
-	public DHTMessageBuilder addData(byte[] data) {
+	public DHTMessageBuilder addData(String data) {
 		this.data.add(data);
 		return this;
 	}
 	
-	public DHTMessageBuilder addAllData(Collection<byte[]> data) {
+	public DHTMessageBuilder addAllData(Collection<String> data) {
 		this.data.addAll(data);
 		return this;
 	}

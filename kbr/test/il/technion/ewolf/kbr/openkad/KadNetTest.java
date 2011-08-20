@@ -1,5 +1,7 @@
 package il.technion.ewolf.kbr.openkad;
 
+import static ch.lambdaj.Lambda.on;
+import static ch.lambdaj.Lambda.sort;
 import il.technion.ewolf.kbr.DefaultNodeConnectionListener;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.Node;
@@ -11,8 +13,6 @@ import java.net.Socket;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
@@ -60,11 +60,11 @@ public class KadNetTest {
 		kadnets.add(kadnet2);
 		
 		Thread.sleep(1000);
-		
 		kadnet2.join(new URI("otcpkad://127.0.0.1:10001/")).get();
 		List<Node> nodes;
 		
 		nodes = kadnet2.findNodes(kadnet1.getLocalNode().getKey(), 1).get();
+		System.err.println(nodes);
 		Assert.assertTrue(nodes.contains(kadnet1.getLocalNode()));
 		
 		nodes = kadnet1.findNodes(kadnet2.getLocalNode().getKey(), 1).get();
@@ -139,11 +139,15 @@ public class KadNetTest {
 			}
 		}
 		
-		
+		System.out.println("--------");
 		KeybasedRouting kadnet1 = nodes.get(11);
 		
 		final KadKeyComparator comp = new KadKeyComparator(kadnet1.getLocalNode().getKey());
 		List<KeybasedRouting> sortedNodes = new ArrayList<KeybasedRouting>(nodes);
+		
+		sortedNodes = sort(sortedNodes, on(KeybasedRouting.class).getLocalNode().getKey(), comp);
+		
+		/*
 		Collections.sort(sortedNodes, new Comparator<KeybasedRouting>() {
 
 			@Override
@@ -151,7 +155,7 @@ public class KadNetTest {
 				return comp.compare(o1.getLocalNode(), o2.getLocalNode());
 			}
 		});
-		
+		*/
 		/*
 		for (int i=0; i < sortedNodes.size(); ++i) {
 			System.out.println(sortedNodes.get(i));
@@ -216,6 +220,8 @@ public class KadNetTest {
 		
 		final KadKeyComparator comp = new KadKeyComparator(kadnet1.getLocalNode().getKey());
 		List<KeybasedRouting> sortedNodes = new ArrayList<KeybasedRouting>(nodes);
+		sortedNodes = sort(sortedNodes, on(KeybasedRouting.class).getLocalNode().getKey(), comp);
+		/*
 		Collections.sort(sortedNodes, new Comparator<KeybasedRouting>() {
 
 			@Override
@@ -223,7 +229,7 @@ public class KadNetTest {
 				return comp.compare(o1.getLocalNode(), o2.getLocalNode());
 			}
 		});
-		
+		*/
 		/*
 		for (int i=0; i < sortedNodes.size(); ++i) {
 			System.out.println(sortedNodes.get(i));

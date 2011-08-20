@@ -6,8 +6,9 @@ import java.net.DatagramSocket;
 import java.net.Socket;
 import java.util.concurrent.Future;
 
-public interface Node extends KeyHolder {
+public interface Node {
 	
+	public Key getKey();
 	public Future<Socket> openConnection(String tag) throws IOException;
 	public Future<DatagramSocket> openUdpConnection(String tag) throws IOException;
 	public OutputStream sendMessage(String tag) throws IOException;

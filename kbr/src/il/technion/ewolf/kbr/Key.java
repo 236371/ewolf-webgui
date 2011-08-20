@@ -17,7 +17,7 @@ import encoding.Base64;
  * @author eyal
  *
  */
-public class Key implements Serializable, KeyHolder {
+public class Key implements Serializable {
 
 	private static final long serialVersionUID = 1136956138268529759L;
 	
@@ -97,8 +97,4 @@ public class Key implements Serializable, KeyHolder {
 		return hash;
 	}
 
-	@Override
-	public Key getKey() {
-		return this;
-	}
 }

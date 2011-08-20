@@ -1,5 +1,8 @@
 package il.technion.ewolf.dht;
 
+import static ch.lambdaj.Lambda.convert;
+import static ch.lambdaj.Lambda.filter;
+import static org.hamcrest.Matchers.nullValue;
 import il.technion.ewolf.dht.DHTMessage.RPC;
 import il.technion.ewolf.kbr.DefaultNodeConnectionListener;
 import il.technion.ewolf.kbr.Key;
@@ -11,10 +14,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -23,6 +24,8 @@ import java.util.concurrent.Future;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+
+import encoding.Base64;
 
 public class DHT {
 	
@@ -124,7 +127,7 @@ public class DHT {
 		final byte[] storeMessage = new DHTMessageBuilder()
 				.setRpc(RPC.STORE)
 				.setKey(key)
-				.addData(data)
+				.addData(Base64.encodeBytes(data))
 				.build()
 				.toJson()
 				.getBytes();
@@ -158,19 +161,15 @@ public class DHT {
 			@Override
 			public List<byte[]> call() throws Exception {
 				
-				final Set<ByteArray> results = new HashSet<ByteArray>();
+				final Set<String> results = new HashSet<String>();
 				
 				kbr.register(responseTag, new DefaultNodeConnectionListener() {
 					@Override
 					public void onIncomingMessage(String tag, Node from, InputStream in) throws IOException {
 						DHTMessage msg = new DHTMessageBuilder(in).build();
 						
-						Set<ByteArray> tmp = new HashSet<ByteArray>();
-						for (byte[] b : msg.getData())
-							tmp.add(new ByteArray(b));
-								
 						synchronized(results) {
-							results.addAll(tmp);
+							results.addAll(msg.getData());
 							results.notifyAll();
 						}
 					}
@@ -190,10 +189,10 @@ public class DHT {
 					kbr.unregister(responseTag);
 				}
 				
-				List<byte[]> $ = new ArrayList<byte[]>();
-				for (ByteArray b : results)
-					$.add(b.getBytes());
-				return $;
+				if (results.isEmpty())
+					return new ArrayList<byte[]>();
+					
+				return filter(nullValue(), convert(results, new Base64Converter()));
 			}
 		});
 	}

@@ -6,12 +6,12 @@ import il.technion.ewolf.kbr.openkad.KadNetModule;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
 
 import com.google.inject.Guice;
+import static ch.lambdaj.Lambda.*;
 
 public class KeyGenerator {
 
@@ -43,7 +43,7 @@ public class KeyGenerator {
 		}
 		out.close();
 		System.out.println("DONE !");
-		Collections.sort(keys, new KadKeyComparator(keys.get(0)));
+		sort(keys, on(Key.class), new KadKeyComparator(keys.get(0)));
 		System.out.println(keys);
 		
 	}

@@ -2,15 +2,11 @@ package il.technion.ewolf.dht;
 
 import il.technion.ewolf.kbr.Key;
 
-import java.io.IOException;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Set;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
-import encoding.Base64;
 
 class DHTMessage {
 
@@ -22,19 +18,24 @@ class DHTMessage {
 	
 	private final RPC rpc;
 	private final Key key;
-	private final String[] data;
+	private final Set<String> data;
 	private final String responseTag;
 	
 	
-	DHTMessage(RPC rpc, Key key, Set<byte[]> data, String responseTag) {
+	DHTMessage(RPC rpc, Key key, Set<String> data, String responseTag) {
 		this.rpc = rpc;
 		this.key = key;
 		this.responseTag = responseTag;
-		this.data = new String[data.size()];
-		int i=0;
-		for (byte[] d : data) {
-			this.data[i++] = Base64.encodeBytes(d);
-		}
+		
+		this.data = data;
+		/*
+		this.data = convert(dhtItems, new Converter<DHTItem, String>() {
+			@Override
+			public String convert(DHTItem item) {
+				return Base64.encodeBytes(item.getBytes());
+			}
+		});
+		*/
 	}
 	
 	public String toJson() {
@@ -43,13 +44,24 @@ class DHTMessage {
 		return msgString;
 	}
 	
-	public Collection<byte[]> getData() throws IOException {
-		Set<byte[]> $ = new HashSet<byte[]>();
-		for (String d : data) {
-			$.add(Base64.decode(d));
-		}
-		return $;
+	public Collection<String> getData() {
+		return data;
 	}
+	
+	/*
+	public Collection<DHTItem> getData() throws IOException {
+		return convert(data, new Converter<String, DHTItem>() {
+			@Override
+			public DHTItem convert(String d) {
+				try {
+					return new DHTItem(Base64.decode(d));
+				} catch (Exception e) {
+					throw new RuntimeException("error decoding data", e);
+				}
+			}
+		});
+	}
+	*/
 	
 	public String getResponseTag() {
 		return responseTag;
