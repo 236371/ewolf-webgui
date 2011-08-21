@@ -313,7 +313,7 @@ public class KadNetTest {
 		
 		Node node = kadnet1.findNodes(kadnet2.getLocalNode().getKey(), 3).get().get(0);
 		System.out.println("sending to "+node);
-		OutputStream msg = node.sendMessage("tag");
+		OutputStream msg = kadnet1.sendMessage(node, "tag");
 		
 		msg.write(bytes);
 		msg.close();
@@ -379,7 +379,7 @@ public class KadNetTest {
 		
 		Node node = kadnet1.findNodes(kadnet2.getLocalNode().getKey(), 3).get().get(0);
 		System.out.println("sending to "+node);
-		Socket sock = node.openConnection("tag").get();
+		Socket sock = kadnet1.openConnection(node, "tag").get();
 		
 		sock.getOutputStream().write("ABC".getBytes());
 		sock.getOutputStream().flush();
@@ -450,7 +450,7 @@ public class KadNetTest {
 		Node node = kadnet1.findNodes(kadnet2.getLocalNode().getKey(), 3).get().get(0);
 		// node has no incoming connPort 
 		System.out.println("sending to "+node);
-		Socket sock = node.openConnection("tag").get();
+		Socket sock = kadnet1.openConnection(node, "tag").get();
 		
 		sock.getOutputStream().write("ABC".getBytes());
 		sock.getOutputStream().flush();
@@ -525,7 +525,7 @@ public class KadNetTest {
 		Assert.assertTrue(nodes.contains(kadnet2.getLocalNode()));
 		
 		Node node2FromNode1 = nodes.get(0);
-		OutputStream msg = node2FromNode1.sendMessage("tag");
+		OutputStream msg = kadnet1.sendMessage(node2FromNode1, "tag");
 		msg.write("A".getBytes());
 		msg.flush();
 		

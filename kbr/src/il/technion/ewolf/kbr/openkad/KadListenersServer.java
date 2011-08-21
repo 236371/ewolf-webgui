@@ -16,7 +16,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
@@ -49,14 +48,14 @@ class KadListenersServer {
 		private void onIncomingMessage(KadMessage msg) throws IOException {
 			listener.onIncomingMessage(
 					msg.getTag(),
-					msg.getFirstHop().getNode(opExecutor),
+					msg.getFirstHop(),
 					new ByteArrayInputStream(msg.getConent()));
 		}
 		
 		void onIncomingConnection(KadMessage msg, Socket sock) throws IOException {
 			listener.onIncomingConnection(
 					msg.getTag(),
-					msg.getFirstHop().getNode(opExecutor),
+					msg.getFirstHop(),
 					sock);
 		}
 	}
@@ -157,7 +156,7 @@ class KadListenersServer {
 			
 			matchedEntry.listener.onIncomingMessage(
 					msg.getTag(),
-					msg.getFirstHop().getNode(opExecutor),
+					msg.getFirstHop(),
 					new ByteArrayInputStream(msg.getConent()),
 					out);
 			

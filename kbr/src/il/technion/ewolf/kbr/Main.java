@@ -55,7 +55,7 @@ public class Main {
 
 		// send message to all nodes
 		for (Node n : nodes) {
-			OutputStream out = n.sendMessage("some tag");
+			OutputStream out = kbr1.sendMessage(n, "some tag");
 			out.write(("hello node " + n.getKey() + " !!").getBytes());
 			out.close();
 		}

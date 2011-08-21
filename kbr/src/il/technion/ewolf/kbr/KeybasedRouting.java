@@ -1,6 +1,8 @@
 package il.technion.ewolf.kbr;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
 import java.net.URI;
 import java.util.List;
 import java.util.Set;
@@ -21,4 +23,7 @@ public interface KeybasedRouting {
 	public void unregister(String pattern);
 	
 	public void shutdown();
+	
+	public Future<Socket> openConnection(Node to, String tag) throws IOException;
+	public OutputStream sendMessage(Node to, String tag) throws IOException;
 }

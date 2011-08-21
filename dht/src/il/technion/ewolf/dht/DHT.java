@@ -1,8 +1,6 @@
 package il.technion.ewolf.dht;
 
 import static ch.lambdaj.Lambda.convert;
-import static ch.lambdaj.Lambda.filter;
-import static org.hamcrest.Matchers.nullValue;
 import il.technion.ewolf.dht.DHTMessage.RPC;
 import il.technion.ewolf.kbr.DefaultNodeConnectionListener;
 import il.technion.ewolf.kbr.Key;
@@ -70,7 +68,7 @@ public class DHT {
 		for (int i=0; i < nodes.size() && sent < replication; ++i) {
 			OutputStream out = null;
 			try {
-				out = nodes.get(i).sendMessage(tag);
+				out = kbr.sendMessage(nodes.get(i), tag);
 				out.write(serializedMessage);
 			} catch (Exception e) {
 				out = null;
@@ -191,8 +189,8 @@ public class DHT {
 				
 				if (results.isEmpty())
 					return new ArrayList<byte[]>();
-					
-				return filter(nullValue(), convert(results, new Base64Converter()));
+				
+				return convert(results, new Base64Converter());
 			}
 		});
 	}

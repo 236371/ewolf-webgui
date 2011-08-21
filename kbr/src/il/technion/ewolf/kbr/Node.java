@@ -1,17 +1,21 @@
 package il.technion.ewolf.kbr;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.DatagramSocket;
-import java.net.Socket;
-import java.util.concurrent.Future;
+import java.io.Serializable;
 
-public interface Node {
+
+public abstract class Node implements Serializable {
 	
-	public Key getKey();
-	public Future<Socket> openConnection(String tag) throws IOException;
-	public Future<DatagramSocket> openUdpConnection(String tag) throws IOException;
-	public OutputStream sendMessage(String tag) throws IOException;
-	public byte[] sendMessage(String tag, byte[] message) throws IOException;
+	private static final long serialVersionUID = 4141864004771700615L;
+	
+	private final Key key;
+	
+	protected Node(Key key) {
+		this.key = key;
+	}
+	
+	public Key getKey() {
+		return key;
+	}
+	
 	
 }

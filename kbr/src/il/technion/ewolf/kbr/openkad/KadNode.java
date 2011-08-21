@@ -3,27 +3,19 @@ package il.technion.ewolf.kbr.openkad;
 import il.technion.ewolf.kbr.Key;
 import il.technion.ewolf.kbr.Node;
 import il.technion.ewolf.kbr.openkad.net.KadConnection;
-import il.technion.ewolf.kbr.openkad.ops.KadOperationsExecutor;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Serializable;
-import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Future;
 
 
-public class KadNode implements Serializable {
+public class KadNode extends Node {
 	
 	private static final long serialVersionUID = -1726068490394037080L;
 	
 	private final InetAddress addr;
 	private final List<KadEndpoint> endpoints;
-	private final Key key;
 	
 	private final List<KadNode> proxies;
 	
@@ -33,7 +25,7 @@ public class KadNode implements Serializable {
 	
 	
 	public KadNode(Key key, InetAddress addr, List<KadEndpoint> endpoints, List<KadNode> proxies) {
-		this.key = key;
+		super(key);
 		this.addr = addr;
 		this.endpoints = Collections.unmodifiableList(endpoints);
 		this.proxies = Collections.synchronizedList(proxies);
@@ -66,10 +58,6 @@ public class KadNode implements Serializable {
 	
 	List<KadEndpoint> getEndpoints() {
 		return endpoints;
-	}
-	
-	public Key getKey() {
-		return key;
 	}
 	
 	List<KadConnection> getDirectKadConnections() {
@@ -109,6 +97,9 @@ public class KadNode implements Serializable {
 		return getKey().toString();
 	}
 	
+	
+	
+	/*
 	Node getNode(final KadOperationsExecutor opExecutor) {
 		return new Node() {
 
@@ -159,5 +150,6 @@ public class KadNode implements Serializable {
 			}
 			
 		};
-	}
+		
+	}*/
 }

@@ -122,7 +122,7 @@ public class TestClient implements HttpRequestHandler {
 		List<Node> nodes = kbr.findNodes(kbr.getKeyFactory().getFromKey(keyString), n).get();
 		for (Node node : nodes) {
 			try {
-				OutputStream out = node.sendMessage("tag");
+				OutputStream out = kbr.sendMessage(node, "tag");
 				out.write(msg.getBytes());
 				out.close();
 				$.put(node.getKey().toBase64(), "sent successfully");

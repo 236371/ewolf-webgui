@@ -2,10 +2,14 @@ package il.technion.ewolf.dht;
 
 import il.technion.ewolf.kbr.KeybasedRouting;
 
+import java.io.File;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import org.hibernate.SessionFactory;
+import org.hibernate.cfg.Configuration;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -29,6 +33,11 @@ public class DHTModule extends AbstractModule {
 		defaultProps.setProperty("dht.replication.saftymargin", "3");
 		defaultProps.setProperty("dht.executor.nrthreads", "1");
 		
+		defaultProps.setProperty("dht.storage.maxlifetime", ""+(1000*60*60)); //one hour
+		defaultProps.setProperty("dht.storage.maxentrysize", ""+(1024*64)); // 64k
+		defaultProps.setProperty("dht.storage.maxentries", ""+(1024*1024*64)); //64MB
+		defaultProps.setProperty("dht.storage.hibernate.cfg", "conf/hibernate.cfg.xml");
+		
 		return defaultProps;
 	}
 	
@@ -45,8 +54,14 @@ public class DHTModule extends AbstractModule {
 	@Override
 	protected void configure() {
 		Names.bindProperties(binder(), properties);
+		bind(DHTStorage.class);
 		bind(KeybasedRouting.class).toInstance(kbr);
 		bind(DHT.class);
+	}
+	
+	@Provides
+	SessionFactory provideSessionFactory(@Named("dht.storage.hibernate.cfg") String hibernateConf) {
+		return new Configuration().configure(new File(hibernateConf)).buildSessionFactory();	
 	}
 	
 	@Provides

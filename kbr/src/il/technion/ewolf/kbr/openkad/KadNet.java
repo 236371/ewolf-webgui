@@ -12,8 +12,11 @@ import il.technion.ewolf.kbr.openkad.ops.KadOperation;
 import il.technion.ewolf.kbr.openkad.ops.KadOperationsExecutor;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -25,7 +28,6 @@ import java.util.logging.Logger;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import static ch.lambdaj.Lambda.*;
 
 public class KadNet implements KeybasedRouting, KadConnectionListener {
 
@@ -73,6 +75,10 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 
 	}
 
+	KadOperationsExecutor getOpExecutor() {
+		return opExecutor;
+	}
+	
 	@Override
 	public void shutdown() {
 		kadRefresher.shutdown();
@@ -105,8 +111,11 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 
 			@Override
 			public List<Node> call() throws Exception {
-				return extract(op.call(), on(KadNode.class).getNode(opExecutor));
+				List<Node> $ = new ArrayList<Node>();
+				$.addAll(op.call());
+				return $;
 				/*
+				return extract(op.call(), on(KadNode.class).getNode(opExecutor));
 				List<Node> $ = new ArrayList<Node>();
 				for (KadNode n : op.call()) {
 					$.add(n.getNode(opExecutor));
@@ -120,9 +129,7 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 	@Override
 	public Set<Node> getNeighbors() {
 		Set<Node> $ = new HashSet<Node>();
-		for (KadNode n : kbuckets.getAllNodes()) {
-			$.add(n.getNode(opExecutor));
-		}
+		$.addAll(kbuckets.getAllNodes());
 		return $;
 	}
 
@@ -233,8 +240,36 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 	}
 
 	@Override
-	public Node getLocalNode() {
-		return localNode.getNode(opExecutor);
+	public KadNode getLocalNode() {
+		return localNode;
+	}
+
+	
+	@Override
+	public Future<Socket> openConnection(Node to, String tag)
+			throws IOException {
+			if (!(to instanceof KadNode))
+				throw new IllegalArgumentException("invalid node");
+			
+			KadNode n = (KadNode)to;
+			
+			if (!keyFactory.isValid(n.getKey()))
+				throw new IllegalArgumentException("invalid key");
+			
+			return opExecutor.submitOpenConnectionOperation(n, tag);
+	}
+
+	@Override
+	public OutputStream sendMessage(Node to, String tag) throws IOException {
+		if (!(to instanceof KadNode))
+			throw new IllegalArgumentException("invalid node");
+		
+		KadNode n = (KadNode)to;
+		
+		if (!keyFactory.isValid(n.getKey()))
+			throw new IllegalArgumentException("invalid key");
+		
+		return new MessageOutputStream(getLocalNode(), n, tag);
 	}
 
 }
