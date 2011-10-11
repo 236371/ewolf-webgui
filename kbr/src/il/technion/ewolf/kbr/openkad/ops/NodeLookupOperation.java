@@ -105,8 +105,6 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 		//boolean $ = extract(connections, on(List.class).isEmpty()).contains(true);
 		//return $;
 		
-		
-		
 		for (List<KadConnection> connList : connections) {
 			if (!connList.isEmpty())
 				return true;
@@ -153,7 +151,7 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 				// keep only the k closest nodes
 				List<KadNode> sortedNodes = sort(knownClosestNodes, on(KadNode.class).getKey(), nodeComparator);
 				int maxSize = Math.max(concurrency, maxNodeCount);
-				if (sortedNodes.size() >= maxSize)
+				if (sortedNodes.size() > maxSize)
 					sortedNodes.subList(maxSize, sortedNodes.size()).clear();
 				
 				knownClosestNodes.clear();
@@ -180,7 +178,7 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 				kbuckets.getKClosestNodes(
 						key,
 						extract(queriedNodes, on(KadNode.class).getKey()),
-						Math.max(concurrency, maxNodeCount)));
+						maxNodeCount));
 		
 		knownClosestNodes.add(localNode);
 		
@@ -208,11 +206,9 @@ class NodeLookupOperation extends KadOperation<List<KadNode>>  {
 		//System.err.println("final queriedNodes: "+queriedNodes);
 		
 		// remove x-tra nodes
-		if (knownClosestNodes.size() >= maxNodeCount)
+		if (knownClosestNodes.size() > maxNodeCount)
 			knownClosestNodes.subList(maxNodeCount, knownClosestNodes.size()).clear();
 		
-		//for (int i=knownClosestNodes.size()-1; i >= maxNodeCount; --i)
-		//	knownClosestNodes.remove(i);
 			
 		return knownClosestNodes;
 	}

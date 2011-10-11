@@ -17,6 +17,7 @@ import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 
+
 public class DHTModule extends AbstractModule {
 
 	private final Properties properties;
@@ -61,7 +62,10 @@ public class DHTModule extends AbstractModule {
 	
 	@Provides
 	SessionFactory provideSessionFactory(@Named("dht.storage.hibernate.cfg") String hibernateConf) {
-		return new Configuration().configure(new File(hibernateConf)).buildSessionFactory();	
+		System.err.println(new File(hibernateConf).getAbsolutePath());
+		return new Configuration()
+			.configure(new File(hibernateConf))
+			.buildSessionFactory();	
 	}
 	
 	@Provides

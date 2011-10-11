@@ -461,6 +461,46 @@ public class KadNetTest {
 	}
 	
 	
+	@Test(timeout=30000)
+	public void testCache2NodesTcp() throws Exception {
+		
+		Properties props = new Properties();
+		props.setProperty("kadnet.otcpkad.port", "10001");
+		props.setProperty("kadnet.bucketsize", "3");
+		props.setProperty("kadnet.keyfactory.keysize", "2");
+		KeybasedRouting kadnet1 = Guice
+			.createInjector(new KadNetModule(props))
+			.getInstance(KeybasedRouting.class);
+		
+		props.setProperty("kadnet.otcpkad.port", "10002");
+		props.setProperty("kadnet.bucketsize", "3");
+		props.setProperty("kadnet.keyfactory.keysize", "2");
+		KeybasedRouting kadnet2 = Guice
+			.createInjector(new KadNetModule(props))
+			.getInstance(KeybasedRouting.class);
+		
+		kadnet1.create();
+		kadnet2.create();
+		kadnets.add(kadnet1);
+		kadnets.add(kadnet2);
+		
+		Thread.sleep(1000);
+		kadnet2.join(new URI("otcpkad://127.0.0.1:10001/")).get();
+		List<Node> nodes;
+		
+		nodes = kadnet2.findNodes(kadnet1.getLocalNode().getKey(), 1).get();
+		System.err.println(nodes);
+		Assert.assertTrue(nodes.contains(kadnet1.getLocalNode()));
+		System.out.println("------------");
+		// this will take 4ever if we dont use cache
+		for (int i=0; i < 1000000; ++i) {
+			kadnet1.findNodes(kadnet1.getLocalNode().getKey(), 1).get();
+			kadnet1.findNodes(kadnet2.getLocalNode().getKey(), 1).get();
+		}
+		nodes = kadnet1.findNodes(kadnet2.getLocalNode().getKey(), 1).get();
+		Assert.assertTrue(nodes.contains(kadnet2.getLocalNode()));
+	}
+	
 	
 	@Test
 	@Ignore

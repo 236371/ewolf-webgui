@@ -8,7 +8,6 @@ import il.technion.ewolf.kbr.NodeConnectionListener;
 import il.technion.ewolf.kbr.openkad.KadMessage.RPC;
 import il.technion.ewolf.kbr.openkad.net.KadConnection;
 import il.technion.ewolf.kbr.openkad.net.KadServer;
-import il.technion.ewolf.kbr.openkad.ops.KadOperation;
 import il.technion.ewolf.kbr.openkad.ops.KadOperationsExecutor;
 
 import java.io.IOException;
@@ -21,8 +20,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,7 +43,8 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 	// private final OpenedKadConnections openedKadConnections;
 	private final KadRefresher kadRefresher;
 	private final Logger logger;
-
+	private final KadFindNodeCache findNodeCache;
+	
 	@Inject
 	KadNet(
 			Logger logger,
@@ -53,7 +56,8 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 			KadOperationsExecutor opExecutor,
 			// KadProxyServer kadProxyServer,
 			// OpenedKadConnections openedKadConnections,
-			KadListenersServer listenersServer, KadRefresher kadRefresher)
+			KadListenersServer listenersServer, KadRefresher kadRefresher,
+			KadFindNodeCache findNodeCache)
 			throws IOException {
 		this.logger = logger;
 		this.logger.setLevel(lvl);
@@ -73,6 +77,7 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 		this.listenersServer = listenersServer;
 		this.kadRefresher = kadRefresher;
 
+		this.findNodeCache = findNodeCache;
 	}
 
 	KadOperationsExecutor getOpExecutor() {
@@ -104,26 +109,60 @@ public class KadNet implements KeybasedRouting, KadConnectionListener {
 	}
 
 	@Override
-	public Future<List<Node>> findNodes(Key key, int n) {
-		final KadOperation<List<KadNode>> op = opExecutor
-				.createNodeLookupOperation(key, n);
-		return opExecutor.submit(new Callable<List<Node>>() {
+	public Future<List<Node>> findNodes(Key key, final int n) {
+		Future<List<KadNode>> nodes = null;
+		synchronized (this) {
+			nodes = findNodeCache.search(key, n);
+			if (nodes == null) {
+				int k = Math.max(n, kbuckets.getBucketSize());
+				nodes = opExecutor.submitNodeLookupOperation(key, k);
+				findNodeCache.put(key, nodes, n);
+			}
+		}
+		assert (nodes != null);
+		final Future<List<KadNode>> nodesFuture = nodes;
+		return new Future<List<Node>>() {
+
+			List<Node> result = null;
+			
+			@Override
+			public boolean cancel(boolean mayInterruptIfRunning) {
+				return nodesFuture.cancel(mayInterruptIfRunning);
+			}
 
 			@Override
-			public List<Node> call() throws Exception {
-				List<Node> $ = new ArrayList<Node>();
-				$.addAll(op.call());
-				return $;
-				/*
-				return extract(op.call(), on(KadNode.class).getNode(opExecutor));
-				List<Node> $ = new ArrayList<Node>();
-				for (KadNode n : op.call()) {
-					$.add(n.getNode(opExecutor));
-				}
-				return $;
-				*/
+			public List<Node> get() throws InterruptedException, ExecutionException {
+				transform(nodesFuture.get());
+				return result;
 			}
-		});
+
+			@Override
+			public List<Node> get(long timeout, TimeUnit unit)
+					throws InterruptedException, ExecutionException,
+					TimeoutException {				
+				transform(nodesFuture.get(timeout, unit));
+				return result;
+			}
+
+			@Override
+			public boolean isCancelled() {
+				return nodesFuture.isCancelled();
+			}
+
+			@Override
+			public synchronized boolean isDone() {
+				return result != null;
+			}
+			
+			private synchronized void transform(List<KadNode> nodes) {
+				if (isDone())
+					return;
+				result = new ArrayList<Node>(nodes);
+				if (result.size() > n)
+					result.subList(n, result.size()).clear();
+			}
+			
+		};
 	}
 
 	@Override

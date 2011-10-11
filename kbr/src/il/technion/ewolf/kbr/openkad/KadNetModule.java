@@ -30,13 +30,16 @@ public class KadNetModule extends AbstractModule {
 	private Properties getDefaultProperties() {
 		Properties defaultProps = new Properties();
 		
-		defaultProps.setProperty("kadnet.seed", "0");
-		defaultProps.setProperty("kadnet.bucketsize", "20");
-		defaultProps.setProperty("kadnet.srv.buffsize", "65536");
-		defaultProps.setProperty("kadnet.srv.conn.port", "0");  // serverport used for establishing a socket connection
-		defaultProps.setProperty("kadnet.keyfactory.seed", "0");
+		// parameters for testing only ! DONT TOUCH !!!
 		defaultProps.setProperty("kadnet.keyfactory.keysize", "20");
 		defaultProps.setProperty("kadnet.keyfactory.hashalgo", "SHA-256");
+		defaultProps.setProperty("kadnet.bucketsize", "20");
+		defaultProps.setProperty("kadnet.srv.buffsize", "65536");
+		
+		
+		defaultProps.setProperty("kadnet.seed", "0");
+		defaultProps.setProperty("kadnet.srv.conn.port", "0");  // serverport used for establishing a socket connection
+		defaultProps.setProperty("kadnet.keyfactory.seed", "0");
 		defaultProps.setProperty("kadnet.executors.incoming.nrthreads", "2");
 		defaultProps.setProperty("kadnet.executors.outgoing.nrthreads", "2");
 		defaultProps.setProperty("kadnet.executors.listeners.nrthreads", "2");
@@ -46,6 +49,8 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("kadnet.localkey", "");
 		defaultProps.setProperty("kadnet.refreshinterval", "60000");
 		//defaultProps.setProperty("kadnet.proxy.checkinterval", "60000");
+		defaultProps.setProperty("kadnet.cache.maxentries", "64");
+		defaultProps.setProperty("kadnet.cache.maxtime", "10000");
 		
 		return defaultProps;
 	}
@@ -70,6 +75,7 @@ public class KadNetModule extends AbstractModule {
 		//bind(OpenedKadConnections.class).in(Singleton.class);
 		bind(KadRefresher.class).in(Singleton.class);
 		bind(KadListenersServer.class).in(Singleton.class);
+		bind(KadFindNodeCache.class).in(Singleton.class);
 		bind(KeybasedRouting.class).to(KadNet.class).in(Singleton.class);
 		
 	}

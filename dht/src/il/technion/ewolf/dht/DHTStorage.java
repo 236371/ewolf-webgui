@@ -32,7 +32,7 @@ class DHTStorage {
 			@Named("dht.storage.maxentries") int maxEntries,
 			SessionFactory sessionFactory) {
 		
-		this.sessionFactory = new Configuration().configure(new File("hibernate.cfg.xml")).buildSessionFactory();
+		this.sessionFactory = sessionFactory;
 		this.maxLifetime = maxLifetime;
 		this.maxEntrySize = maxEntrySize;
 		this.maxEntries = maxEntries;
