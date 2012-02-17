@@ -20,6 +20,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+/**
+ * Handle all the messages different states.
+ * A request state: 
+ * init -> sent -> response received -> callback invoked
+ * 
+ * A message state:
+ * init -> expecting -> message received -> callback invoked -> back to expecting or end
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ * @param <A>
+ */
 public class MessageDispatcher<A> {
 
 	// state
@@ -53,7 +65,6 @@ public class MessageDispatcher<A> {
 		this.communicator = communicator;
 		this.isDone = new AtomicBoolean(false);
 	}
-	
 	
 	
 	

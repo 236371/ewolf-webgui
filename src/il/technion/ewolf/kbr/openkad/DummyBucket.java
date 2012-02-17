@@ -4,7 +4,12 @@ import il.technion.ewolf.kbr.Node;
 
 import java.util.Collection;
 
-public class DummyBucket implements Bucket {
+/**
+ * A default stupid implementation of Bucket that does nothing
+ * 
+ * @author eyal.kibbar@gmail.com
+ */
+class DummyBucket implements Bucket {
 
 	@Override
 	public void insert(KadNode n) {

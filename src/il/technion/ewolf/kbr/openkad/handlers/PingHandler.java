@@ -16,6 +16,11 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
+/**
+ * Handles ping requests by sending back a ping response
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class PingHandler extends AbstractHandler {
 
 	private final KadServer kadServer;

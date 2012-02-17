@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
+import java.io.Serializable;
 import java.io.Writer;
 import java.lang.reflect.Type;
 import java.util.zip.GZIPInputStream;
@@ -28,7 +29,12 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.Inject;
 
-public class JsonKadSerializer implements KadSerializer {
+/**
+ * Serialize a message into a gun-ziped json message
+ * @author eyal.kibbar@gmail.com
+ *
+ */
+public class JsonKadSerializer extends KadSerializer implements JsonSerializer<Serializable>, JsonDeserializer<Serializable> {
 
 	private final Gson gson;
 	
@@ -37,21 +43,7 @@ public class JsonKadSerializer implements KadSerializer {
 	@Inject
 	JsonKadSerializer() {
 		this.gson = new GsonBuilder()
-			.registerTypeAdapter(byte[].class, new JsonSerializer<byte[]>() {
-				@Override
-				public JsonElement serialize(byte[] src, Type typeOfSrc, JsonSerializationContext context) {
-					return new JsonPrimitive(Base64.encodeBase64String(src));
-				}
-				
-			})
-			.registerTypeAdapter(byte[].class, new JsonDeserializer<byte[]>() {
-
-				@Override
-				public byte[] deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-					return Base64.decodeBase64(json.getAsJsonPrimitive().getAsString());
-				}
-				
-			})
+			.registerTypeHierarchyAdapter(Serializable.class, this)
 			.create();
 	}
 	
@@ -97,6 +89,7 @@ public class JsonKadSerializer implements KadSerializer {
 			writer.beginArray();
 			Class<?> clazz = msg.getClass();
 			gson.toJson(clazz.getSimpleName(), String.class, writer);
+			//System.out.println("writing class: "+clazz);
 			gson.toJson(msg, clazz, writer);
 			writer.endArray();
 			
@@ -104,9 +97,24 @@ public class JsonKadSerializer implements KadSerializer {
 			writer.close();
 			utf8Writer.close();
 			dout.close();
-			
-			
 		}
+	}
+
+	@Override
+	public Serializable deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+		byte[] src = Base64.decodeBase64(json.getAsJsonPrimitive().getAsString());
+		try {
+			return JsonKadSerializer.this.deserialize(src);
+		} catch (Exception e) {
+			throw new JsonParseException(e);
+		}
+	}
+
+	public JsonElement serialize(Serializable src, Type typeOfSrc, JsonSerializationContext context) {
+		byte[] serialized = JsonKadSerializer.this.serialize(src);
+		String s = Base64.encodeBase64String(serialized);
+		//System.out.println("sending: "+s);
+		return new JsonPrimitive(s);
 	}
 
 }

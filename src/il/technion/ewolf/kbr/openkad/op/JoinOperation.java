@@ -17,14 +17,20 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.concurrent.Callable;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
-public class JoinOperation implements Callable<Void> {
+/**
+ * Join operation as defined in the kademlia algorithm
+ * @author eyal.kibbar@gmail.com
+ *
+ */
+public class JoinOperation  {
 
 	//dependencies
 	private final Provider<FindNodeOperation> findNodeOperationProvider;
@@ -35,7 +41,9 @@ public class JoinOperation implements Callable<Void> {
 	private final KBuckets kBuckets;
 	private final Node localNode;
 	private final Provider<KadNode> kadNodeProvider;
-	
+	private final Timer timer;
+	private final long refreshInterval;
+	private final TimerTask refreshTask;
 	// state
 	private Collection<Node> bootstrap = new HashSet<Node>();
 	
@@ -48,7 +56,10 @@ public class JoinOperation implements Callable<Void> {
 			KBuckets kBuckets,
 			@Named("openkad.keys.zerokey") Key zeroKey,
 			@Named("openkad.scheme.name") String kadScheme,
-			@Named("openkad.local.node") Node localNode) {
+			@Named("openkad.local.node") Node localNode,
+			@Named("openkad.timer") Timer timer,
+			@Named("openkad.refresh.interval") long refreshInterval,
+			@Named("openkad.refresh.task") TimerTask refreshTask) {
 		
 		this.kadNodeProvider = kadNodeProvider;
 		this.findNodeOperationProvider = findNodeOperationProvider;
@@ -58,8 +69,16 @@ public class JoinOperation implements Callable<Void> {
 		this.zeroKey = zeroKey;
 		this.kadScheme = kadScheme;
 		this.localNode = localNode;
+		this.timer = timer;
+		this.refreshInterval = refreshInterval;
+		this.refreshTask = refreshTask;
 	}
-	
+	/**
+	 * Sets the bootstrap nodes for stating the join operation
+	 * @param bootstrapUri all the bootstraps URI in the following format:
+	 * openkad.udp://[node ip]:[port]/
+	 * @return this for fluent interface
+	 */
 	public JoinOperation addBootstrap(Collection<URI> bootstrapUri) {
 		
 		for (URI uri : bootstrapUri) {
@@ -77,8 +96,10 @@ public class JoinOperation implements Callable<Void> {
 		return this;
 	}
 	
-	@Override
-	public Void call() throws Exception {
+	/**
+	 * Join a network !
+	 */
+	public void doJoin() {
 
 		final CountDownLatch latch = new CountDownLatch(bootstrap.size());
 		CompletionHandler<KadMessage, Void> callback = new CompletionHandler<KadMessage, Void>() {
@@ -112,32 +133,27 @@ public class JoinOperation implements Callable<Void> {
 		
 		// waiting for responses
 		
-		latch.await();
+		try {
+			latch.await();
+		} catch (InterruptedException e1) {
+			throw new RuntimeException(e1);
+		}
 		
-		
-		
-		if (kBuckets.getClosestNodesFromKBuckets(zeroKey, 1).isEmpty())
+		if (kBuckets.getClosestNodesByKey(zeroKey, 1).isEmpty())
 			throw new IllegalStateException("all bootstrap nodes are down");
-		
-		
 		
 		findNodeOperationProvider.get()
 			.setKey(localNode.getKey())
-			.call();
-		
-		
+			.doFindNode();
 		
 		for (Key key : kBuckets.randomKeysForAllBuckets()) {
 			findNodeOperationProvider.get()
 				.setKey(key)
-				.call();
+				.doFindNode();
 		}
 		
-		
-		
-		//System.out.println(localNode+": \n"+kBuckets);
-		
-		return null;
+		timer.scheduleAtFixedRate(refreshTask, refreshInterval, refreshInterval);
 	}
+	
 
 }

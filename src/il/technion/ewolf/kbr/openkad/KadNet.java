@@ -8,6 +8,7 @@ import il.technion.ewolf.kbr.Node;
 import il.technion.ewolf.kbr.concurrent.CompletionHandler;
 import il.technion.ewolf.kbr.concurrent.FutureTransformer;
 import il.technion.ewolf.kbr.openkad.handlers.FindNodeHandler;
+import il.technion.ewolf.kbr.openkad.handlers.ForwardHandler;
 import il.technion.ewolf.kbr.openkad.handlers.PingHandler;
 import il.technion.ewolf.kbr.openkad.handlers.StoreHandler;
 import il.technion.ewolf.kbr.openkad.msg.ContentMessage;
@@ -23,18 +24,25 @@ import il.technion.ewolf.kbr.openkad.op.FindValueOperation;
 import il.technion.ewolf.kbr.openkad.op.JoinOperation;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TimerTask;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import com.google.inject.Guice;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
-public class KadNet implements KeybasedRouting {
+class KadNet implements KeybasedRouting {
 
 	// dependencies
 	private final Provider<MessageDispatcher<Object>> msgDispatcherProvider;
@@ -46,6 +54,7 @@ public class KadNet implements KeybasedRouting {
 	private final Provider<FindNodeHandler> findNodeHandlerProvider;
 	private final Provider<PingHandler> pingHandler;
 	private final Provider<StoreHandler> storeHandlerProvider;
+	private final Provider<ForwardHandler> forwardHandlerProvider;
 	
 	private final Node localNode;
 	private final KadServer kadServer;
@@ -53,11 +62,14 @@ public class KadNet implements KeybasedRouting {
 	private final KeyFactory keyFactory;
 	private final ExecutorService clientExecutor;
 	private final int bucketSize;
+	private final TimerTask refreshTask;
 	
-	//testing
+	// testing
 	private final List<Integer> findNodeHopsHistogram;
 	
-	
+	// state
+	private final Map<String, MessageDispatcher<?>> dispatcherFromTag = new HashMap<String, MessageDispatcher<?>>();
+	private Thread kadServerThread = null;
 	@Inject
 	KadNet(
 			Provider<MessageDispatcher<Object>> msgDispatcherProvider,
@@ -65,10 +77,11 @@ public class KadNet implements KeybasedRouting {
 			Provider<ContentRequest> contentRequestProvider,
 			Provider<ContentMessage> contentMessageProvider,
 			Provider<IncomingContentHandler<Object>> incomingContentHandlerProvider,
-			Provider<FindValueOperation> findValueOperationProvider,
+			@Named("openkad.op.findvalue") Provider<FindValueOperation> findValueOperationProvider,
 			Provider<FindNodeHandler> findNodeHandlerProvider,
 			Provider<PingHandler> pingHandler,
 			Provider<StoreHandler> storeHandlerProvider,
+			Provider<ForwardHandler> forwardHandlerProvider,
 			
 			@Named("openkad.local.node") Node localNode,
 			KadServer kadServer,
@@ -76,6 +89,7 @@ public class KadNet implements KeybasedRouting {
 			KeyFactory keyFactory,
 			@Named("openkad.executors.client") ExecutorService clientExecutor,
 			@Named("openkad.bucket.kbuckets.maxsize") int bucketSize,
+			@Named("openkad.refresh.task") TimerTask refreshTask,
 			
 			//testing
 			@Named("openkad.testing.findNodeHopsHistogram") List<Integer> findNodeHopsHistogram) {
@@ -90,6 +104,7 @@ public class KadNet implements KeybasedRouting {
 		this.findNodeHandlerProvider = findNodeHandlerProvider;
 		this.pingHandler = pingHandler;
 		this.storeHandlerProvider = storeHandlerProvider;
+		this.forwardHandlerProvider = forwardHandlerProvider;
 		
 		this.localNode = localNode;
 		this.kadServer = kadServer;
@@ -97,7 +112,7 @@ public class KadNet implements KeybasedRouting {
 		this.keyFactory = keyFactory;
 		this.clientExecutor = clientExecutor;
 		this.bucketSize = bucketSize;
-		
+		this.refreshTask = refreshTask;
 		//testing
 		this.findNodeHopsHistogram = findNodeHopsHistogram;
 	}
@@ -110,40 +125,35 @@ public class KadNet implements KeybasedRouting {
 		pingHandler.get().register();
 		findNodeHandlerProvider.get().register();
 		storeHandlerProvider.get().register();
+		forwardHandlerProvider.get().register();
 		
 		kBuckets.registerIncomingMessageHandler();
-		new Thread(kadServer).start();
+		kadServerThread = new Thread(kadServer);
+		kadServerThread.start();
 	}
 
 	@Override
-	public void join(Collection<URI> bootstraps) throws Exception {
+	public void join(Collection<URI> bootstraps) {
 		joinOperationProvider.get()
 			.addBootstrap(bootstraps)
-			.call();
+			.doJoin();
 	}
 
+	
 	@Override
-	public List<Node> findNode(Key k, int n) throws Exception {
-		
+	public List<Node> findNode(Key k) {
 		FindValueOperation op = findValueOperationProvider.get()
-			.setMaxNodes(n)
-			.setKey(k);
-		
-		
-		List<Node> result = op.call();
+				.setKey(k);
+			
+		List<Node> result = op.doFindValue();
 		findNodeHopsHistogram.add(op.getNrQueried());
 		
 		List<Node> $ = new ArrayList<Node>(result);
 		
-		if ($.size() > n)
-			$.subList(n, $.size()).clear();
+		if ($.size() > bucketSize)
+			$.subList(bucketSize, $.size()).clear();
 		
 		return result;
-	}
-	
-	@Override
-	public List<Node> findNode(Key k) throws Exception {
-		return findNode(k, bucketSize);
 	}
 
 	@Override
@@ -167,25 +177,32 @@ public class KadNet implements KeybasedRouting {
 	}
 
 	@Override
-	public void register(String tag, MessageHandler handler) {
-		msgDispatcherProvider.get()
+	public synchronized void register(String tag, MessageHandler handler) {
+		MessageDispatcher<?> dispatcher = dispatcherFromTag.get(tag);
+		if (dispatcher != null)
+			dispatcher.cancel(new CancellationException());
+		
+		dispatcher = msgDispatcherProvider.get()
 			.addFilter(new TagMessageFilter(tag))
 			.setConsumable(false)
 			.setCallback(null, incomingContentHandlerProvider.get()
 				.setHandler(handler)
 				.setTag(tag))
 			.register();
+		
+		dispatcherFromTag.put(tag, dispatcher);	
 	}
 
 	@Override
-	public void sendMessage(Node to, String tag, byte[] msg) throws IOException {
+	public void sendMessage(Node to, String tag, Serializable msg) throws IOException {
 		kadServer.send(to, contentMessageProvider.get()
 			.setTag(tag)
 			.setContent(msg));
 	}
-
+	
 	@Override
-	public Future<byte[]> sendRequest(Node to, String tag, byte[] msg) throws Exception {
+	public Future<Serializable> sendRequest(Node to, String tag, Serializable msg) {
+		
 		ContentRequest contentRequest = contentRequestProvider.get()
 			.setTag(tag)
 			.setContent(msg);
@@ -196,16 +213,16 @@ public class KadNet implements KeybasedRouting {
 			.addFilter(new IdMessageFilter(contentRequest.getId()))
 			.futureSend(to, contentRequest);
 		
-		return new FutureTransformer<KadMessage, byte[]>(futureSend) {
+		return new FutureTransformer<KadMessage, Serializable>(futureSend) {
 			@Override
-			protected byte[] transform(KadMessage msg) throws Throwable {
+			protected Serializable transform(KadMessage msg) throws Throwable {
 				return ((ContentResponse)msg).getContent();
 			}
 		};
 	}
 	
 	@Override
-	public <A> void sendRequest(Node to, String tag, byte[] msg, final A attachment, final CompletionHandler<byte[], A> handler) {
+	public <A> void sendRequest(Node to, String tag, Serializable msg, final A attachment, final CompletionHandler<Serializable, A> handler) {
 		ContentRequest contentRequest = contentRequestProvider.get()
 			.setTag(tag)
 			.setContent(msg);
@@ -234,4 +251,18 @@ public class KadNet implements KeybasedRouting {
 			.send(to, contentRequest);
 	}
 
+	
+	
+	public static void main(String[] args) throws Exception {
+		Injector injector = Guice.createInjector(new KadNetModule()
+			.setProperty("openkad.net.udp.port", "5555"));
+		KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
+		kbr.create();
+	}
+	
+	@Override
+	public void shutdown() {
+		refreshTask.cancel();
+		kadServer.shutdown(kadServerThread);
+	}
 }

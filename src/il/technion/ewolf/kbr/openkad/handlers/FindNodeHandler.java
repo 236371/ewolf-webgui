@@ -11,6 +11,7 @@ import il.technion.ewolf.kbr.openkad.net.MessageDispatcher;
 import il.technion.ewolf.kbr.openkad.net.filter.MessageFilter;
 import il.technion.ewolf.kbr.openkad.net.filter.TypeMessageFilter;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -20,14 +21,20 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
+/**
+ * Handle find node requests by giving the known closest nodes to the requested key
+ * from the KBuckets data structure
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class FindNodeHandler extends AbstractHandler {
 
 	private final KadServer kadServer;
 	private final Node localNode;
 	private final KadCache cache;
 	private final KBuckets kBuckets;
+	private final int kBucketSize;
 	
-	private final AtomicInteger nrShortCacheHits;
 	private final AtomicInteger nrFindnodeHits;
 	private final AtomicInteger nrFindnodeMiss;
 	
@@ -39,8 +46,8 @@ public class FindNodeHandler extends AbstractHandler {
 			@Named("openkad.local.node") Node localNode,
 			KadCache cache,
 			KBuckets kBuckets,
+			@Named("openkad.bucket.kbuckets.maxsize") int kBucketSize,
 			
-			@Named("openkad.testing.nrShortCacheHits") AtomicInteger nrShortCacheHits,
 			@Named("openkad.testing.nrFindnodeHits") AtomicInteger nrFindnodeHits,
 			@Named("openkad.testing.nrFindnodeMiss") AtomicInteger nrFindnodeMiss) {
 		
@@ -49,8 +56,8 @@ public class FindNodeHandler extends AbstractHandler {
 		this.localNode = localNode;
 		this.cache = cache;
 		this.kBuckets = kBuckets;
+		this.kBucketSize = kBucketSize;
 		
-		this.nrShortCacheHits = nrShortCacheHits;
 		this.nrFindnodeHits = nrFindnodeHits;
 		this.nrFindnodeMiss = nrFindnodeMiss;
 	}
@@ -66,25 +73,21 @@ public class FindNodeHandler extends AbstractHandler {
 			List<Node> cachedResults = null;
 			
 			if (!findNodeRequest.shouldSearchCache()) {
-				findNodeResponse.setNodes(kBuckets.getClosestNodesFromKBuckets(
-						findNodeRequest.getKey(), findNodeRequest.getMaxNodes()));
+				findNodeResponse.setNodes(kBuckets.getClosestNodesByKey(
+						findNodeRequest.getKey(), kBucketSize));
 				
 			} else {
 				 // requester ask to search in cache
 				cachedResults = cache.search(findNodeRequest.getKey());
-				if (cachedResults == null || cachedResults.size() < findNodeRequest.getMaxNodes()) {
-					if (cachedResults != null)
-						nrShortCacheHits.incrementAndGet();
-					
+				
+				if (cachedResults == null) {
 					nrFindnodeMiss.incrementAndGet();
-					findNodeResponse.setNodes(kBuckets.getClosestNodesFromKBuckets(
-							findNodeRequest.getKey(), findNodeRequest.getMaxNodes()));
+					findNodeResponse.setNodes(kBuckets.getClosestNodesByKey(
+							findNodeRequest.getKey(), kBucketSize));
 				} else {
-					
 					nrFindnodeHits.incrementAndGet();
-					if (cachedResults.size() > findNodeRequest.getMaxNodes())
-						cachedResults = cachedResults.subList(0, findNodeRequest.getMaxNodes());
-					findNodeResponse.setNodes(cachedResults)
+					findNodeResponse
+						.setNodes(new ArrayList<Node>(cachedResults))
 						.setCachedResults(true);
 						
 				}
@@ -103,6 +106,7 @@ public class FindNodeHandler extends AbstractHandler {
 
 	@Override
 	protected Collection<MessageFilter> getFilters() {
+		// only accept FindNodeRequests messages
 		return Arrays.asList(new MessageFilter[] {
 				new TypeMessageFilter(FindNodeRequest.class)
 		});

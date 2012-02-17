@@ -5,7 +5,11 @@ import java.math.BigInteger;
 import java.util.Comparator;
 
 
-
+/**
+ * Compare keys distance from a given key using XOR metric
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class KeyComparator implements Comparator<Key> {
 
 	private final BigInteger key;

@@ -10,7 +10,12 @@ import java.util.Map;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-
+/**
+ * Caches nodes according to the LRU policy
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class LRUKadCache implements KadCache {
 
 	// dependencies
@@ -40,7 +45,7 @@ public class LRUKadCache implements KadCache {
 	
 	@Inject
 	LRUKadCache(
-			@Named("openkad.cache.bucket.size") int size) {
+			@Named("openkad.cache.size") int size) {
 		
 		this.size = size;
 		this.cache = new LinkedList<CacheEntry>();

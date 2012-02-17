@@ -5,24 +5,27 @@ import il.technion.ewolf.kbr.KeyFactory;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.Node;
 import il.technion.ewolf.kbr.RandomKeyFactory;
-import il.technion.ewolf.kbr.openkad.cache.ColorLRUKadCache;
 import il.technion.ewolf.kbr.openkad.cache.KadCache;
+import il.technion.ewolf.kbr.openkad.cache.LRUKadCache;
 import il.technion.ewolf.kbr.openkad.handlers.FindNodeHandler;
+import il.technion.ewolf.kbr.openkad.handlers.ForwardHandler;
 import il.technion.ewolf.kbr.openkad.handlers.PingHandler;
 import il.technion.ewolf.kbr.openkad.handlers.StoreHandler;
+import il.technion.ewolf.kbr.openkad.msg.ContentRequest;
 import il.technion.ewolf.kbr.openkad.msg.FindNodeRequest;
+import il.technion.ewolf.kbr.openkad.msg.ForwardRequest;
 import il.technion.ewolf.kbr.openkad.msg.PingRequest;
 import il.technion.ewolf.kbr.openkad.net.JsonKadSerializer;
 import il.technion.ewolf.kbr.openkad.net.KadSerializer;
 import il.technion.ewolf.kbr.openkad.net.KadServer;
 import il.technion.ewolf.kbr.openkad.net.MessageDispatcher;
-import il.technion.ewolf.kbr.openkad.op.ColorFindNodeOperation;
+import il.technion.ewolf.kbr.openkad.op.EagerColorFindValueOperation;
 import il.technion.ewolf.kbr.openkad.op.FindNodeOperation;
 import il.technion.ewolf.kbr.openkad.op.FindValueOperation;
 import il.technion.ewolf.kbr.openkad.op.JoinOperation;
+import il.technion.ewolf.kbr.openkad.op.KadFindValueOperation;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
@@ -36,6 +39,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -53,7 +57,6 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 
 public class KadNetModule extends AbstractModule {
-
 	
 	private final Properties properties;
 	
@@ -64,34 +67,41 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("openkad.keyfactory.keysize", "20");
 		defaultProps.setProperty("openkad.keyfactory.hashalgo", "SHA-256");
 		defaultProps.setProperty("openkad.bucket.kbuckets.maxsize", "20");
-		defaultProps.setProperty("openkad.bucket.colors.nrcolors", "4");
-		defaultProps.setProperty("openkad.bucket.colors.maxsize", "1");
-		defaultProps.setProperty("openkad.bucket.slack.maxsize", "2");
-		defaultProps.setProperty("openkad.bucket.color.candidates", "3");
-		defaultProps.setProperty("openkad.bucket.color.share", "1");
+		defaultProps.setProperty("openkad.color.nrcolors", "4");
 		defaultProps.setProperty("openkad.scheme.name", "openkad.udp");
-		defaultProps.setProperty("openkad.colors.forwardttl", "1");
-		
 		
 		// performance params
-		defaultProps.setProperty("openkad.executors.server.nrthreads", "4");
+		
+		// handling incoming messages
+		defaultProps.setProperty("openkad.executors.server.nrthreads", "8"); 
 		defaultProps.setProperty("openkad.executors.server.max_pending", "128");
-		defaultProps.setProperty("openkad.executors.client.nrthreads", "2");
+		// handling registered callback
+		defaultProps.setProperty("openkad.executors.client.nrthreads", "4"); 
 		defaultProps.setProperty("openkad.executors.client.max_pending", "128");
-		defaultProps.setProperty("openkad.executors.color.nrthreads", "3");
-		defaultProps.setProperty("openkad.executors.color.max_pending", "16");
+		// forwarding find node requests
+		defaultProps.setProperty("openkad.executors.forward.nrthreads", "4");
+		defaultProps.setProperty("openkad.executors.forward.max_pending", "16");
+		// executing the long find node operations
 		defaultProps.setProperty("openkad.executors.op.nrthreads", "1");
 		defaultProps.setProperty("openkad.executors.op.max_pending", "4");
+		// sending back pings
 		defaultProps.setProperty("openkad.executors.ping.nrthreads", "1");
 		defaultProps.setProperty("openkad.executors.ping.max_pending", "16");
+		// cache settings
 		defaultProps.setProperty("openkad.cache.validtime", TimeUnit.HOURS.toMillis(1) +"");
-		defaultProps.setProperty("openkad.cache.bucket.size", "100");
+		defaultProps.setProperty("openkad.cache.size", "100");
+		defaultProps.setProperty("openkad.cache.share", "1");
+		// minimum time between successive pings
 		defaultProps.setProperty("openkad.bucket.valid_timespan", TimeUnit.MINUTES.toMillis(1) +"");
+		// network timeouts and concurrency level
 		defaultProps.setProperty("openkad.net.concurrency", "3");
 		defaultProps.setProperty("openkad.net.timeout", TimeUnit.SECONDS.toMillis(3)+"");
-		defaultProps.setProperty("openkad.net.color.timeout", TimeUnit.SECONDS.toMillis(30)+"");
-		defaultProps.setProperty("openkad.net.buffer.size", "32");
+		defaultProps.setProperty("openkad.net.forwarded.timeout", TimeUnit.SECONDS.toMillis(30)+"");
 		
+		defaultProps.setProperty("openkad.color.candidates", "1");
+		
+		// interval between successive find node operations for refresh buckets
+		defaultProps.setProperty("openkad.refresh.interval", TimeUnit.SECONDS.toMillis(30)+"");
 		
 		// local configuration, please touch
 		defaultProps.setProperty("openkad.net.udp.port", "-1");
@@ -122,15 +132,63 @@ public class KadNetModule extends AbstractModule {
 		Names.bindProperties(binder(), properties);
 		
 		// testing binds
+		
 		// number of incoming messages
 		bind(AtomicInteger.class)
 			.annotatedWith(Names.named("openkad.testing.nrIncomingMessages"))
 			.toInstance(new AtomicInteger(0));
 		
+		// number of find nodes with wrong color
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrFindNodesWithWrongColor"))
+			.toInstance(new AtomicInteger(0));
+		
+		
+		// number of handled forward requests
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrForwardHandling"))
+			.toInstance(new AtomicInteger(0));
+		
+		// number of handled forward requests from initiator
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrForwardHandlingFromInitiator"))
+			.toInstance(new AtomicInteger(0));
+				
+				
+		// number of nacks recved
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrNacks"))
+			.toInstance(new AtomicInteger(0));
+		
+		// number of long timeouts
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrLongTimeouts"))
+			.toInstance(new AtomicInteger(0));
+		
+		// max number of hops until the result is found (or calculated)
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.maxHopsToResult"))
+			.toInstance(new AtomicInteger(0));
+		
+		// remote cache hits
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.remoteCacheHits"))
+			.toInstance(new AtomicInteger(0));
+		
+		// local cache hits
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.localCacheHits"))
+			.toInstance(new AtomicInteger(0));
+				
 		// number of hops histogram for all find node operations I caused
 		// cache hits (find node hops = 0) will not be in here
 		bind(new TypeLiteral<List<Integer>>() {})
 			.annotatedWith(Names.named("openkad.testing.findNodeHopsHistogram"))
+			.toInstance(Collections.synchronizedList(new ArrayList<Integer>()));
+		
+		// number of hops histogram for all forward operations
+		bind(new TypeLiteral<List<Integer>>() {})
+			.annotatedWith(Names.named("openkad.testing.hopsToResultHistogram"))
 			.toInstance(Collections.synchronizedList(new ArrayList<Integer>()));
 		
 		// number of hits when requesting find node
@@ -170,10 +228,14 @@ public class KadNetModule extends AbstractModule {
 		bind(Timer.class)
 			.annotatedWith(Names.named("openkad.timer"))
 			.toInstance(new Timer());
-		
-		bind(KadNode.class);
+
+		// bind requests
 		bind(PingRequest.class);
 		bind(FindNodeRequest.class);
+		bind(ForwardRequest.class);
+		bind(ContentRequest.class);
+		
+		bind(KadNode.class);
 		bind(KBuckets.class).in(Scopes.SINGLETON);
 		bind(MessageDispatcher.class);
 		bind(KadSerializer.class).to(JsonKadSerializer.class).in(Scopes.SINGLETON);
@@ -182,8 +244,8 @@ public class KadNetModule extends AbstractModule {
 		bind(KadCache.class)
 			//.to(OptimalKadCache.class)
 			//.to(DummyKadCache.class)
-			//.to(LRUKadCache.class)
-			.to(ColorLRUKadCache.class)
+			.to(LRUKadCache.class)
+			//.to(ColorLRUKadCache.class)
 			.in(Scopes.SINGLETON);
 		
 		bind(JoinOperation.class);
@@ -192,29 +254,21 @@ public class KadNetModule extends AbstractModule {
 		bind(FindNodeHandler.class);
 		bind(PingHandler.class);
 		bind(StoreHandler.class);
+		bind(ForwardHandler.class);
+		
 		
 		bind(FindValueOperation.class)
-			//.to(KadCacheFindNodeOperation.class);
-			.to(ColorFindNodeOperation.class);
+			.annotatedWith(Names.named("openkad.op.findvalue"))
+			//.to(ColorFindNodeOperation.class);
+			.to(KadFindValueOperation.class);
+			//.to(ForwardFindValueOperation.class);
 		
+		bind(FindValueOperation.class)
+			.annotatedWith(Names.named("openkad.op.lastFindValue"))
+			//.to(KadFindValueOperation.class);
+			.to(EagerColorFindValueOperation.class);
 		
 		bind(KeybasedRouting.class).to(KadNet.class).in(Scopes.SINGLETON);
-	}
-	
-	/*
-	@Provides
-	@Named("openkad.bucket.slack")
-	Bucket provideSlackBucket(
-			@Named("openkad.bucket.slack.maxsize") int maxSize) {
-		return new SlackBucket(maxSize);
-	}
-	*/
-	
-	@Provides
-	@Named("openkad.bucket.slack")
-	@Singleton
-	Bucket provideSlackBucket() {
-		return new DummyBucket();
 	}
 	
 	@Provides
@@ -226,26 +280,6 @@ public class KadNetModule extends AbstractModule {
 			Provider<PingRequest> pingRequestProvider,
 			Provider<MessageDispatcher<Void>> msgDispatcherProvider) {
 		return new StableBucket(maxSize, validTimespan, pingExecutor, pingRequestProvider, msgDispatcherProvider);
-	}
-	
-	/*
-	@Provides
-	@Named("openkad.bucket.colors")
-	Bucket provideColors(
-			@Named("openkad.bucket.colors.maxsize") int maxSize,
-			@Named("openkad.bucket.valid_timespan") long validTimespan,
-			@Named("openkad.executors.ping") ExecutorService pingExecutor,
-			Provider<PingRequest> pingRequestProvider,
-			Provider<MessageDispatcher<Void>> msgDispatcherProvider) {
-		return new StableBucket(maxSize, validTimespan, pingExecutor, pingRequestProvider, msgDispatcherProvider);
-	}
-	*/
-	
-	@Provides
-	@Named("openkad.bucket.colors")
-	@Singleton
-	Bucket provideColors() {
-		return new DummyBucket();
 	}
 	
 	@Provides
@@ -281,20 +315,6 @@ public class KadNetModule extends AbstractModule {
 	}
 	
 	@Provides
-	@Named("openkad.net.buffer")
-	@Singleton
-	BlockingQueue<DatagramPacket> providePacketsBuffer(
-			@Named("openkad.net.buffer.size") int sz) {
-		
-		BlockingQueue<DatagramPacket> $ = new ArrayBlockingQueue<DatagramPacket>(sz, false);
-		int bufsize = 1024*64;
-		for (int i=0; i < sz; ++i) {
-			$.add(new DatagramPacket(new byte[bufsize], bufsize));
-		}
-		
-		return $;
-	}
-	@Provides
 	@Named("openkad.executors.server")
 	@Singleton
 	ExecutorService provideServerExecutor(
@@ -313,14 +333,13 @@ public class KadNetModule extends AbstractModule {
 	}
 	
 	@Provides
-	@Named("openkad.executors.color")
+	@Named("openkad.executors.forward")
 	@Singleton
 	ExecutorService provideColorExecutor(
-			@Named("openkad.executors.color.nrthreads") int nrThreads,
-			@Named("openkad.executors.color.max_pending") int maxPending) {
+			@Named("openkad.executors.forward.nrthreads") int nrThreads,
+			@Named("openkad.executors.forward.max_pending") int maxPending) {
 		return new ThreadPoolExecutor(1, nrThreads, 5, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(maxPending, true));
 	}
-	
 	
 	@Provides
 	@Named("openkad.executors.op")
@@ -330,7 +349,6 @@ public class KadNetModule extends AbstractModule {
 			@Named("openkad.executors.op.max_pending") int maxPending) {
 		return new ThreadPoolExecutor(1, nrThreads, 5, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(maxPending, true));
 	}
-	
 	
 	@Provides
 	@Named("openkad.executors.client")
@@ -348,7 +366,6 @@ public class KadNetModule extends AbstractModule {
 			@Named("openkad.net.concurrency") int concurrency) {
 		return new ArrayBlockingQueue<MessageDispatcher<?>>(concurrency, true);
 	}
-	
 	
 	@Provides
 	@Named("openkad.rnd.id")
@@ -382,21 +399,27 @@ public class KadNetModule extends AbstractModule {
 	}
 	
 	@Provides
-	@Named("openkad.bucket.colors.mycolor")
+	@Named("openkad.refresh.task")
 	@Singleton
-	int provideMyColor(
-			@Named("openkad.bucket.colors.nrcolors") int nrColors,
-			@Named("openkad.local.node") Node node) {
-		//System.err.println(node.getKey().getInt() +" "+node.getKey().toBinaryString()+" % "+nrColors+" = "+node.getKey().getColor(nrColors));
-		return node.getKey().getColor(nrColors);
+	TimerTask provideRefreshTask(
+			final Provider<FindNodeOperation> findNodeOperationProvider,
+			final KeyFactory keyFactory) {
+		return new TimerTask() {
+			
+			@Override
+			public void run() {
+				findNodeOperationProvider.get()
+					.setKey(keyFactory.generate())
+					.doFindNode();
+			}
+		};
 	}
-
 	@Provides
 	@Named("openkad.local.color")
 	@Singleton
 	int provideLocalColor(
 			@Named("openkad.local.node") Node localNode,
-			@Named("openkad.bucket.colors.nrcolors") int nrColors) {
+			@Named("openkad.color.nrcolors") int nrColors) {
 		return localNode.getKey().getColor(nrColors);
 	}
 	

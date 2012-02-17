@@ -13,6 +13,11 @@ import java.util.Collection;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
+/**
+ * Handle store messages by inserting the content to the cache
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class StoreHandler extends AbstractHandler {
 
 	private final KadCache cache;

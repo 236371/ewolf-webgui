@@ -26,53 +26,54 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
+/**
+ * This is a data structures that holds all the known nodes
+ * It sorts them into buckets according to their keys common prefix
+ * with the local node's key.
+ * 
+ * A node with a different MSB in its key than the local node's MSB
+ * will be inserted to the last bucket.
+ * A node with ONLY the LSB different will be inserted into the first bucket.
+ * Generally, a node with a common prefix the length of k bits with the local
+ * node will be inserted to the KeyLengthInBit - k bucket
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class KBuckets {
 
 	private final Provider<MessageDispatcher<Object>> msgDispatcherProvider;
 	private final Provider<KadNode> kadNodeProvider;
 	private final Bucket[] kbuckets;
-	private final Bucket[] colorBuckets;
-	private final Bucket[] slackBuckets;
 	private final Node localNode;
 	private final KeyFactory keyFactory;
-	private final int colorBucketSize;
 	private final int nrColors;
+	
 	@Inject
 	KBuckets(
 			KeyFactory keyFactory,
 			Provider<KadNode> kadNodeProvider,
 			Provider<MessageDispatcher<Object>> msgDispatcherProvider,
-			@Named("openkad.bucket.colors.nrcolors") int nrColors,
-			@Named("openkad.bucket.colors.maxsize") int colorBucketSize,
-			@Named("openkad.bucket.colors") Provider<Bucket> colorsProvider,
 			@Named("openkad.bucket.kbuckets") Provider<Bucket> kBucketProvider,
-			@Named("openkad.bucket.slack") Provider<Bucket> provideSlackBucket,
-			@Named("openkad.local.node") Node localNode) {
+			@Named("openkad.local.node") Node localNode,
+			@Named("openkad.color.nrcolors") int nrColors) {
 		
 		this.keyFactory = keyFactory;
 		this.msgDispatcherProvider = msgDispatcherProvider;
 		this.kadNodeProvider = kadNodeProvider;
 		this.localNode = localNode;
-		this.colorBucketSize = colorBucketSize;
 		this.nrColors = nrColors;
 		
 		kbuckets = new Bucket[keyFactory.getBitLength()];
 		for (int i=0; i < kbuckets.length; ++i) {
 			kbuckets[i] = kBucketProvider.get();
 		}
-		
-		colorBuckets = new Bucket[nrColors];
-		for (int i=0; i < colorBuckets.length; ++i) {
-			colorBuckets[i] = colorsProvider.get();
-		}
-		
-		slackBuckets = new Bucket[nrColors];
-		for (int i=0; i < slackBuckets.length; ++i) {
-			slackBuckets[i] = provideSlackBucket.get();
-		}
-		
 	}
 
+	/**
+	 * Uses the keyFactory to generate keys which will fit to different buckets
+	 * @return a list of random keys where no 2 keys will fit into the same bucket
+	 */
 	public List<Key> randomKeysForAllBuckets() {
 		List<Key> $ = new ArrayList<Key>();
 		for (int i=0; i < kbuckets.length; ++i) {
@@ -82,6 +83,11 @@ public class KBuckets {
 		return $;
 	}
 	
+	/**
+	 * Register this data structure to listen to incoming messages and update itself
+	 * accordingly.
+	 * Invoke this method after creating the entire system
+	 */
 	public void registerIncomingMessageHandler() {
 		msgDispatcherProvider.get()
 			.setConsumable(false)
@@ -103,6 +109,8 @@ public class KBuckets {
 							.setNode(msg.getSrc())
 							.setNodeWasContacted());
 					
+					// try to sniff the message for more information, such as
+					// nodes in its content
 					if (msg instanceof FindNodeResponse) {
 						for (Node n : ((FindNodeResponse)msg).getNodes()) {
 							KBuckets.this.insert(kadNodeProvider.get().setNode(n));
@@ -112,57 +120,9 @@ public class KBuckets {
 			})
 			.register();
 	}
-	
-	public List<Node> getAllNodes() {
-		List<Node> $ = new ArrayList<Node>();
-		for (int i=0; i < kbuckets.length; ++i) {
-			kbuckets[i].addNodesTo($);
-		}
-		return $;
-	}
-	
-	
+
 	private int getKBucketIndex(Key key) {
 		return key.xor(localNode.getKey()).getFirstSetBitIndex();
-	}
-	
-	public void insert(KadNode node) {
-		int i = getKBucketIndex(node.getNode().getKey());
-		if (i == -1)
-			return;
-		
-		kbuckets[i].insert(node);
-		
-		int colorIndex = node.getNode().getKey().getColor(nrColors);
-		colorBuckets[colorIndex].insert(node);
-		slackBuckets[colorIndex].insert(node);
-	}
-	
-	public List<Node> getClosestNodesFromKBuckets(Key k, int n) {
-		List<Node> $ = getClosestNodes(k, n, getKBucketIndex(k), kbuckets);
-		if ($.isEmpty())
-			return $;
-		$ = sort($, on(Node.class).getKey(), new KeyComparator(k));
-		if ($.size() > n)
-			$.subList(n, $.size()).clear();
-		return $;
-	}
-	
-	
-	public List<Node> getClosestNodesFromColors(Key k, int n) {
-		//List<Node> $ = getClosestNodes(k, n, k.getColor(nrColors), colorBuckets);
-		//List<Node> $ = getClosestNodes(k, n, k.getColor(nrColors), slackBuckets);
-		//$.addAll(slackNodes);
-		//List<Node> knodes = getClosestNodes(k, n, getKBucketIndex(k), kbuckets, $);
-		//$.addAll(knodes);
-		
-		List<Node> $ = getClosestNodes(k, n, getKBucketIndex(k), kbuckets);
-		
-		$ = sort($, on(Node.class).getKey(), new KeyColorComparator(k, nrColors));
-		if ($.size() > n)
-			$.subList(n, $.size()).clear();
-		
-		return $;
 	}
 	
 	private List<Node> getClosestNodes(Key k, int n, int index, Bucket[] buckets) {
@@ -203,6 +163,84 @@ public class KBuckets {
 		
 		return $;
 	}
+	
+	/**
+	 * Inserts a node to the data structure
+	 * The can be rejected, depending on the bucket policy
+	 * @param node
+	 */
+	public void insert(KadNode node) {
+		int i = getKBucketIndex(node.getNode().getKey());
+		if (i == -1)
+			return;
+		
+		kbuckets[i].insert(node);
+	}
+	
+	/**
+	 * 
+	 * @return a list containing all the nodes in the data structure
+	 */
+	public List<Node> getAllNodes() {
+		List<Node> $ = new ArrayList<Node>();
+		for (int i=0; i < kbuckets.length; ++i) {
+			kbuckets[i].addNodesTo($);
+		}
+		return $;
+	}
+	
+	
+	/**
+	 * Returns a single bucket's content. The bucket number is calculated
+	 * using the given key according to its prefix with the local node's key
+	 * as explained above.
+	 * 
+	 * @param k key to calculate the bucket from
+	 * @return a list of nodes from a particular bucket
+	 */
+	public List<Node> getAllFromBucket(Key k) {
+		int i = getKBucketIndex(k);
+		if (i == -1)
+			return Collections.emptyList();
+		List<Node> $ = new ArrayList<Node>();
+		kbuckets[i].addNodesTo($);
+		return $;
+	}
+	
+	/**
+	 * Gets all nodes with keys closest to the given k.
+	 * The size of the list will be MIN(n, total number of nodes in the data structure)
+	 * @param k the key which the result's nodes are close to
+	 * @param n the maximum number of nodes expected
+	 * @return a list of nodes sorted by proximity to k
+	 */
+	public List<Node> getClosestNodesByKey(Key k, int n) {
+		List<Node> $ = getClosestNodes(k, n, getKBucketIndex(k), kbuckets);
+		if ($.isEmpty())
+			return $;
+		$ = sort($, on(Node.class).getKey(), new KeyComparator(k));
+		if ($.size() > n)
+			$.subList(n, $.size()).clear();
+		return $;
+	}
+	
+	/**
+	 * Gets all nodes with keys closest to the given k.
+	 * The size of the list will be MIN(n, total number of nodes in the data structure)
+	 * @param k the key which the result's nodes are close to
+	 * @param n the maximum number of nodes expected
+	 * @return a list of nodes sorted by proximity to the given key's color
+	 */
+	public List<Node> getClosestNodesByColor(Key k, int n) {
+		List<Node> $ = getClosestNodes(k, n, getKBucketIndex(k), kbuckets);
+		if ($.isEmpty())
+			return $;
+		$ = sort($, on(Node.class).getKey(), new KeyColorComparator(k, nrColors));
+		if ($.size() > n)
+			$.subList(n, $.size()).clear();
+		return $;
+	}
+	
 	
 	@Override
 	public String toString() {

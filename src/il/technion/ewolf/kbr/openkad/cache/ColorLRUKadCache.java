@@ -8,6 +8,12 @@ import java.util.List;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+/**
+ * Same as LRU cache but only inserts keys with the local node's color
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class ColorLRUKadCache extends LRUKadCache {
 
 	private int nrColors;
@@ -15,8 +21,8 @@ public class ColorLRUKadCache extends LRUKadCache {
 
 	@Inject
 	ColorLRUKadCache(
-			@Named("openkad.cache.bucket.size") int size,
-			@Named("openkad.bucket.colors.nrcolors") int nrColors,
+			@Named("openkad.cache.size") int size,
+			@Named("openkad.color.nrcolors") int nrColors,
 			@Named("openkad.local.color") int myColor) {
 		super(size);
 		this.nrColors = nrColors;

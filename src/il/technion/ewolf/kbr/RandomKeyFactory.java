@@ -12,13 +12,25 @@ import java.util.Random;
 
 import org.apache.commons.codec.binary.Base64;
 
+/**
+ * Creates keys using a Random generator
+ * 
+ * @author eyal.kibbar@gmail.com
+ */
 public class RandomKeyFactory implements KeyFactory {
 
 	private final int keyByteLength;
 	private final Random rnd;
 	private final MessageDigest md;
 	
-	
+
+	/**
+	 * 
+	 * @param keyByteLength the length in bytes of the generated keys
+	 * @param rnd the random object to be used
+	 * @param hashAlgo the algorithm to be used for digesting when generating from an array of topics
+	 * @throws NoSuchAlgorithmException if the digest algorithm was not found
+	 */
 	public RandomKeyFactory(int keyByteLength, Random rnd, String hashAlgo) throws NoSuchAlgorithmException {
 		this.keyByteLength = keyByteLength;
 		this.rnd = rnd;

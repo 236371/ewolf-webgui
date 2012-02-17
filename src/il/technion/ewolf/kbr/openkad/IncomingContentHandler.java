@@ -9,12 +9,20 @@ import il.technion.ewolf.kbr.openkad.msg.KadMessage;
 import il.technion.ewolf.kbr.openkad.net.KadServer;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.concurrent.ExecutorService;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
-public class IncomingContentHandler<A> implements CompletionHandler<KadMessage, A> {
+/**
+ * Parses the incoming message and invokes the correct MessageHandler method
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ * @param <A> any arbitrary attachment
+ */
+class IncomingContentHandler<A> implements CompletionHandler<KadMessage, A> {
 
 	// state
 	private String tag;
@@ -25,6 +33,12 @@ public class IncomingContentHandler<A> implements CompletionHandler<KadMessage, 
 	private final Node localNode;
 	private final KadServer kadServer;
 	
+	/**
+	 * 
+	 * @param clientExecutor the executor for all incoming requests that should be handled by the KeybasedRouting user
+	 * @param localNode the local node
+	 * @param kadServer the KadServer used to send messages
+	 */
 	@Inject
 	IncomingContentHandler(
 			@Named("openkad.executors.client") ExecutorService clientExecutor,
@@ -35,11 +49,21 @@ public class IncomingContentHandler<A> implements CompletionHandler<KadMessage, 
 		this.localNode = localNode;
 	}
 	
+	/**
+	 * Sets the MessageHandler to be invoked
+	 * @param handler 
+	 * @return this for fluent interface 
+	 */
 	public IncomingContentHandler<A> setHandler(MessageHandler handler) {
 		this.handler = handler;
 		return this;
 	}
 	
+	/**
+	 * Sets the incoming messages tag
+	 * @param tag
+	 * @return
+	 */
 	public IncomingContentHandler<A> setTag(String tag) {
 		this.tag = tag;
 		return this;
@@ -51,7 +75,7 @@ public class IncomingContentHandler<A> implements CompletionHandler<KadMessage, 
 		clientExecutor.execute(new Runnable() {
 			@Override
 			public void run() {
-				byte[] resContent = handler.onIncomingRequest(req.getSrc(), tag, req.getContent());
+				Serializable resContent = handler.onIncomingRequest(req.getSrc(), tag, req.getContent());
 				try {
 					kadServer.send(req.getSrc(), req
 						.generateResponse(localNode)
@@ -74,7 +98,9 @@ public class IncomingContentHandler<A> implements CompletionHandler<KadMessage, 
 		});
 	}
 	
-	
+	/**
+	 * Execute the user's handler and send back the result if needed
+	 */
 	@Override
 	public void completed(final KadMessage msg, A attachment) {
 		if (msg instanceof ContentRequest) {
@@ -86,7 +112,7 @@ public class IncomingContentHandler<A> implements CompletionHandler<KadMessage, 
 
 	@Override
 	public void failed(Throwable exc, A attachment) {
-		// should never be here
+		// cancelled
 	}
 
 }

@@ -18,6 +18,18 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
+/**
+ * A bucket with the following policy:
+ * when inserting a node do the following:
+ * 1. if the node is already in the bucket, move it to be the last
+ * 2. if the node is not in the bucket and the bucket is not full, move it to be the last in the bucket
+ * 3. if the node is not in the bucket and the bucket is full, ping the first node in the bucket:
+ *  a. if it returned a ping, move it to be the first in bucket and don't insert the given node
+ *  b. if it did not returned a ping, remove it from the bucket and insert the given node as last
+ *  
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class StableBucket implements Bucket {
 
 	// state
@@ -51,7 +63,9 @@ public class StableBucket implements Bucket {
 		KadNode inBucketReplaceCandidate = null;
 		synchronized (bucket) {
 			int i = bucket.indexOf(n);
-			if (i != -1) { // found node in bucket
+			if (i != -1) {
+				// found node in bucket
+				
 				// if heard from n (it is possible to insert n i never had
 				// contact with simply by hearing about from another node)
 				if (bucket.get(i).getLastContact() < n.getLastContact()) {
@@ -83,20 +97,18 @@ public class StableBucket implements Bucket {
 			return;
 
 		
-		// both n and firstInBucket have been seen and are competing
+		// both n and inBucketReplaceCandidate have been seen and are competing
 		// on place in bucket
 		
 		// find a node to ping that no one else is currently pinging
-		for (int j=0; j < bucket.size(); ++j) {
-			if (bucket.get(j).lockForPing()) {
-				sendPing(bucket.get(j), n);
+		synchronized (bucket) {
+			for (int j=0; j < bucket.size(); ++j) {
+				if (bucket.get(j).lockForPing()) {
+					sendPing(bucket.get(j), n);
+					return;
+				}
 			}
 		}
-		
-					
-		
-		
-		
 	}
 	
 	private void sendPing(final KadNode inBucket, final KadNode replaceIfFailed) {

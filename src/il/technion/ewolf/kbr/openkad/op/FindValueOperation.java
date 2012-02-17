@@ -3,18 +3,22 @@ package il.technion.ewolf.kbr.openkad.op;
 import il.technion.ewolf.kbr.Key;
 import il.technion.ewolf.kbr.Node;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
 
-public abstract class FindValueOperation implements Callable<List<Node>> {
+/**
+ * Base class for all the find value operations
+ * @author eyal.kibbar@gmail.com
+ *
+ */
+public abstract class FindValueOperation {
 
 	protected Key key;
-	protected int maxNodes;
+	private Collection<Node> bootstrap;
 	
-	private final int kBucketSize;
-	
-	protected FindValueOperation(int kBucketSize) {
-		this.kBucketSize = kBucketSize;
+	protected FindValueOperation() {
+		bootstrap = Collections.emptySet();
 	}
 	
 	public FindValueOperation setKey(Key key) {
@@ -22,12 +26,17 @@ public abstract class FindValueOperation implements Callable<List<Node>> {
 		return this;
 	}
 	
-	public FindValueOperation setMaxNodes(int maxNodes) {
-		this.maxNodes = Math.max(maxNodes, kBucketSize);
+	public FindValueOperation setBootstrap(Collection<Node> bootstrap) {
+		this.bootstrap = bootstrap;
 		return this;
 	}
 	
+	protected Collection<Node> getBootstrap() {
+		return bootstrap;
+	}
 	
 	public abstract int getNrQueried();
+	
+	public abstract List<Node> doFindValue();
 	
 }

@@ -7,21 +7,23 @@ import java.util.Arrays;
 import org.apache.commons.codec.binary.Base64;
 
 
-
+/**
+ * Identifier for nodes. Use {@link KeyFactory} to generate instances of this class.
+ * @author eyal.kibbar@gmail.com
+ */
 public class Key implements Serializable {
 
 	private static final long serialVersionUID = 4137662182397711129L;
 	
-	private transient byte[] bytes = null;
-	
-	private final String base64Encoded;
-
+	private final byte[] bytes;
 	
 	Key(byte[] bytes) {
 		this.bytes = bytes;
-		base64Encoded = Base64.encodeBase64String(bytes);
 	}
-	
+	/**
+	 * Check if a key is 0 key
+	 * @return true if bytes of this key are 0
+	 */
 	public boolean isZeroKey() {
 		for (byte x : getBytes()) {
 			if (x != 0)
@@ -30,20 +32,38 @@ public class Key implements Serializable {
 		return true;
 	}
 	
+	/**
+	 * A key color is a number between 0 and nrColors that is calculated
+	 * using its LSBs
+	 * 
+	 * @param nrColors
+	 * @return the calculated color
+	 */
 	public int getColor(int nrColors) {
 		return Math.abs(getInt().intValue()) % nrColors;
 	}
 	
+	/**
+	 * 
+	 * @return all the key's bytes
+	 */
 	public byte[] getBytes() {
-		if (bytes == null)
-			bytes = Base64.decodeBase64(base64Encoded);
 		return bytes;
 	}
 	
+	/**
+	 * 
+	 * @return length of key in bytes
+	 */
 	public int getByteLength() {
 		return getBytes().length;
 	}
 	
+	/**
+	 * 
+	 * @param k another key
+	 * @return a new Key which is the result of this key XOR the given key
+	 */
 	public Key xor(Key k) {
 		if (k.getByteLength() != getByteLength())
 			throw new IllegalArgumentException("incompatable key for xor");
@@ -54,6 +74,9 @@ public class Key implements Serializable {
 		return new Key(b);
 	}
 	
+	/**
+	 * @return the index of the MSB turned on, or -1 if all bits are off
+	 */
 	public int getFirstSetBitIndex() {
 		for (int i=0; i < getByteLength(); ++i) {
 			if (getBytes()[i] == 0) 
@@ -66,10 +89,16 @@ public class Key implements Serializable {
 		return -1;
 	}
 	
+	/**
+	 * @return length of key in bits 
+	 */
 	public int getBitLength() {
 		return getByteLength() * 8;
 	}
 	
+	/**
+	 * @return the key BigInteger representation
+	 */
 	public BigInteger getInt() {
 		return new BigInteger(getBytes());
 	}
@@ -78,7 +107,7 @@ public class Key implements Serializable {
 	public boolean equals(Object o) {
 		if (o == null || !getClass().equals(o.getClass()))
 			return false;
-		return base64Encoded.equals(((Key)o).base64Encoded);
+		return Arrays.equals(getBytes(), ((Key)o).getBytes());
 	}
 	
 	@Override
@@ -86,14 +115,22 @@ public class Key implements Serializable {
 		return Arrays.hashCode(getBytes());
 	}
 	
+	/**
+	 * 
+	 * @return the key encode in Base64
+	 */
 	public String toBase64() {
-		return base64Encoded;
+		return Base64.encodeBase64String(bytes);
 	}
 	
 	public String toString() {
-		return base64Encoded;
+		return Base64.encodeBase64String(bytes);
 	}
 	
+	/**
+	 * 
+	 * @return the key encoded in binary string
+	 */
 	public String toBinaryString() {
 		String $ = "";
 		for (int i=0; i < getByteLength(); ++i) {

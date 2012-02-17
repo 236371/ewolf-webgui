@@ -6,11 +6,16 @@ import il.technion.ewolf.kbr.Node;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+/**
+ * A findNode request as defined in the kademlia protocol
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class FindNodeRequest extends KadRequest {
 
 	private static final long serialVersionUID = -7084922793331210968L;
 	private Key key;
-	private int maxNodes;
 	private boolean searchCache;
 	
 	@Inject
@@ -19,7 +24,10 @@ public class FindNodeRequest extends KadRequest {
 			@Named("openkad.local.node") Node src) {
 		super(id, src);
 	}
-	
+	/**
+	 * 
+	 * @return the key we are searching
+	 */
 	public Key getKey() {
 		return key;
 	}
@@ -34,9 +42,6 @@ public class FindNodeRequest extends KadRequest {
 		return new FindNodeResponse(getId(), localNode);
 	}
 
-	public int getMaxNodes() {
-		return maxNodes;
-	}
 	
 	public FindNodeRequest setSearchCache(boolean searchCache) {
 		this.searchCache = searchCache;
@@ -47,9 +52,5 @@ public class FindNodeRequest extends KadRequest {
 		return searchCache;
 	}
 	
-	public FindNodeRequest setMaxNodes(int maxNodes) {
-		this.maxNodes = maxNodes;
-		return this;
-	}
 
 }

@@ -7,6 +7,13 @@ import java.io.Serializable;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+/**
+ * Base class for all openkad messages.
+ * All messages must be in this package
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public abstract class KadMessage implements Serializable {
 
 	private static final long serialVersionUID = -6975403100655787398L;
@@ -17,6 +24,7 @@ public abstract class KadMessage implements Serializable {
 		this.id = id;
 		this.src = src;
 	}
+	
 	
 	public Node getSrc() {
 		return src;

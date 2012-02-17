@@ -11,6 +11,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+/**
+ * Caches all results and never removes them.
+ * This policy is obviously only good for testing 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class OptimalKadCache implements KadCache {
 
 	private final long validTime;

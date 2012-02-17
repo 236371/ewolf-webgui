@@ -1,9 +1,9 @@
 package il.technion.ewolf.kbr;
 
-
-
-
-
+/**
+ * Compare Key's colors distance from a given color
+ * @author eyal.kibbar@gmail.com
+ */
 public class KeyColorComparator extends KeyComparator {
 
 	private final int color;

@@ -5,6 +5,14 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+/**
+ * Transforms one future result to another
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ * @param <T> The original result type
+ * @param <R> The final result type
+ */
 public abstract class FutureTransformer<T, R> implements Future<R> {
 
 	private final Future<T> f;
@@ -15,6 +23,15 @@ public abstract class FutureTransformer<T, R> implements Future<R> {
 		this.f = f;
 	}
 	
+	/**
+	 * Called to transform result of type T into the new result type (R).
+	 * This method will be called at most once. After the first call, the
+	 * result will be cached.
+	 * 
+	 * @param t original result
+	 * @return transformed result
+	 * @throws Throwable
+	 */
 	protected abstract R transform(T t) throws Throwable;
 	
 	@Override

@@ -1,16 +1,23 @@
 package il.technion.ewolf.kbr.openkad.msg;
 
+import java.io.Serializable;
+
 import il.technion.ewolf.kbr.Node;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+/**
+ * A message containing arbitrary data to be used by the KeybasedRouting.sendRequest methods
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class ContentRequest extends KadRequest {
 
 	private static final long serialVersionUID = 918433377540165654L;
 
 	private String tag;
-	private byte[] content;
+	private Serializable content;
 	
 	@Inject
 	ContentRequest(
@@ -24,10 +31,11 @@ public class ContentRequest extends KadRequest {
 		return tag;
 	}
 	
-	public byte[] getContent() {
+	public Serializable getContent() {
 		return content;
 	}
-	public ContentRequest setContent(byte[] content) {
+	
+	public ContentRequest setContent(Serializable content) {
 		this.content = content;
 		return this;
 	}

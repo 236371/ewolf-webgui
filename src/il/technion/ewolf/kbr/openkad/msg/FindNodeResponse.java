@@ -6,6 +6,11 @@ import java.util.List;
 
 import com.google.inject.name.Named;
 
+/**
+ * A findNode response as defined in the kademlia protocol
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class FindNodeResponse extends KadResponse {
 
 	private static final long serialVersionUID = 2103126060969733458L;
@@ -21,6 +26,10 @@ public class FindNodeResponse extends KadResponse {
 		return this;
 	}
 	
+	/**
+	 * 
+	 * @return the nodes closest to the request key
+	 */
 	public List<Node> getNodes() {
 		return nodes;
 	}

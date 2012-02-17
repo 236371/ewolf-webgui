@@ -8,6 +8,11 @@ import java.util.List;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+/**
+ * A store results message to be inserted to the destination node's cache
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class StoreMessage extends KadMessage {
 
 	private static final long serialVersionUID = 3908967205635902724L;

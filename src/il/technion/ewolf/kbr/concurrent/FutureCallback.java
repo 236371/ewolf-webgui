@@ -6,6 +6,15 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+/**
+ * Convert a CompletionHandler into a future.
+ * the get method simply blocks until the callback was called
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ * @param <T> the result type
+ * @param <A> any arbitrary attachment
+ */
 public class FutureCallback<T, A> implements Future<T>, CompletionHandler<T, A> {
 
 	private T result = null;

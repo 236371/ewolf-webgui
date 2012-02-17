@@ -11,6 +11,12 @@ import java.util.Map;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+/**
+ * Caches nodes according to the FIFO policy
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class FifoKadCache implements KadCache {
 
 	// dependencies
@@ -40,7 +46,7 @@ public class FifoKadCache implements KadCache {
 	
 	@Inject
 	FifoKadCache(
-			@Named("openkad.cache.bucket.size") int size) {
+			@Named("openkad.cache.size") int size) {
 		
 		this.size = size;
 		this.cache = new LinkedList<CacheEntry>();

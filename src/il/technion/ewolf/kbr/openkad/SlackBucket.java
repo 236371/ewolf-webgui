@@ -8,6 +8,14 @@ import java.util.List;
 
 import com.google.inject.Inject;
 
+/**
+ * A bucket with the following policy:
+ * Any new node is inserted, if the bucket has reached its max size
+ * the oldest node in the bucket is removed.
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class SlackBucket implements Bucket {
 
 	
@@ -19,6 +27,7 @@ public class SlackBucket implements Bucket {
 		this.maxSize = maxSize;
 		bucket = new LinkedList<KadNode>();
 	}
+	
 	
 	@Override
 	public void insert(KadNode n) {

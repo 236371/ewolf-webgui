@@ -4,6 +4,11 @@ import il.technion.ewolf.kbr.openkad.msg.ContentMessage;
 import il.technion.ewolf.kbr.openkad.msg.ContentRequest;
 import il.technion.ewolf.kbr.openkad.msg.KadMessage;
 
+/**
+ * Reject all message with different tag than the given tag
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class TagMessageFilter implements MessageFilter {
 
 	private final String tag;
