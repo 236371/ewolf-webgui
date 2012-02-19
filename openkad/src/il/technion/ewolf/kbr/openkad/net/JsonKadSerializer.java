@@ -43,6 +43,7 @@ public class JsonKadSerializer extends KadSerializer implements JsonSerializer<S
 	@Inject
 	JsonKadSerializer() {
 		this.gson = new GsonBuilder()
+			.registerTypeAdapter(Serializable.class, this)
 			.registerTypeHierarchyAdapter(Serializable.class, this)
 			.create();
 	}

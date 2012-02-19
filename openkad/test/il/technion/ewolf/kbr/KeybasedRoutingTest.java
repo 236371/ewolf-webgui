@@ -18,7 +18,6 @@ import org.junit.Test;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-
 public class KeybasedRoutingTest {
 
 	@Test
@@ -253,6 +252,10 @@ public class KeybasedRoutingTest {
 	}
 	
 	
+	enum Y {
+		A, B, C
+	}
+	
 	private static final class X implements Serializable {
 		
 		private static final long serialVersionUID = -5254444279440929179L;
@@ -260,6 +263,7 @@ public class KeybasedRoutingTest {
 		int a;
 		int b;
 		String c;
+		
 		public X(int a, int b, String c) {
 			this.a = a;
 			this.b = b;
