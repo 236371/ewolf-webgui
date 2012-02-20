@@ -59,51 +59,47 @@ public class StableBucket implements Bucket {
 	}
 	
 	@Override
-	public void insert(final KadNode n) {
-		KadNode inBucketReplaceCandidate = null;
-		synchronized (bucket) {
-			int i = bucket.indexOf(n);
-			if (i != -1) {
-				// found node in bucket
-				
-				// if heard from n (it is possible to insert n i never had
-				// contact with simply by hearing about from another node)
-				if (bucket.get(i).getLastContact() < n.getLastContact()) {
-					KadNode s = bucket.remove(i);
-					s.setNodeWasContacted(n.getLastContact());
-					bucket.add(s);
-				}
-				return;
-			} else if (bucket.size() < maxSize) {
-				// not found in bucket and there is enough room for n
-				bucket.add(n);
-				return;
-			}
-			// n is not in bucket and bucket is full
-			inBucketReplaceCandidate = bucket.get(0);
+	public synchronized void insert(final KadNode n) {
+		int i = bucket.indexOf(n);
+		if (i != -1) {
+			// found node in bucket
 			
-			// the first node was only inserted indirectly (meaning, I never recved
-			// a msg from it !) and I did recv a msg from n.
-			if (inBucketReplaceCandidate.hasNeverContacted() && n.hasContacted()) {
-				bucket.remove(inBucketReplaceCandidate);
-				bucket.add(n);
-				return;
+			// if heard from n (it is possible to insert n i never had
+			// contact with simply by hearing about from another node)
+			if (bucket.get(i).getLastContact() < n.getLastContact()) {
+				KadNode s = bucket.remove(i);
+				s.setNodeWasContacted(n.getLastContact());
+				bucket.add(s);
 			}
-		}
+		} else if (bucket.size() < maxSize) {
+			// not found in bucket and there is enough room for n
+			bucket.add(n);
+			
+		} else {
+			// n is not in bucket and bucket is full
 		
-		// dont bother to insert n if I never recved a msg from it
-		// or if the first node's ping is still valid
-		if (n.hasNeverContacted() || inBucketReplaceCandidate.isPingStillValid(validTimespan))
-			return;
-
-		
-		// both n and inBucketReplaceCandidate have been seen and are competing
-		// on place in bucket
-		
-		// find a node to ping that no one else is currently pinging
-		synchronized (bucket) {
+			// don't bother to insert n if I never recved a msg from it
+			if (n.hasNeverContacted())
+				return;
+			
+			// find a node to ping that no one else is currently pinging
 			for (int j=0; j < bucket.size(); ++j) {
-				if (bucket.get(j).lockForPing()) {
+				KadNode inBucketReplaceCandidate = bucket.get(j);
+				
+				// the first node was only inserted indirectly (meaning, I never recved
+				// a msg from it !) and I did recv a msg from n.
+				if (inBucketReplaceCandidate.hasNeverContacted() && n.hasContacted()) {
+					bucket.remove(inBucketReplaceCandidate);
+					bucket.add(n);
+					return;
+				}
+				
+				// ping is still valid, don't replace
+				if (inBucketReplaceCandidate.isPingStillValid(validTimespan))
+					return;
+				
+				// send ping and act accordingly
+				if (inBucketReplaceCandidate.lockForPing()) {
 					sendPing(bucket.get(j), n);
 					return;
 				}
@@ -125,7 +121,7 @@ public class StableBucket implements Bucket {
 					// ping was recved
 					inBucket.setNodeWasContacted();
 					inBucket.releasePingLock();
-					synchronized (bucket) {
+					synchronized (StableBucket.this) {
 						if (bucket.remove(inBucket)) {
 							bucket.add(inBucket);
 						}
@@ -134,9 +130,22 @@ public class StableBucket implements Bucket {
 				@Override
 				public void failed(Throwable exc, Void nothing) {
 					// ping was not recved
-					synchronized (bucket) {
-						if (bucket.remove(inBucket)) {
-							bucket.add(replaceIfFailed);
+					synchronized (StableBucket.this) {
+						// try to remove the already in bucket and 
+						// replace it with the new candidate that we
+						// just heard from.
+						if (bucket.remove(inBucket)) { 
+							// successfully removed the old node that
+							// did not answer my ping
+							
+							// try insert the new candidate
+							if (!bucket.add(replaceIfFailed)) {
+								// candidate was already in bucket
+								// return the inBucket to be the oldest node in
+								// the bucket since we don't want our bucket
+								// to shrink unnecessarily
+								bucket.add(0, inBucket);
+							}
 						}
 					}
 					inBucket.releasePingLock();
@@ -158,21 +167,15 @@ public class StableBucket implements Bucket {
 	}
 	
 	@Override
-	public void addNodesTo(Collection<Node> c) {
-		synchronized (bucket) {
-			for (KadNode n : bucket) {
-				c.add(n.getNode());
-			}
+	public synchronized void addNodesTo(Collection<Node> c) {
+		for (KadNode n : bucket) {
+			c.add(n.getNode());
 		}
 	}
 	
 	@Override
-	public String toString() {
-		String $;
-		synchronized (bucket) {
-			$ = bucket.toString();
-		}
-		return $;
+	public synchronized String toString() {
+		return bucket.toString();
 	}
 	
 }

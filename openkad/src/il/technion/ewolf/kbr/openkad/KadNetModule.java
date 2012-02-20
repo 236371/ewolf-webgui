@@ -23,7 +23,7 @@ import il.technion.ewolf.kbr.openkad.op.EagerColorFindValueOperation;
 import il.technion.ewolf.kbr.openkad.op.FindNodeOperation;
 import il.technion.ewolf.kbr.openkad.op.FindValueOperation;
 import il.technion.ewolf.kbr.openkad.op.JoinOperation;
-import il.technion.ewolf.kbr.openkad.op.KadFindValueOperation;
+import il.technion.ewolf.kbr.openkad.op.KadCacheFindValueOperation;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -67,7 +67,7 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("openkad.keyfactory.keysize", "20");
 		defaultProps.setProperty("openkad.keyfactory.hashalgo", "SHA-256");
 		defaultProps.setProperty("openkad.bucket.kbuckets.maxsize", "20");
-		defaultProps.setProperty("openkad.color.nrcolors", "4");
+		defaultProps.setProperty("openkad.color.nrcolors", "20");
 		defaultProps.setProperty("openkad.scheme.name", "openkad.udp");
 		
 		// performance params
@@ -88,7 +88,7 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("openkad.executors.ping.nrthreads", "1");
 		defaultProps.setProperty("openkad.executors.ping.max_pending", "16");
 		// cache settings
-		defaultProps.setProperty("openkad.cache.validtime", TimeUnit.HOURS.toMillis(1) +"");
+		defaultProps.setProperty("openkad.cache.validtime", TimeUnit.HOURS.toMillis(10) +"");
 		defaultProps.setProperty("openkad.cache.size", "100");
 		defaultProps.setProperty("openkad.cache.share", "1");
 		// minimum time between successive pings
@@ -242,10 +242,9 @@ public class KadNetModule extends AbstractModule {
 		bind(KadServer.class).in(Scopes.SINGLETON);
 		
 		bind(KadCache.class)
-			//.to(OptimalKadCache.class)
 			//.to(DummyKadCache.class)
+			//.to(OptimalKadCache.class)
 			.to(LRUKadCache.class)
-			//.to(ColorLRUKadCache.class)
 			.in(Scopes.SINGLETON);
 		
 		bind(JoinOperation.class);
@@ -259,8 +258,8 @@ public class KadNetModule extends AbstractModule {
 		
 		bind(FindValueOperation.class)
 			.annotatedWith(Names.named("openkad.op.findvalue"))
-			//.to(ColorFindNodeOperation.class);
-			.to(KadFindValueOperation.class);
+			//.to(KadFindValueOperation.class);
+			.to(KadCacheFindValueOperation.class);
 			//.to(ForwardFindValueOperation.class);
 		
 		bind(FindValueOperation.class)
@@ -404,6 +403,7 @@ public class KadNetModule extends AbstractModule {
 	TimerTask provideRefreshTask(
 			final Provider<FindNodeOperation> findNodeOperationProvider,
 			final KeyFactory keyFactory) {
+		
 		return new TimerTask() {
 			
 			@Override
