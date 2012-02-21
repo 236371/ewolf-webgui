@@ -3,6 +3,7 @@ package il.technion.ewolf.kbr.openkad.op;
 import static ch.lambdaj.Lambda.on;
 import static ch.lambdaj.Lambda.sort;
 import il.technion.ewolf.kbr.KeyColorComparator;
+import il.technion.ewolf.kbr.KeyComparator;
 import il.technion.ewolf.kbr.Node;
 import il.technion.ewolf.kbr.openkad.KBuckets;
 import il.technion.ewolf.kbr.openkad.msg.ForwardMessage;
@@ -15,6 +16,7 @@ import il.technion.ewolf.kbr.openkad.net.filter.TypeMessageFilter;
 
 import java.util.List;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,6 +29,8 @@ public class ForwardFindValueOperation extends FindValueOperation {
 
 	// state
 	private int nrQueried = 0;
+	private List<Node> bootstrap;
+	
 	
 	// dependencies
 	private final int kBucketSize;
@@ -105,7 +109,7 @@ public class ForwardFindValueOperation extends FindValueOperation {
 		return nrQueried;
 	}
 	
-	private List<Node> sendForwardRequest(Node to, ForwardRequest req) throws Exception {
+	private List<Node> sendForwardRequest(Node to, ForwardRequest req) throws CancellationException, InterruptedException, ExecutionException {
 		System.out.println(localNode+": forwarding to "+to);
 		Future<KadMessage> requestFuture = msgDispatcherProvider.get()
 			.setConsumable(true)
@@ -114,29 +118,33 @@ public class ForwardFindValueOperation extends FindValueOperation {
 			.futureSend(to, req);
 		
 		ForwardResponse res = (ForwardResponse)requestFuture.get();
-		if (res.getNodes() != null) {
-			System.out.println(localNode+": cache hit");
-			remoteCacheHits.incrementAndGet();
-			// we had a cache hit !
-			// no need to wait for future messages
-			int hopsToResult = 1;
-			if (hopsToResult > maxHopsToResult.get())
-				maxHopsToResult.set(hopsToResult);
-			hopsToResultHistogram.add(hopsToResult);
-			return res.getNodes();
-		}
-		
-		// remote node return nack
-		if (res.isNack()) {
+		if (res.isAck()) {
+			System.out.println(localNode+": remote node return ack");
+			
+		} else if (res.isNack()) {
 			System.out.println(localNode+": remote node return nack");
 			nrNacks.incrementAndGet();
+			bootstrap.addAll(res.getNodes());
+			// Logical throw to indicate result was a nack. 
+			// will be caught outside to cancel the expect.
 			
 			throw new CancellationException("nack");
+			
+		} else {
+			assert (res.getNodes() != null);
+			
+			if (res.getNodes() != null) {
+				System.out.println(localNode+": cache hit");
+				remoteCacheHits.incrementAndGet();
+				// we had a cache hit !
+				// no need to wait for future messages
+				int hopsToResult = 1;
+				if (hopsToResult > maxHopsToResult.get())
+					maxHopsToResult.set(hopsToResult);
+				hopsToResultHistogram.add(hopsToResult);
+				return res.getNodes();
+			}
 		}
-		
-		// remote node returned ack
-		assert (res.isAck());
-		System.out.println(localNode+": remote node return ack");
 		
 		return null;
 	}
@@ -145,11 +153,17 @@ public class ForwardFindValueOperation extends FindValueOperation {
 	private List<Node> waitForResults(Future<KadMessage> expectMessage) throws Exception {
 		ForwardMessage msg = (ForwardMessage)expectMessage.get();
 		
-		if (msg.getNodes() != null) {
+		if (msg.isNack()) {
+			nrNacks.incrementAndGet();
+			bootstrap.addAll(msg.getNodes());
+			throw new CancellationException("nack");
+			
+		} else if (msg.getNodes() != null) {
 			// remote node has calculated the results for me
 			int hopsToResult = 1 + msg.getPathLength();
 			if (hopsToResult > maxHopsToResult.get())
 				maxHopsToResult.set(hopsToResult);
+			
 			hopsToResultHistogram.add(hopsToResult);
 			
 			if (msg.getFindNodeHops() != 0) {
@@ -159,12 +173,13 @@ public class ForwardFindValueOperation extends FindValueOperation {
 			}
 			System.out.println(localNode+": remote node has calculated the results for me");
 			return msg.getNodes();
+			
+		} else {
+			// remote node has returned null, move on to the
+			// next candidate
+			System.out.println(localNode+": remote node has returned null, move on to the next candidate");
+			nrNacks.incrementAndGet();
 		}
-		
-		// remote node has returned null, move on to the
-		// next candidate
-		System.out.println(localNode+": remote node has returned null, move on to the next candidate");
-		nrNacks.incrementAndGet();
 		
 		return null;
 	}
@@ -177,7 +192,7 @@ public class ForwardFindValueOperation extends FindValueOperation {
 			return doFindNode();
 		}
 		
-		List<Node> bootstrap = kBuckets.getClosestNodesByKey(key, kBucketSize);
+		bootstrap = kBuckets.getClosestNodesByKey(key, kBucketSize);
 		bootstrap.add(localNode);
 		List<Node> candidates = sort(bootstrap, on(Node.class).getKey(), new KeyColorComparator(key, nrColors));
 		
@@ -196,6 +211,11 @@ public class ForwardFindValueOperation extends FindValueOperation {
 				hopsToResultHistogram.add(0);
 				return doFindNode();
 			}
+			
+			// sort and cut the bootstrap
+			bootstrap = sort(bootstrap, on(Node.class).getKey(), new KeyComparator(key));
+			if (bootstrap.size() > kBucketSize)
+				bootstrap.subList(kBucketSize, bootstrap.size()).clear();
 			
 			ForwardRequest req = forwardRequestProvider.get()
 				.setInitiator() // TODO: remove b4 publish
@@ -225,7 +245,6 @@ public class ForwardFindValueOperation extends FindValueOperation {
 				expectMessage.cancel(false);
 				continue;
 			}
-			
 			
 			// wait for the result to arrive
 			try {

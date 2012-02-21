@@ -151,10 +151,11 @@ public class JoinOperation  {
 				.setKey(key)
 				.doFindNode();
 		}
+		
 		try {
 			timer.scheduleAtFixedRate(refreshTask, refreshInterval, refreshInterval);
 		} catch (IllegalStateException e) {
-			// if I couldn't schedule the refresh task i don care
+			// if I couldn't schedule the refresh task i don't care
 		}
 	}
 	

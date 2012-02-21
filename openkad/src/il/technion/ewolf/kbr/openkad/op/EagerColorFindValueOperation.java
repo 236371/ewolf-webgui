@@ -63,7 +63,7 @@ public class EagerColorFindValueOperation extends FindValueOperation implements 
 	private final KadCache cache;
 	private final int nrShare;
 	private final int nrColors;
-	
+	private final int myColor;
 	// testing
 	private final AtomicInteger nrLocalCacheHits;
 	private final AtomicInteger nrRemoteCacheHits;
@@ -74,6 +74,7 @@ public class EagerColorFindValueOperation extends FindValueOperation implements 
 			@Named("openkad.bucket.kbuckets.maxsize") int kBucketSize,
 			@Named("openkad.cache.share") int nrShare,
 			@Named("openkad.color.nrcolors") int nrColors,
+			@Named("openkad.local.color") int myColor,
 			
 			Provider<FindNodeRequest> findNodeRequestProvider,
 			Provider<MessageDispatcher<Node>> msgDispatcherProvider,
@@ -95,7 +96,8 @@ public class EagerColorFindValueOperation extends FindValueOperation implements 
 		this.kadServer = kadServer;
 		this.cache = cache;
 		this.nrColors = nrColors;
-			
+		this.myColor = myColor;
+		
 		this.nrLocalCacheHits = nrLocalCacheHits;
 		this.nrRemoteCacheHits = nrRemoteCacheHits;
 		
@@ -217,7 +219,9 @@ public class EagerColorFindValueOperation extends FindValueOperation implements 
 		
 		knownClosestNodes = Collections.unmodifiableList(knownClosestNodes);
 		
-		sendStoreResults(firstSentTo);
+		// only share if i dont have the right color
+		if (myColor != key.getColor(nrColors))
+			sendStoreResults(firstSentTo);
 		
 		cache.insert(key, knownClosestNodes);
 		

@@ -52,6 +52,10 @@ public class LRUKadCache implements KadCache {
 		this.entryFromKey = new HashMap<Key, CacheEntry>();
 	}
 	
+	protected synchronized boolean isFull() {
+		return cache.size() == size;
+	}
+	
 	@Override
 	public synchronized void insert(Key key, List<Node> nodes) {
 		CacheEntry cacheEntry = entryFromKey.get(key);

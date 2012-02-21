@@ -18,7 +18,8 @@ public class ForwardMessage extends KadMessage {
 	private static final long serialVersionUID = 101861722605010003L;
 	
 	private List<Node> nodes;
-	private boolean ack;
+	private boolean ack = false;
+	private boolean nack = false;
 	private int pathLength = 0;
 	private int findNodeHops = 0;
 	
@@ -41,11 +42,15 @@ public class ForwardMessage extends KadMessage {
 	
 	
 	public ForwardMessage setAck() {
+		if (isNack())
+			throw new IllegalStateException("cannot be both ack and nack");
 		this.ack = true;
 		return this;
 	}
 	
 	public ForwardMessage setNack() {
+		if (isAck())
+			throw new IllegalStateException("cannot be both ack and nack");
 		this.ack = false;
 		return this;
 	}
@@ -56,7 +61,7 @@ public class ForwardMessage extends KadMessage {
 	}
 	
 	public boolean isNack() {
-		return !ack;
+		return nack;
 	}
 	
 	public int getPathLength() {

@@ -32,7 +32,7 @@ public class ColorLRUKadCache extends LRUKadCache {
 	
 	@Override
 	public void insert(Key key, List<Node> nodes) {
-		if (key.getColor(nrColors) != myColor)
+		if (isFull() && key.getColor(nrColors) != myColor)
 			return;
 		super.insert(key, nodes);
 	}

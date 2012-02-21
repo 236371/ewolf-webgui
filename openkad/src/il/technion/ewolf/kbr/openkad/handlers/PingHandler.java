@@ -11,6 +11,7 @@ import il.technion.ewolf.kbr.openkad.net.filter.TypeMessageFilter;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -25,20 +26,24 @@ public class PingHandler extends AbstractHandler {
 
 	private final KadServer kadServer;
 	private final Node localNode;
+	private final AtomicInteger nrIncomingPings;
 	
 	@Inject
 	PingHandler(
 			Provider<MessageDispatcher<Void>> msgDispatcherProvider,
 			KadServer kadServer,
-			@Named("openkad.local.node") Node localNode) {
+			@Named("openkad.local.node") Node localNode,
+			@Named("openkad.testing.nrIncomingPings") AtomicInteger nrIncomingPings) {
 		super(msgDispatcherProvider);
 		this.kadServer = kadServer;
 		this.localNode = localNode;
+		this.nrIncomingPings = nrIncomingPings;
 	}
 
 	@Override
 	public void completed(KadMessage msg, Void attachment) {
 		try {
+			nrIncomingPings.incrementAndGet();
 			PingResponse pingResponse = ((PingRequest)msg).generateResponse(localNode);
 			kadServer.send(msg.getSrc(), pingResponse);
 		} catch (Exception e) {

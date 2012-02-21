@@ -16,7 +16,8 @@ public class ForwardResponse extends KadResponse {
 	
 	
 	private List<Node> nodes = null;
-	private boolean ack;
+	private boolean ack = false;
+	private boolean nack = false;
 	
 	ForwardResponse(long id, Node src) {
 		super(id, src);
@@ -34,12 +35,16 @@ public class ForwardResponse extends KadResponse {
 	
 	
 	public ForwardResponse setAck() {
+		if (isNack())
+			throw new IllegalStateException("cannot be both ack and nack");
 		this.ack = true;
 		return this;
 	}
 	
 	public ForwardResponse setNack() {
-		this.ack = false;
+		if (isAck())
+			throw new IllegalStateException("cannot be both ack and nack");
+		this.nack = true;
 		return this;
 	}
 	
@@ -49,7 +54,7 @@ public class ForwardResponse extends KadResponse {
 	}
 	
 	public boolean isNack() {
-		return !ack;
+		return nack;
 	}
 	
 

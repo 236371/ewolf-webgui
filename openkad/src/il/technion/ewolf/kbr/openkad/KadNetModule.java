@@ -79,11 +79,11 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("openkad.executors.client.nrthreads", "4"); 
 		defaultProps.setProperty("openkad.executors.client.max_pending", "128");
 		// forwarding find node requests
-		defaultProps.setProperty("openkad.executors.forward.nrthreads", "4");
-		defaultProps.setProperty("openkad.executors.forward.max_pending", "16");
+		defaultProps.setProperty("openkad.executors.forward.nrthreads", "3");
+		defaultProps.setProperty("openkad.executors.forward.max_pending", "4");
 		// executing the long find node operations
 		defaultProps.setProperty("openkad.executors.op.nrthreads", "1");
-		defaultProps.setProperty("openkad.executors.op.max_pending", "4");
+		defaultProps.setProperty("openkad.executors.op.max_pending", "3");
 		// sending back pings
 		defaultProps.setProperty("openkad.executors.ping.nrthreads", "1");
 		defaultProps.setProperty("openkad.executors.ping.max_pending", "16");
@@ -223,7 +223,10 @@ public class KadNetModule extends AbstractModule {
 		bind(AtomicInteger.class)
 			.annotatedWith(Names.named("openkad.testing.optimalCacheMaxSize"))
 			.toInstance(new AtomicInteger(0));
-				
+		
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrIncomingPings"))
+			.toInstance(new AtomicInteger(0));
 		
 		bind(Timer.class)
 			.annotatedWith(Names.named("openkad.timer"))
@@ -245,6 +248,7 @@ public class KadNetModule extends AbstractModule {
 			//.to(DummyKadCache.class)
 			//.to(OptimalKadCache.class)
 			.to(LRUKadCache.class)
+			//.to(ColorLRUKadCache.class)
 			.in(Scopes.SINGLETON);
 		
 		bind(JoinOperation.class);

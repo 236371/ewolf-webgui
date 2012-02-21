@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -141,7 +142,14 @@ public class MessageDispatcher<A> {
 	
 	public Future<KadMessage> futureRegister() {
 		
-		FutureCallback<KadMessage, A> f = new FutureCallback<KadMessage, A>();
+		FutureCallback<KadMessage, A> f = new FutureCallback<KadMessage, A>() {
+			@Override
+			public synchronized boolean cancel(boolean mayInterruptIfRunning) {
+				MessageDispatcher.this.cancel(new CancellationException());
+				return super.cancel(mayInterruptIfRunning);
+			};
+		};
+		
 		setCallback(null, f);
 		expecters.add(this);
 		setupTimeout();
