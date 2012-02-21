@@ -77,8 +77,8 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("openkad.executors.server.nrthreads", "8"); 
 		defaultProps.setProperty("openkad.executors.server.max_pending", "128");
 		// handling registered callback
-		defaultProps.setProperty("openkad.executors.client.nrthreads", "1"); 
-		defaultProps.setProperty("openkad.executors.client.max_pending", "1");
+		defaultProps.setProperty("openkad.executors.client.nrthreads", "3"); 
+		defaultProps.setProperty("openkad.executors.client.max_pending", "128");
 		// forwarding find node requests
 		defaultProps.setProperty("openkad.executors.forward.nrthreads", "2");
 		defaultProps.setProperty("openkad.executors.forward.max_pending", "2");
