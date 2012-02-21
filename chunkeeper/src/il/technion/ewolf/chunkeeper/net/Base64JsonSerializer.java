@@ -26,6 +26,13 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.google.inject.Inject;
 
+/**
+ * Serialize chunkeeper objects using json and endcode it to
+ * a url safe base64 encoding
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class Base64JsonSerializer implements ChunkeeperSerializer {
 
 	private final Gson gson;

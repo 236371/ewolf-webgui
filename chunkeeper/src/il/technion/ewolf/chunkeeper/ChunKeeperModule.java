@@ -30,6 +30,8 @@ public class ChunKeeperModule extends AbstractModule {
 	private Properties getDefaultProperties() {
 		Properties defaultProps = new Properties();
 		
+		// the chunk locator dht params
+		// for more info, refer to the dht documentation
 		defaultProps.setProperty("chunkeeper.dht.storage.maxage", ""+TimeUnit.HOURS.toMillis(1));
 		defaultProps.setProperty("chunkeeper.dht.storage.validtime", ""+TimeUnit.HOURS.toMillis(1));
 		

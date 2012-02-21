@@ -13,6 +13,12 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
+/**
+ * Stores the chunk in memory
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class SimpleChunkStore implements ChunkStore {
 
 	private final DHT chucksDHT;

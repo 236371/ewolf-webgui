@@ -11,6 +11,12 @@ import java.util.Map;
 
 import org.apache.commons.codec.binary.Base64;
 
+/**
+ * Uniquely identifies a chunk. Holds the size of the data, the key
+ * it is mapped by and the data's hash
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class ChunkId implements Serializable {
 
 	private static final long serialVersionUID = 7215790794713185534L;
@@ -45,15 +51,28 @@ public class ChunkId implements Serializable {
 			hashFromAlgo.put(algoName, md.digest(data));
 		}
 	}
-	
+	/**
+	 * Get the key this data is mapped by
+	 * @return
+	 */
 	public Key getKey() {
 		return key;
 	}
 	
+	/**
+	 * Get the data size in bytes
+	 * @return data size in bytes
+	 */
 	public long getSize() {
 		return size;
 	}
 	
+	/**
+	 * Get the data's hash from a hash algorithm. May return null
+	 * if no hash was found for the requested algorithm
+	 * @param hashAlgo
+	 * @return
+	 */
 	public byte[] getHash(String hashAlgo) {
 		return hashFromAlgo.get(hashAlgo);
 	}

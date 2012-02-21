@@ -15,12 +15,23 @@ import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.protocol.HttpRequestHandler;
 
+/**
+ * Base class for all chunkeeper handlers
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public abstract class AbstractHandler implements HttpRequestHandler {
 	
 	
 	protected abstract String getPath();
 	
-	
+	/**
+	 * Parse an http request for its query part
+	 * @param req the http request
+	 * @return parsed http query
+	 * @throws HttpException
+	 */
 	protected Map<String, List<String>> parseQuery(HttpRequest req) throws HttpException {
 		Map<String, List<String>> params = new HashMap<String, List<String>>();
 		
@@ -50,6 +61,10 @@ public abstract class AbstractHandler implements HttpRequestHandler {
 		return params;
 	}
 	
+	/**
+	 * Register this handler
+	 * @param conn the http connector used by the chunkeeper to transfer messages and data
+	 */
 	public void register(HttpConnector conn) {
 		conn.register(getPath(), this);
 	}

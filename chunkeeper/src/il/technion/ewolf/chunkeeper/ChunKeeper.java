@@ -20,6 +20,15 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
+/**
+ * Stores and finds chunks in a distributed network. Rereplicate the
+ * stored data as necessary and keeps track on fairness issues.
+ * Data size is not bounded although other nodes may not agree to store
+ * large objects.
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class ChunKeeper {
 
 	private final DHT chucksDHT;
@@ -43,16 +52,29 @@ public class ChunKeeper {
 		this.connector = connector;
 	}
 	
+	/**
+	 * Binds all the handlers. invoke this method before using this class
+	 */
 	public void bind() {
 		for (AbstractHandler h : handlers) {
 			h.register(connector);
 		}
 	}
 	
+	/**
+	 * Login with credentials for fairness calculations
+	 * @param creditFor the pub/prv key used for crediting and fairness
+	 */
 	public void login(KeyPair creditFor) {
 		
 	}
 	
+	/**
+	 * Stores a data mapped by a given key
+	 * 
+	 * @param key the data item's key
+	 * @param data the data to be stored
+	 */
 	public void store(Key key, Serializable data) {
 		ByteArrayOutputStream bout = null;
 		ObjectOutputStream oout = null;
@@ -70,6 +92,11 @@ public class ChunKeeper {
 		}
 	}
 	
+	/**
+	 * Finds all chunks associated with the given key
+	 * @param key the data item's key
+	 * @return all chunks associated with the key
+	 */
 	public Set<Chunk> findChunk(Key key) {
 		Chunk localResults = chunkStore.get(key);
 		if (localResults != null) {

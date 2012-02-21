@@ -20,6 +20,12 @@ import org.apache.http.util.EntityUtils;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+/**
+ * Represent a data item that can be download lazily
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class Chunk {
 
 	// state
@@ -47,6 +53,14 @@ public class Chunk {
 		this.serializer = serializer;
 	}
 	
+	/**
+	 * Adds another chunk location (ip and port) for downloading this
+	 * chunk from. Note that the first time addLocator is invoked sets
+	 * this chunk identity
+	 * 
+	 * @param l the chunk locator
+	 * @return true if the locator fits (has the same identity as this chunk)
+	 */
 	public boolean addLocator(ChunkLocator l) {
 		if (chunkId == null) {
 			// first addLocator sets the chunk id of this chunk
@@ -63,10 +77,20 @@ public class Chunk {
 		return true;
 	}
 	
+	/**
+	 * 
+	 * @return the chunk identity. Can be null if chunk has no identity yet
+	 */
 	public ChunkId getChunkId() {
 		return chunkId;
 	}
 	
+	/**
+	 * Manually sets the data. This will prevent opening connection for download the data.
+	 * This method is very useful for returning cached results
+	 * @param data the chunk's data
+	 * @return this for fluent interface
+	 */
 	public Chunk setData(byte[] data) {
 		this.data = data;
 		return this;
@@ -92,6 +116,12 @@ public class Chunk {
 	}
 	
 
+	/**
+	 * Download the data and from the remote node and deserialize it
+	 * @return the deserialized data
+	 * @throws IOException if the data was not successfully downloaded
+	 * @throws ClassNotFoundException could not deserialize the data
+	 */
 	public Serializable download() throws IOException, ClassNotFoundException {
 		byte[] raw = downloadRaw();
 		
@@ -108,6 +138,13 @@ public class Chunk {
 	}
 	
 	
+	/**
+	 * Download the data from the remote node.
+	 * Note that this method caches the download data, thus only the first invocation
+	 * will actually open a connection with the remote nodes for downloading.
+	 * @return the raw data in its byte array format
+	 * @throws IOException open connection with all data's sources failed
+	 */
 	public byte[] downloadRaw() throws IOException {
 		if (data != null)
 			return data;

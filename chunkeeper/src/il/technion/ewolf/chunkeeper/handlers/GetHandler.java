@@ -19,6 +19,11 @@ import org.apache.http.protocol.HttpContext;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+/**
+ * Search the requested chunk in its local storage and sends it back if found
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class GetHandler extends AbstractHandler {
 
 	private final String getHandlerPath;
