@@ -6,6 +6,12 @@ import java.io.Serializable;
 
 import com.google.inject.Inject;
 
+/**
+ * Store message sent to the remote node's store message handler
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class StoreMessage extends DHTMessage {
 	
 	private static final long serialVersionUID = 4824611006605171348L;

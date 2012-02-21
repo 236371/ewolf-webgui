@@ -13,6 +13,14 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
+/**
+ * Does the put operation:
+ * send storeMessage to all closest nodes according to the key
+ * based routing
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class PutOperation {
 
 	// state

@@ -20,6 +20,15 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
+/**
+ * Does the complex get operation:
+ * sends a findValueRequest to all the closest nodes to the key
+ * according to the key based routing network and waits for responses.
+ * Once all responses have recved, merge them into a list
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class GetOperation {
 
 	// state
@@ -45,21 +54,41 @@ public class GetOperation {
 		this.findValueRequestHandlerName = findValueRequestHandlerName;
 	}
 	
+	/**
+	 * Sets the remote dht name for sending the request to.
+	 * @param dhtName the remote dht name
+	 * @return this for fluent interface
+	 */
 	public GetOperation setDhtName(String dhtName) {
 		this.dhtName = dhtName;
 		return this;
 	}
 	
+	/**
+	 * Sets the local storage to look into when doing the operation
+	 * @param storage the local storage
+	 * @return this for fluent interface
+	 */
 	public GetOperation setStorage(DHTStorage storage) {
 		this.storage = storage;
 		return this;
 	}
 	
+	/**
+	 * Sets the key to be searched
+	 * @param key the data item's key
+	 * @return this for fluent interface
+	 */
 	public GetOperation setKey(Key key) {
 		this.key = key;
 		return this;
 	}
 	
+	/**
+	 * Does the operation.
+	 * You must set the storage, key and dhtName before calling this method 
+	 * @return a list of values stored in the dht
+	 */
 	public List<Serializable> doGet() {
 		if (dhtName == null || storage == null || key == null)
 			throw new IllegalArgumentException("missing param in dht get operation");

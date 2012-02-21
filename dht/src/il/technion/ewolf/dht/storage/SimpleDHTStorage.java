@@ -12,6 +12,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.inject.Inject;
 
+/**
+ * Simple volatile storage that never removes old data
+ *  
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class SimpleDHTStorage implements DHTStorage {
 
 	private final Map<Key, Set<Serializable>> storage;

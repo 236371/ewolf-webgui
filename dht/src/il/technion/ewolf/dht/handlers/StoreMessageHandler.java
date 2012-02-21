@@ -9,6 +9,11 @@ import java.io.Serializable;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
+/**
+ * Handles store messages: insert the given data item into the storage
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class StoreMessageHandler extends AbstractDHTHandler {
 
 	// dependencies

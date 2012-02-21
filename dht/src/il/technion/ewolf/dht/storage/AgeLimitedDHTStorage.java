@@ -24,6 +24,12 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
+/**
+ * A volatile storage that removes data after a given time limit.
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class AgeLimitedDHTStorage implements DHTStorage {
 
 	private final Map<Key, Set<Entry>> storage;
@@ -101,6 +107,11 @@ public class AgeLimitedDHTStorage implements DHTStorage {
 		
 	}
 	
+	/**
+	 * Re insert old data to the dht
+	 * @param rereplicate true for re insert the data
+	 * @return this for fluent interface
+	 */
 	public AgeLimitedDHTStorage setRereplicate(boolean rereplicate) {
 		this.rereplicate = rereplicate;
 		return this;
@@ -111,11 +122,25 @@ public class AgeLimitedDHTStorage implements DHTStorage {
 		this.dhtName = dhtName;
 	}
 	
+	/**
+	 * sets a data item max age. If a data item exceeds this age
+	 * it will be removed from storage and will not be re inserted
+	 * even if rereplicate = true
+	 * @param maxAge
+	 * @return this for fluent interface
+	 */
 	public AgeLimitedDHTStorage setMaxAge(long maxAge) {
 		this.maxAge = maxAge;
 		return this;
 	}
 	
+	/**
+	 * sets the max time a data item can be in this storage before
+	 * it is removed (or re-inserted)
+	 * 
+	 * @param validTime max time in storage in millies
+	 * @return this for fluent interface
+	 */
 	public AgeLimitedDHTStorage setValidTime(long validTime) {
 		this.validTime = validTime;
 		return this;

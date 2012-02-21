@@ -25,6 +25,7 @@ public class SimpleDHTModule extends AbstractModule {
 		
 		Properties defaultProps = new Properties();
 		
+		// interval for cleaning the storage from old stale data
 		defaultProps.setProperty("dht.storage.checkInterval", ""+TimeUnit.MINUTES.toMillis(5));
 		
 		return defaultProps;

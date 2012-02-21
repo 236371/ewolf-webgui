@@ -17,6 +17,15 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Provider;
 
+/**
+ * Implements a DHT in the most strait forward way.
+ * put finds the nodes closest to the key using a key based routing and
+ * sends store message to all the found nodes.
+ * get finds the nodes closest to the key and sends them a get request.
+ * 
+ * @author eyal.kibbar@gmail.com
+ *
+ */
 public class SimpleDHT implements DHT {
 
 	// dependencies

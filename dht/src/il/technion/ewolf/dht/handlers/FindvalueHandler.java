@@ -12,7 +12,12 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
-
+/**
+ * Handle the find value requests: search the storage for the
+ * requested key and sends the results back to the requester
+ * 
+ * @author eyal.kibbar@gmail.com
+ */
 public class FindvalueHandler extends AbstractDHTHandler {
 
 	// state
