@@ -22,8 +22,8 @@ import il.technion.ewolf.kbr.openkad.net.MessageDispatcher;
 import il.technion.ewolf.kbr.openkad.op.EagerColorFindValueOperation;
 import il.technion.ewolf.kbr.openkad.op.FindNodeOperation;
 import il.technion.ewolf.kbr.openkad.op.FindValueOperation;
-import il.technion.ewolf.kbr.openkad.op.ForwardFindValueOperation;
 import il.technion.ewolf.kbr.openkad.op.JoinOperation;
+import il.technion.ewolf.kbr.openkad.op.KadFindValueOperation;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -68,7 +68,7 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("openkad.keyfactory.keysize", "20");
 		defaultProps.setProperty("openkad.keyfactory.hashalgo", "SHA-256");
 		defaultProps.setProperty("openkad.bucket.kbuckets.maxsize", "20");
-		defaultProps.setProperty("openkad.color.nrcolors", "20");
+		defaultProps.setProperty("openkad.color.nrcolors", "19");
 		defaultProps.setProperty("openkad.scheme.name", "openkad.udp");
 		
 		// performance params
@@ -100,7 +100,8 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("openkad.net.forwarded.timeout", TimeUnit.SECONDS.toMillis(300)+"");
 		
 		defaultProps.setProperty("openkad.color.candidates", "1");
-		
+		defaultProps.setProperty("openkad.color.slack.size", "1");
+		defaultProps.setProperty("openkad.color.allcolors", "95");
 		// interval between successive find node operations for refresh buckets
 		defaultProps.setProperty("openkad.refresh.interval", TimeUnit.SECONDS.toMillis(30)+"");
 		
@@ -168,9 +169,9 @@ public class KadNetModule extends AbstractModule {
 		
 		bind(FindValueOperation.class)
 			.annotatedWith(Names.named("openkad.op.findvalue"))
-			//.to(KadFindValueOperation.class);
+			.to(KadFindValueOperation.class);
 			//.to(KadCacheFindValueOperation.class);
-			.to(ForwardFindValueOperation.class);
+			//.to(ForwardFindValueOperation.class);
 		
 		bind(FindValueOperation.class)
 			.annotatedWith(Names.named("openkad.op.lastFindValue"))
@@ -189,6 +190,13 @@ public class KadNetModule extends AbstractModule {
 			Provider<PingRequest> pingRequestProvider,
 			Provider<MessageDispatcher<Void>> msgDispatcherProvider) {
 		return new StableBucket(maxSize, validTimespan, pingExecutor, pingRequestProvider, msgDispatcherProvider);
+	}
+	
+	@Provides
+	@Named("openkad.bucket.slack")
+	Bucket provideSlackBucket(@Named("openkad.color.slack.size") int maxSize) {
+		//return new SlackBucket(maxSize);
+		return new DummyBucket();
 	}
 	
 	@Provides

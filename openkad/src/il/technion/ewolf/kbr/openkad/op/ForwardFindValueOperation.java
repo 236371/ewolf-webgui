@@ -11,6 +11,8 @@ import il.technion.ewolf.kbr.openkad.msg.ForwardMessage;
 import il.technion.ewolf.kbr.openkad.msg.ForwardRequest;
 import il.technion.ewolf.kbr.openkad.msg.ForwardResponse;
 import il.technion.ewolf.kbr.openkad.msg.KadMessage;
+import il.technion.ewolf.kbr.openkad.msg.StoreMessage;
+import il.technion.ewolf.kbr.openkad.net.KadServer;
 import il.technion.ewolf.kbr.openkad.net.MessageDispatcher;
 import il.technion.ewolf.kbr.openkad.net.filter.IdMessageFilter;
 import il.technion.ewolf.kbr.openkad.net.filter.TypeMessageFilter;
@@ -38,15 +40,18 @@ public class ForwardFindValueOperation extends FindValueOperation {
 	private final int nrCandidates;
 	private final int nrColors;
 	private final int myColor;
+	private final int nrShare;
 	private final long timeout;
 	private final Node localNode;
 	
 	private final Provider<ForwardRequest> forwardRequestProvider;
 	private final Provider<MessageDispatcher<Void>> msgDispatcherProvider;
 	private final Provider<FindValueOperation> findValueOperationProvider;
+	private final Provider<StoreMessage> storeMessageProvider;
 	
 	private final KBuckets kBuckets;
 	private final KadCache cache;
+	private final KadServer kadServer;
 	
 	// testing
 	private final AtomicInteger nrLongTimeouts;
@@ -64,15 +69,18 @@ public class ForwardFindValueOperation extends FindValueOperation {
 			@Named("openkad.color.candidates") int nrCandidates,
 			@Named("openkad.color.nrcolors") int nrColors,
 			@Named("openkad.local.color") int myColor,
+			@Named("openkad.cache.share") int nrShare,
 			@Named("openkad.net.forwarded.timeout") long timeout,
 			@Named("openkad.local.node") Node localNode,
 			
 			Provider<ForwardRequest> forwardRequestProvider,
 			Provider<MessageDispatcher<Void>> msgDispatcherProvider,
 			@Named("openkad.op.lastFindValue") Provider<FindValueOperation> findValueOperationProvider,
+			Provider<StoreMessage> storeMessageProvider,
 			
 			KBuckets kBuckets,
 			KadCache cache,
+			KadServer kadServer,
 			
 			//testing
 			@Named("openkad.testing.nrLongTimeouts") AtomicInteger nrLongTimeouts,
@@ -88,15 +96,18 @@ public class ForwardFindValueOperation extends FindValueOperation {
 		this.nrCandidates = nrCandidates;
 		this.nrColors = nrColors;
 		this.myColor = myColor;
+		this.nrShare = nrShare;
 		this.timeout = timeout;
 		this.localNode = localNode;
 		
 		this.forwardRequestProvider = forwardRequestProvider;
 		this.msgDispatcherProvider = msgDispatcherProvider;
 		this.findValueOperationProvider = findValueOperationProvider;
+		this.storeMessageProvider = storeMessageProvider;
 		
 		this.kBuckets = kBuckets;
 		this.cache = cache;
+		this.kadServer = kadServer;
 		
 		this.nrLongTimeouts = nrLongTimeouts;
 		this.hopsToResultHistogram = hopsToResultHistogram;
@@ -129,6 +140,10 @@ public class ForwardFindValueOperation extends FindValueOperation {
 			System.out.println(localNode+": remote node return nack");
 			nrNacks.incrementAndGet();
 			bootstrap.addAll(res.getNodes());
+			
+			// try to avoid sending more messages to this node
+			kBuckets.markAsDead(res.getSrc());
+			
 			// Logical throw to indicate result was a nack. 
 			// will be caught outside to cancel the expect.
 			
@@ -160,6 +175,8 @@ public class ForwardFindValueOperation extends FindValueOperation {
 		if (msg.isNack()) {
 			nrNacks.incrementAndGet();
 			bootstrap.addAll(msg.getNodes());
+			kBuckets.markAsDead(msg.getSrc());
+			
 			throw new CancellationException("nack");
 			
 		} else if (msg.getNodes() != null) {
@@ -204,6 +221,9 @@ public class ForwardFindValueOperation extends FindValueOperation {
 		bootstrap = kBuckets.getClosestNodesByKey(key, kBucketSize);
 		bootstrap.add(localNode);
 		List<Node> candidates = sort(bootstrap, on(Node.class).getKey(), new KeyColorComparator(key, nrColors));
+		List<Node> colorCandidates = kBuckets.getNodesFromColorBucket(key);
+		candidates.removeAll(colorCandidates);
+		candidates.addAll(0, colorCandidates);
 		
 		if (candidates.size() > nrCandidates)
 			candidates.subList(nrCandidates, candidates.size()).clear();
@@ -244,6 +264,7 @@ public class ForwardFindValueOperation extends FindValueOperation {
 				List<Node> results = sendForwardRequest(n, req);
 				if (results != null) {
 					expectMessage.cancel(false);
+					shareResults(colorCandidates, results);
 					return results;
 				}
 				// results is null, that means the remote node will
@@ -252,23 +273,44 @@ public class ForwardFindValueOperation extends FindValueOperation {
 			} catch (Exception e) {
 				System.out.println(localNode+ ": failed recv ack or nack from remote node");
 				expectMessage.cancel(false);
+				kBuckets.markAsDead(n);
 				continue;
 			}
 			
 			// wait for the result to arrive
 			try {
 				List<Node> results = waitForResults(expectMessage);
-				if (results != null)
+				if (results != null) {
+					shareResults(colorCandidates, results);
 					return results;
+				}
 				
 			} catch (Exception e) {
 				System.out.println(localNode+ ": failed to recv expected message");
+				kBuckets.markAsDead(n);
 				nrLongTimeouts.incrementAndGet();
 			}
 			
 		} while (true);
 	}
 	
+	
+	private void shareResults(List<Node> toShareWith, List<Node> results) {
+		if (toShareWith.size() > nrShare)
+			toShareWith.subList(nrShare, toShareWith.size()).clear();
+		
+		StoreMessage storeMessage = storeMessageProvider.get()
+			.setKey(key)
+			.setNodes(results);
+		for (Node n : toShareWith) {
+			// dont send if the remote node has a different color
+			if (n.getKey().getColor(nrColors) != key.getColor(nrColors))
+				continue;
+			try {
+				kadServer.send(n, storeMessage);
+			} catch (Exception e) {}
+		}
+	}
 	
 	private List<Node> doFindNode() {
 		

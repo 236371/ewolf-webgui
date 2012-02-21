@@ -122,7 +122,7 @@ public class ForwardHandler extends AbstractHandler {
 		this.nrNacksSent = nrNacksSent;
 	}
 
-	private void doFindValue(final ForwardRequest req, final List<Node> bootstrap) throws RejectedExecutionException {
+	private void doFindValue(final ForwardRequest req) throws RejectedExecutionException {
 		opExecutor.execute(new Runnable() {
 			
 			@Override
@@ -133,7 +133,7 @@ public class ForwardHandler extends AbstractHandler {
 				
 				System.out.println(localNode+": doing the find node");
 				FindValueOperation op = findValueOperationProvider.get()
-					.setBootstrap(bootstrap)
+					.setBootstrap(req.getBootstrap())
 					.setKey(req.getKey());
 				
 				List<Node> results = op.doFindValue();
@@ -169,29 +169,27 @@ public class ForwardHandler extends AbstractHandler {
 		
 		// check the cache first
 		List<Node> cachedResults = cache.search(req.getKey());
-		ForwardResponse res = req.generateResponse(localNode);
-		
-		try {
-			if (cachedResults != null) {
-				System.out.println(localNode+": cache hit !");
-				kadServer.send(req.getSrc(), res.setNodes(cachedResults));
-				return;
+		if (cachedResults != null) {
+			System.out.println(localNode+": cache hit !");
+			try {
+				kadServer.send(req.getSrc(), req
+						.generateResponse(localNode)
+						.setNodes(cachedResults));
+			} catch (IOException e) {
+				// could not send back the results
+				// nothing to do
 			}
-			// no cached result
-			// continue with the operation
-		} catch (IOException e) {
-			// could not send back the results
-			// nothing to do
 			return;
 		}
 		
-		
+		// no cached result
+		// continue with the operation
 		assert (cachedResults == null);
 		System.out.println(localNode+": result was not in cache");
-		// result was not in cache
+		
 		// either forward to someone else or do the job myself
 		if (myColor == req.getKey().getColor(nrColors)) {
-			// i need to preform the find node because i have
+			// i need to perform the find value because i have
 			// the right color
 			System.out.println(localNode+": I have the right color");
 			doFindValueAndSendAckOrNack(req);
@@ -240,7 +238,8 @@ public class ForwardHandler extends AbstractHandler {
 						// node B is too busy to do the job
 						// node B sends a nack message to node A
 						
-						doFindValueOrSendNack(incomingReq, res.getNodes());
+						sendBackNack(incomingReq, res.getNodes());
+						//doFindValueOrSendNack(incomingReq, res.getNodes());
 					}
 					
 					// response contains real results !!
@@ -260,53 +259,27 @@ public class ForwardHandler extends AbstractHandler {
 	}
 	
 	private void doFindValueAndSendAckOrNack(ForwardRequest req) {
-		if (doFindValueOrSendNack(req, new ArrayList<Node>(1))) {
-			// find value will be executed !
-			// send ack
-			try {
-				kadServer.send(req.getSrc(), req.generateResponse(localNode).setAck());
-			} catch (IOException e) {
-				// failed to send ack
-				// nothing to do
-			}
-		}
-	}
-	
-	/**
-	 * 
-	 * @param req
-	 * @return true if find value is scheduled for execution
-	 */
-	private boolean doFindValueOrSendNack(ForwardRequest req, List<Node> additionalBootstrap) {
 		// do the find value myself
 		try {
-			List<Node> mergedBootstraps = mergeBootstraps(
-					req.getBootstrap(),
-					additionalBootstrap,
-					req.getKey());
+			doFindValue(req);
 			
-			doFindValue(req, mergedBootstraps);
-			return true;
+			kadServer.send(req.getSrc(), req.generateResponse(localNode).setAck());
+			
 		} catch (RejectedExecutionException e) {
 			// i'm too busy to do the find value myself
 			// send back a nack
-			
-			// merge my knowledge from my kbuckets with the additional bootstrap
-			// exclude the request bootstraps since the node who sent
-			// me this is not interested in its own knowledge being sent
-			// back to him
-			List<Node> mergedBootstraps = mergeBootstraps(
-					kBuckets.getClosestNodesByKey(req.getKey(), kBucketSize), 
-					additionalBootstrap,
-					req.getKey(),
-					req.getBootstrap());
-			
-			sendBackNack(req, mergedBootstraps);
+			sendBackNack(req, new ArrayList<Node>(1));
+		} catch (IOException e) {
+			// failed to send ack
+			// nothing to do
 		}
-		return false;
 	}
 	
+	
 	private void sendBackNack(ForwardRequest req, List<Node> bootstrap) {
+		List<Node> bucket = kBuckets.getClosestNodesByKey(req.getKey(), kBucketSize);
+		bucket.addAll(bootstrap);
+		bootstrap = mergeBootstraps(req.getBootstrap(), bucket, req.getKey());
 		try {
 			kadServer.send(req.getSrc(), req
 					.generateMessage(localNode)
@@ -359,8 +332,9 @@ public class ForwardHandler extends AbstractHandler {
 					expectDispatcher.cancel(exc);
 					nrShortForwardTimeouts.incrementAndGet();
 					kBuckets.markAsDead(nextHop);
-					doFindValueOrSendNack(incomingReq, incomingReq.getBootstrap());
 					
+					sendBackNack(incomingReq, new ArrayList<Node>(1));
+					//doFindValueOrSendNack(incomingReq, incomingReq.getBootstrap());
 				}
 				
 				@Override
@@ -380,7 +354,8 @@ public class ForwardHandler extends AbstractHandler {
 						// next hop decided not to answer my request
 						
 						// do the op myself with the nack x-tra nodes
-						doFindValueOrSendNack(incomingReq, res.getNodes());
+						// doFindValueOrSendNack(incomingReq, res.getNodes());
+						sendBackNack(incomingReq, res.getNodes());
 						
 					} else {
 						// response is neither ack nor nack
@@ -480,15 +455,13 @@ public class ForwardHandler extends AbstractHandler {
 			// if the next hop only returns an ACK, we will continue
 			// waiting for the result in the expect message.
 			forwardExecutor.execute(new Runnable() {
-				
 				@Override
 				public void run() {
 					sendForwardRequest(incomingReq, outgoingReq, expectMessage, nextHop);
 				}
-				
 			});
-			
-			// send ack
+			// message is scheduled for forwarding
+			// send ack back to the requester
 			try {
 				kadServer.send(incomingReq.getSrc(), incomingReq
 						.generateResponse(localNode)
@@ -501,8 +474,8 @@ public class ForwardHandler extends AbstractHandler {
 		} catch (RejectedExecutionException e) {
 			expectMessage.cancel(e);
 			// could not forward request
-			// do it myself
-			doFindValueAndSendAckOrNack(incomingReq);
+			// send nack
+			sendBackNack(incomingReq, kBuckets.getClosestNodesByKey(incomingReq.getKey(), kBucketSize));
 		}
 	}
 

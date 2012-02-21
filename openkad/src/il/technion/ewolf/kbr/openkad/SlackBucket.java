@@ -36,6 +36,9 @@ public class SlackBucket implements Bucket {
 			return;
 		
 		synchronized (bucket) {
+			if (bucket.contains(n))
+				return;
+			
 			if (bucket.size() == maxSize)
 				bucket.remove(0);
 			
@@ -54,7 +57,6 @@ public class SlackBucket implements Bucket {
 
 	@Override
 	public void markDead(Node n) {
-		// TODO Auto-generated method stub
-		
+		// nothing to do
 	}
 }
