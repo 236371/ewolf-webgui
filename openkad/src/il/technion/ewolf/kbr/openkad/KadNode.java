@@ -129,4 +129,12 @@ public class KadNode {
 	public boolean hasContacted() {
 		return !hasNeverContacted();
 	}
+
+	/**
+	 * Sets the last contact time to 0, which will cause
+	 * hasNeverContacted to return true
+	 */
+	public void markDead() {
+		setNodeWasContacted(0);
+	}
 }

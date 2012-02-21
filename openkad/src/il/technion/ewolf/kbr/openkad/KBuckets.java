@@ -9,6 +9,9 @@ import il.technion.ewolf.kbr.KeyFactory;
 import il.technion.ewolf.kbr.Node;
 import il.technion.ewolf.kbr.concurrent.CompletionHandler;
 import il.technion.ewolf.kbr.openkad.msg.FindNodeResponse;
+import il.technion.ewolf.kbr.openkad.msg.ForwardMessage;
+import il.technion.ewolf.kbr.openkad.msg.ForwardRequest;
+import il.technion.ewolf.kbr.openkad.msg.ForwardResponse;
 import il.technion.ewolf.kbr.openkad.msg.KadMessage;
 import il.technion.ewolf.kbr.openkad.msg.PingResponse;
 import il.technion.ewolf.kbr.openkad.net.MessageDispatcher;
@@ -111,8 +114,19 @@ public class KBuckets {
 					
 					// try to sniff the message for more information, such as
 					// nodes in its content
+					List<Node> nodes = null;
 					if (msg instanceof FindNodeResponse) {
-						for (Node n : ((FindNodeResponse)msg).getNodes()) {
+						nodes = ((FindNodeResponse)msg).getNodes();
+					} else if (msg instanceof ForwardResponse) {
+						nodes = ((ForwardResponse)msg).getNodes();
+					} else if (msg instanceof ForwardMessage) {
+						nodes = ((ForwardMessage)msg).getNodes();
+					} else if (msg instanceof ForwardRequest) {
+						nodes = ((ForwardRequest)msg).getBootstrap();
+					}
+					
+					if (nodes != null) {
+						for (Node n : nodes) {
 							KBuckets.this.insert(kadNodeProvider.get().setNode(n));
 						}
 					}
@@ -189,6 +203,13 @@ public class KBuckets {
 		return $;
 	}
 	
+	public void markAsDead(Node n) {
+		int i = getKBucketIndex(n.getKey());
+		if (i == -1)
+			return;
+		
+		kbuckets[i].markDead(n);
+	}
 	
 	/**
 	 * Returns a single bucket's content. The bucket number is calculated

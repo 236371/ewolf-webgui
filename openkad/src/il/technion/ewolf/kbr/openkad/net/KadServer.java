@@ -6,6 +6,7 @@ import static ch.lambdaj.Lambda.on;
 import static org.hamcrest.Matchers.is;
 import il.technion.ewolf.kbr.Node;
 import il.technion.ewolf.kbr.openkad.msg.KadMessage;
+import il.technion.ewolf.kbr.openkad.msg.PingRequest;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -17,6 +18,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -39,7 +41,11 @@ public class KadServer implements Runnable {
 	private final String kadScheme;
 	
 	// testing
+	private final AtomicInteger nrOutgoingPings;
 	private final AtomicInteger nrIncomingMessages;
+	private final AtomicLong nrBytesSent;
+	private final AtomicLong nrBytesRecved;
+	
 	
 	// state
 	private final AtomicBoolean isActive = new AtomicBoolean(false);
@@ -52,7 +58,12 @@ public class KadServer implements Runnable {
 			//@Named("openkad.net.buffer") BlockingQueue<DatagramPacket> pkts,
 			@Named("openkad.executors.server") ExecutorService srvExecutor,
 			@Named("openkad.net.expecters") Set<MessageDispatcher<?>> expecters,
-			@Named("openkad.testing.nrIncomingMessages") AtomicInteger nrIncomingMessages) {
+			
+			// testing
+			@Named("openkad.testing.nrOutgoingPings") AtomicInteger nrOutgoingPings,
+			@Named("openkad.testing.nrIncomingMessages") AtomicInteger nrIncomingMessages,
+			@Named("openkad.testing.nrBytesSent") AtomicLong nrBytesSent,
+			@Named("openkad.testing.nrBytesRecved") AtomicLong nrBytesRecved) {
 		
 		this.kadScheme = kadScheme;
 		this.serializer = serializer;
@@ -60,7 +71,11 @@ public class KadServer implements Runnable {
 		//this.pkts = pkts;
 		this.srvExecutor = srvExecutor;
 		this.expecters = expecters;
+		
+		this.nrOutgoingPings = nrOutgoingPings;
 		this.nrIncomingMessages = nrIncomingMessages;
+		this.nrBytesSent = nrBytesSent;
+		this.nrBytesRecved = nrBytesRecved;
 	}
 	
 	/**
@@ -78,11 +93,16 @@ public class KadServer implements Runnable {
 	 * @throws IOException any socket exception
 	 */
 	public void send(Node to, KadMessage msg) throws IOException {
+		if (msg instanceof PingRequest) {
+			nrOutgoingPings.incrementAndGet();
+		}
+		
 		ByteArrayOutputStream bout = null;
 		try {
 			bout = new ByteArrayOutputStream();
 			serializer.write(msg, bout);
 			byte[] bytes = bout.toByteArray();
+			nrBytesSent.addAndGet(bytes.length);
 			DatagramPacket pkt = new DatagramPacket(bytes, 0, bytes.length);
 			
 			pkt.setSocketAddress(to.getSocketAddress(kadScheme));
@@ -94,6 +114,7 @@ public class KadServer implements Runnable {
 	
 	private void handleIncomingPacket(final DatagramPacket pkt) {
 		nrIncomingMessages.incrementAndGet();
+		nrBytesRecved.addAndGet(pkt.getLength());
 		srvExecutor.execute(new Runnable() {
 			
 			@Override

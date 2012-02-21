@@ -22,8 +22,8 @@ import il.technion.ewolf.kbr.openkad.net.MessageDispatcher;
 import il.technion.ewolf.kbr.openkad.op.EagerColorFindValueOperation;
 import il.technion.ewolf.kbr.openkad.op.FindNodeOperation;
 import il.technion.ewolf.kbr.openkad.op.FindValueOperation;
+import il.technion.ewolf.kbr.openkad.op.ForwardFindValueOperation;
 import il.technion.ewolf.kbr.openkad.op.JoinOperation;
-import il.technion.ewolf.kbr.openkad.op.KadCacheFindValueOperation;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -46,6 +46,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provider;
@@ -76,14 +77,14 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("openkad.executors.server.nrthreads", "8"); 
 		defaultProps.setProperty("openkad.executors.server.max_pending", "128");
 		// handling registered callback
-		defaultProps.setProperty("openkad.executors.client.nrthreads", "4"); 
-		defaultProps.setProperty("openkad.executors.client.max_pending", "128");
+		defaultProps.setProperty("openkad.executors.client.nrthreads", "1"); 
+		defaultProps.setProperty("openkad.executors.client.max_pending", "1");
 		// forwarding find node requests
-		defaultProps.setProperty("openkad.executors.forward.nrthreads", "3");
-		defaultProps.setProperty("openkad.executors.forward.max_pending", "4");
+		defaultProps.setProperty("openkad.executors.forward.nrthreads", "2");
+		defaultProps.setProperty("openkad.executors.forward.max_pending", "2");
 		// executing the long find node operations
 		defaultProps.setProperty("openkad.executors.op.nrthreads", "1");
-		defaultProps.setProperty("openkad.executors.op.max_pending", "3");
+		defaultProps.setProperty("openkad.executors.op.max_pending", "2");
 		// sending back pings
 		defaultProps.setProperty("openkad.executors.ping.nrthreads", "1");
 		defaultProps.setProperty("openkad.executors.ping.max_pending", "16");
@@ -95,8 +96,8 @@ public class KadNetModule extends AbstractModule {
 		defaultProps.setProperty("openkad.bucket.valid_timespan", TimeUnit.MINUTES.toMillis(1) +"");
 		// network timeouts and concurrency level
 		defaultProps.setProperty("openkad.net.concurrency", "3");
-		defaultProps.setProperty("openkad.net.timeout", TimeUnit.SECONDS.toMillis(3)+"");
-		defaultProps.setProperty("openkad.net.forwarded.timeout", TimeUnit.SECONDS.toMillis(30)+"");
+		defaultProps.setProperty("openkad.net.timeout", TimeUnit.SECONDS.toMillis(10)+"");
+		defaultProps.setProperty("openkad.net.forwarded.timeout", TimeUnit.SECONDS.toMillis(300)+"");
 		
 		defaultProps.setProperty("openkad.color.candidates", "1");
 		
@@ -131,102 +132,7 @@ public class KadNetModule extends AbstractModule {
 	protected void configure() {
 		Names.bindProperties(binder(), properties);
 		
-		// testing binds
-		
-		// number of incoming messages
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrIncomingMessages"))
-			.toInstance(new AtomicInteger(0));
-		
-		// number of find nodes with wrong color
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrFindNodesWithWrongColor"))
-			.toInstance(new AtomicInteger(0));
-		
-		
-		// number of handled forward requests
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrForwardHandling"))
-			.toInstance(new AtomicInteger(0));
-		
-		// number of handled forward requests from initiator
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrForwardHandlingFromInitiator"))
-			.toInstance(new AtomicInteger(0));
-				
-				
-		// number of nacks recved
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrNacks"))
-			.toInstance(new AtomicInteger(0));
-		
-		// number of long timeouts
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrLongTimeouts"))
-			.toInstance(new AtomicInteger(0));
-		
-		// max number of hops until the result is found (or calculated)
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.maxHopsToResult"))
-			.toInstance(new AtomicInteger(0));
-		
-		// remote cache hits
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.remoteCacheHits"))
-			.toInstance(new AtomicInteger(0));
-		
-		// local cache hits
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.localCacheHits"))
-			.toInstance(new AtomicInteger(0));
-				
-		// number of hops histogram for all find node operations I caused
-		// cache hits (find node hops = 0) will not be in here
-		bind(new TypeLiteral<List<Integer>>() {})
-			.annotatedWith(Names.named("openkad.testing.findNodeHopsHistogram"))
-			.toInstance(Collections.synchronizedList(new ArrayList<Integer>()));
-		
-		// number of hops histogram for all forward operations
-		bind(new TypeLiteral<List<Integer>>() {})
-			.annotatedWith(Names.named("openkad.testing.hopsToResultHistogram"))
-			.toInstance(Collections.synchronizedList(new ArrayList<Integer>()));
-		
-		// number of hits when requesting find node
-		// instead of returning the correct K bucket, we simply return
-		// the cached result
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrFindnodeHits"))
-			.toInstance(new AtomicInteger(0));
-		
-		// number of times we did not find anything in the cached results
-		// for find node request and returned instead the right K bucjet
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrFindnodeMiss"))
-			.toInstance(new AtomicInteger(0));
-		
-		// number of local cache hits
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrLocalCacheHits"))
-			.toInstance(new AtomicInteger(0));
-		
-		// number of times the cache results was to short
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrShortCacheHits"))
-			.toInstance(new AtomicInteger(0));
-		
-		// number of times the cache of a remote machine had a hit
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrRemoteCacheHits"))
-			.toInstance(new AtomicInteger(0));
-		
-		// the max size of the optimal cache
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.optimalCacheMaxSize"))
-			.toInstance(new AtomicInteger(0));
-		
-		bind(AtomicInteger.class)
-			.annotatedWith(Names.named("openkad.testing.nrIncomingPings"))
-			.toInstance(new AtomicInteger(0));
+		bindTestingParams();
 		
 		bind(Timer.class)
 			.annotatedWith(Names.named("openkad.timer"))
@@ -263,8 +169,8 @@ public class KadNetModule extends AbstractModule {
 		bind(FindValueOperation.class)
 			.annotatedWith(Names.named("openkad.op.findvalue"))
 			//.to(KadFindValueOperation.class);
-			.to(KadCacheFindValueOperation.class);
-			//.to(ForwardFindValueOperation.class);
+			//.to(KadCacheFindValueOperation.class);
+			.to(ForwardFindValueOperation.class);
 		
 		bind(FindValueOperation.class)
 			.annotatedWith(Names.named("openkad.op.lastFindValue"))
@@ -427,4 +333,131 @@ public class KadNetModule extends AbstractModule {
 		return localNode.getKey().getColor(nrColors);
 	}
 	
+	
+	private void bindTestingParams() {
+
+		// number of incoming messages
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrIncomingMessages"))
+			.toInstance(new AtomicInteger(0));
+		
+		// number of find nodes with wrong color
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrFindNodesWithWrongColor"))
+			.toInstance(new AtomicInteger(0));
+		
+		
+		// number of handled forward requests
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrForwardHandling"))
+			.toInstance(new AtomicInteger(0));
+		
+		// number of handled forward requests from initiator
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrForwardHandlingFromInitiator"))
+			.toInstance(new AtomicInteger(0));
+				
+				
+		// number of nacks recved
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrNacks"))
+			.toInstance(new AtomicInteger(0));
+		
+		// number of long timeouts
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrLongTimeouts"))
+			.toInstance(new AtomicInteger(0));
+		
+		// max number of hops until the result is found (or calculated)
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.maxHopsToResult"))
+			.toInstance(new AtomicInteger(0));
+		
+		// remote cache hits
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.remoteCacheHits"))
+			.toInstance(new AtomicInteger(0));
+		
+		// local cache hits
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.localCacheHits"))
+			.toInstance(new AtomicInteger(0));
+				
+		// number of hops histogram for all find node operations I caused
+		// cache hits (find node hops = 0) will not be in here
+		bind(new TypeLiteral<List<Integer>>() {})
+			.annotatedWith(Names.named("openkad.testing.findNodeHopsHistogram"))
+			.toInstance(Collections.synchronizedList(new ArrayList<Integer>()));
+		
+		// number of hops histogram for all forward operations
+		bind(new TypeLiteral<List<Integer>>() {})
+			.annotatedWith(Names.named("openkad.testing.hopsToResultHistogram"))
+			.toInstance(Collections.synchronizedList(new ArrayList<Integer>()));
+		
+		// number of hits when requesting find node
+		// instead of returning the correct K bucket, we simply return
+		// the cached result
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrFindnodeHits"))
+			.toInstance(new AtomicInteger(0));
+		
+		// number of times we did not find anything in the cached results
+		// for find node request and returned instead the right K bucjet
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrFindnodeMiss"))
+			.toInstance(new AtomicInteger(0));
+		
+		// number of local cache hits
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrLocalCacheHits"))
+			.toInstance(new AtomicInteger(0));
+		
+		// number of times the cache results was to short
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrShortCacheHits"))
+			.toInstance(new AtomicInteger(0));
+		
+		// number of times the cache of a remote machine had a hit
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrRemoteCacheHits"))
+			.toInstance(new AtomicInteger(0));
+		
+		// the max size of the optimal cache
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.optimalCacheMaxSize"))
+			.toInstance(new AtomicInteger(0));
+		
+		// counts the number of incoming pings
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrIncomingPings"))
+			.toInstance(new AtomicInteger(0));
+		
+		// counts the number of outgoing pings
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrOutgoingPings"))
+			.toInstance(new AtomicInteger(0));
+		
+		
+		// counts the number of short timeouts in the forward algo
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrShortForwardTimeouts"))
+			.toInstance(new AtomicInteger(0));
+		
+		// total amount of nacks sent
+		bind(AtomicInteger.class)
+			.annotatedWith(Names.named("openkad.testing.nrNacksSent"))
+			.toInstance(new AtomicInteger(0));
+				
+		// total amount of bytes sent
+		bind(AtomicLong.class)
+			.annotatedWith(Names.named("openkad.testing.nrBytesSent"))
+			.toInstance(new AtomicLong(0));
+		
+		
+		
+		// total amount of bytes recved
+		bind(AtomicLong.class)
+			.annotatedWith(Names.named("openkad.testing.nrBytesRecved"))
+			.toInstance(new AtomicLong(0));
+	}
 }

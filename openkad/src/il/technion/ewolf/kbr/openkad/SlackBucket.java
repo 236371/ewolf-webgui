@@ -52,4 +52,9 @@ public class SlackBucket implements Bucket {
 		}
 	}
 
+	@Override
+	public void markDead(Node n) {
+		// TODO Auto-generated method stub
+		
+	}
 }

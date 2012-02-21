@@ -88,7 +88,7 @@ public class StableBucket implements Bucket {
 				
 				// the first node was only inserted indirectly (meaning, I never recved
 				// a msg from it !) and I did recv a msg from n.
-				if (inBucketReplaceCandidate.hasNeverContacted() && n.hasContacted()) {
+				if (inBucketReplaceCandidate.hasNeverContacted()) {
 					bucket.remove(inBucketReplaceCandidate);
 					bucket.add(n);
 					return;
@@ -163,6 +163,19 @@ public class StableBucket implements Bucket {
 			});
 		} catch (Exception e) {
 			inBucket.releasePingLock();
+		}
+	}
+	
+	@Override
+	public synchronized void markDead(Node n) {
+		for (int i=0; i < bucket.size(); ++i) {
+			KadNode kadNode = bucket.get(i);
+			if (kadNode.getNode().equals(n)) {
+				// mark dead an move to front
+				kadNode.markDead();
+				bucket.remove(i);
+				bucket.add(0, kadNode);
+			}
 		}
 	}
 	

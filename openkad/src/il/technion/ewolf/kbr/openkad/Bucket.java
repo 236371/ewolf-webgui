@@ -23,4 +23,11 @@ interface Bucket {
 	 * @param c the collection the nodes will be added to
 	 */
 	void addNodesTo(Collection<Node> c);
+
+	/**
+	 * Marks a node as dead: the dead node will be replace if 
+	 * insert was invoked 
+	 * @param n the dead node
+	 */
+	public void markDead(Node n);
 }

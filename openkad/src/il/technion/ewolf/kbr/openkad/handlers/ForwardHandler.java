@@ -1,9 +1,9 @@
 package il.technion.ewolf.kbr.openkad.handlers;
 
+import static ch.lambdaj.Lambda.filter;
+import static ch.lambdaj.Lambda.having;
 import static ch.lambdaj.Lambda.on;
 import static ch.lambdaj.Lambda.sort;
-import static ch.lambdaj.Lambda.having;
-import static ch.lambdaj.Lambda.filter;
 import static org.hamcrest.Matchers.is;
 import il.technion.ewolf.kbr.Key;
 import il.technion.ewolf.kbr.KeyComparator;
@@ -69,7 +69,8 @@ public class ForwardHandler extends AbstractHandler {
 	private final AtomicInteger nrFindNodesWithWrongColor;
 	private final AtomicInteger nrForwardHandling;
 	private final AtomicInteger nrForwardHandlingFromInitiator;
-	
+	private final AtomicInteger nrShortForwardTimeouts;
+	private final AtomicInteger nrNacksSent;
 	@Inject
 	ForwardHandler(
 			KadCache cache,
@@ -92,7 +93,9 @@ public class ForwardHandler extends AbstractHandler {
 			//testing
 			@Named("openkad.testing.nrFindNodesWithWrongColor") AtomicInteger nrFindNodesWithWrongColor,
 			@Named("openkad.testing.nrForwardHandling") AtomicInteger nrForwardHandling,
-			@Named("openkad.testing.nrForwardHandlingFromInitiator") AtomicInteger nrForwardHandlingFromInitiator) {
+			@Named("openkad.testing.nrForwardHandlingFromInitiator") AtomicInteger nrForwardHandlingFromInitiator,
+			@Named("openkad.testing.nrShortForwardTimeouts") AtomicInteger nrShortForwardTimeouts,
+			@Named("openkad.testing.nrNacksSent") AtomicInteger nrNacksSent) {
 		
 		super(msgDispatcherProvider);
 		this.cache = cache;
@@ -115,6 +118,8 @@ public class ForwardHandler extends AbstractHandler {
 		this.nrFindNodesWithWrongColor = nrFindNodesWithWrongColor;
 		this.nrForwardHandling = nrForwardHandling;
 		this.nrForwardHandlingFromInitiator = nrForwardHandlingFromInitiator;
+		this.nrShortForwardTimeouts = nrShortForwardTimeouts;
+		this.nrNacksSent = nrNacksSent;
 	}
 
 	private void doFindValue(final ForwardRequest req, final List<Node> bootstrap) throws RejectedExecutionException {
@@ -296,17 +301,23 @@ public class ForwardHandler extends AbstractHandler {
 					req.getKey(),
 					req.getBootstrap());
 			
-			try {
-				kadServer.send(req.getSrc(), req
-						.generateMessage(localNode)
-						.setNodes(mergedBootstraps)
-						.setNack());
-			} catch (IOException e1) {
-				// could not send back the nack
-				// nothing to do
-			}
+			sendBackNack(req, mergedBootstraps);
 		}
 		return false;
+	}
+	
+	private void sendBackNack(ForwardRequest req, List<Node> bootstrap) {
+		try {
+			kadServer.send(req.getSrc(), req
+					.generateMessage(localNode)
+					.setNodes(bootstrap)
+					.setNack());
+			nrNacksSent.incrementAndGet();
+			
+		} catch (IOException e1) {
+			// could not send back the nack
+			// nothing to do
+		}
 	}
 	
 	private List<Node> mergeBootstraps(List<Node> b1, List<Node> b2, Key key) {
@@ -328,13 +339,14 @@ public class ForwardHandler extends AbstractHandler {
 		return $;
 	}
 	
-	private MessageDispatcher<Void> generateOutgoingDispatcher(
+	private void sendForwardRequest(
 			final ForwardRequest incomingReq,
 			final ForwardRequest outgoingReq,
-			final MessageDispatcher<Void> expectDispatcher) {
+			final MessageDispatcher<Void> expectDispatcher,
+			final Node nextHop) {
 		
 		
-		return msgDispatcherProvider.get()
+		msgDispatcherProvider.get()
 			.setConsumable(true)
 			.addFilter(new IdMessageFilter(outgoingReq.getId()))
 			.addFilter(new TypeMessageFilter(ForwardResponse.class))
@@ -345,7 +357,8 @@ public class ForwardHandler extends AbstractHandler {
 					// no need to wait for result, it will
 					// never arrive
 					expectDispatcher.cancel(exc);
-					
+					nrShortForwardTimeouts.incrementAndGet();
+					kBuckets.markAsDead(nextHop);
 					doFindValueOrSendNack(incomingReq, incomingReq.getBootstrap());
 					
 				}
@@ -390,7 +403,8 @@ public class ForwardHandler extends AbstractHandler {
 						}
 					}
 				}
-			});
+			})
+			.send(nextHop, outgoingReq);
 	}
 	
 	/**
@@ -469,8 +483,7 @@ public class ForwardHandler extends AbstractHandler {
 				
 				@Override
 				public void run() {
-					generateOutgoingDispatcher(incomingReq, outgoingReq, expectMessage)
-						.send(nextHop, outgoingReq);
+					sendForwardRequest(incomingReq, outgoingReq, expectMessage, nextHop);
 				}
 				
 			});
@@ -480,7 +493,6 @@ public class ForwardHandler extends AbstractHandler {
 				kadServer.send(incomingReq.getSrc(), incomingReq
 						.generateResponse(localNode)
 						.setAck());
-				
 			} catch (IOException e) {
 				// failed to send ack
 				// nothing to do

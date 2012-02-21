@@ -6,6 +6,7 @@ import il.technion.ewolf.kbr.KeyColorComparator;
 import il.technion.ewolf.kbr.KeyComparator;
 import il.technion.ewolf.kbr.Node;
 import il.technion.ewolf.kbr.openkad.KBuckets;
+import il.technion.ewolf.kbr.openkad.cache.KadCache;
 import il.technion.ewolf.kbr.openkad.msg.ForwardMessage;
 import il.technion.ewolf.kbr.openkad.msg.ForwardRequest;
 import il.technion.ewolf.kbr.openkad.msg.ForwardResponse;
@@ -45,6 +46,7 @@ public class ForwardFindValueOperation extends FindValueOperation {
 	private final Provider<FindValueOperation> findValueOperationProvider;
 	
 	private final KBuckets kBuckets;
+	private final KadCache cache;
 	
 	// testing
 	private final AtomicInteger nrLongTimeouts;
@@ -70,6 +72,7 @@ public class ForwardFindValueOperation extends FindValueOperation {
 			@Named("openkad.op.lastFindValue") Provider<FindValueOperation> findValueOperationProvider,
 			
 			KBuckets kBuckets,
+			KadCache cache,
 			
 			//testing
 			@Named("openkad.testing.nrLongTimeouts") AtomicInteger nrLongTimeouts,
@@ -93,6 +96,7 @@ public class ForwardFindValueOperation extends FindValueOperation {
 		this.findValueOperationProvider = findValueOperationProvider;
 		
 		this.kBuckets = kBuckets;
+		this.cache = cache;
 		
 		this.nrLongTimeouts = nrLongTimeouts;
 		this.hopsToResultHistogram = hopsToResultHistogram;
@@ -187,6 +191,11 @@ public class ForwardFindValueOperation extends FindValueOperation {
 	@Override
 	public List<Node> doFindValue() {
 
+		List<Node> nodes = cache.search(key);
+		if (nodes != null && nodes.size() >= kBucketSize) {
+			return nodes;
+		}
+		
 		if (myColor == key.getColor(nrColors)) {
 			hopsToResultHistogram.add(0);
 			return doFindNode();

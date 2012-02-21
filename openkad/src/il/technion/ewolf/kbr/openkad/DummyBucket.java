@@ -19,4 +19,7 @@ class DummyBucket implements Bucket {
 	public void addNodesTo(Collection<Node> c) {
 	}
 
+	@Override
+	public void markDead(Node n) {
+	}
 }

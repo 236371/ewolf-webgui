@@ -221,7 +221,7 @@ public class EagerColorFindValueOperation extends FindValueOperation implements 
 		
 		// only share if i dont have the right color
 		if (myColor != key.getColor(nrColors))
-			sendStoreResults(firstSentTo);
+			sendStoreResults(lastSentTo);
 		
 		cache.insert(key, knownClosestNodes);
 		
