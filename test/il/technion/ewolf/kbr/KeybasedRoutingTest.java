@@ -14,28 +14,37 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.Assert;
 
+import org.junit.After;
 import org.junit.Test;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 public class KeybasedRoutingTest {
 
+	private List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
+	private static final int BASE_PORT = 10000;
+
+	@After
+	public void shutdown_kbrs() {
+		for (KeybasedRouting k : kbrs)
+			k.shutdown();
+		kbrs.clear();
+	}
+
 	@Test
 	public void the2NodesShouldFindEachOther() throws Throwable {
-		int basePort = 10000;
-		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		for (int i=0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "1")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "3")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
 			kbrs.add(kbr);
 		}
 		
-		kbrs.get(1).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+basePort+"/")));
+		kbrs.get(1).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+BASE_PORT+"/")));
 		System.out.println("finished joining");
 		
 		for (int i=0; i < kbrs.size(); ++i) {
@@ -63,25 +72,22 @@ public class KeybasedRoutingTest {
 		
 	}
 	
-	
 	@Test
 	public void the16NodesShouldFindEachOther() throws Throwable {
-		int basePort = 10100;
-		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		for (int i=0; i < 16; ++i) {
 			Injector injector = Guice.createInjector(new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "2")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "5")
 					.setProperty("openkad.color.nrcolors", "128")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
 			kbrs.add(kbr);
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
@@ -113,21 +119,19 @@ public class KeybasedRoutingTest {
 	/*
 	@Test
 	public void the64NodesShouldFindEachOtherAsynchronously() throws Throwable {
-		int basePort = 10800;
-		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		for (int i=0; i < 64; ++i) {
 			Injector injector = Guice.createInjector(new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "2")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "5")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
 			kbrs.add(kbr);
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
@@ -159,24 +163,22 @@ public class KeybasedRoutingTest {
 	
 	@Test
 	public void the64NodesShouldFindEachOther() throws Throwable {
-		int basePort = 10200;
-		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		Random rnd = new Random(10200);
 		for (int i=0; i < 64; ++i) {
 			Injector injector = Guice.createInjector(new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "3")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "3")
 					.setProperty("openkad.bucket.colors.nrcolors", "1")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
 			kbrs.add(kbr);
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + rnd.nextInt(i);
-			System.out.println(i+" ==> "+(port-basePort));
+			int port = BASE_PORT + rnd.nextInt(i);
+			System.out.println(i+" ==> "+(port-BASE_PORT));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
 			
@@ -207,21 +209,19 @@ public class KeybasedRoutingTest {
 	
 	@Test(timeout=5000)
 	public void the2NodesShouldAbleToSendMessages() throws Throwable {
-		int basePort = 10300;
-		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		for (int i=0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "1")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "1")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
 			kbrs.add(kbr);
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
@@ -285,21 +285,19 @@ public class KeybasedRoutingTest {
 	
 	@Test(timeout=5000)
 	public void the2NodesShouldAbleToSendArbitrarySerializableMessages() throws Throwable {
-		int basePort = 10400;
-		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		for (int i=0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "1")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "1")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
 			kbrs.add(kbr);
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
@@ -333,21 +331,19 @@ public class KeybasedRoutingTest {
 	
 	@Test(timeout=5000)
 	public void the2NodesShouldAbleToSendArbitrarySerializableRequests() throws Throwable {
-		int basePort = 10500;
-		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		for (int i=0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "1")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "1")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
 			kbrs.add(kbr);
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
@@ -370,21 +366,19 @@ public class KeybasedRoutingTest {
 	
 	@Test(timeout=30000)
 	public void the16NodesShouldAbleToSendMessages() throws Throwable {
-		int basePort = 10600;
-		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		for (int i=0; i < 16; ++i) {
 			Injector injector = Guice.createInjector(new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "5")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "5")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
 			kbrs.add(kbr);
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
@@ -417,21 +411,19 @@ public class KeybasedRoutingTest {
 	
 	@Test(timeout=5000)
 	public void the2NodesShouldAbleToSendRequest() throws Throwable {
-		int basePort = 10700;
-		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		for (int i=0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "1")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "1")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
 			kbrs.add(kbr);
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
