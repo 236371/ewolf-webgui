@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="test"/>
+	<classpathentry kind="lib" path="lib/commons-codec-1.5.jar" sourcepath="lib.src/commons-codec-1.6-sources.jar"/>
+	<classpathentry kind="lib" path="lib/gson-2.1.jar" sourcepath="lib.src/gson-2.1-sources.jar"/>
+	<classpathentry kind="lib" path="lib/guice-3.0-no_aop.jar" sourcepath="lib.src/guice-3.0-src.zip"/>
+	<classpathentry kind="lib" path="lib/guice-throwingproviders-3.0.jar" sourcepath="lib.src/guice-3.0-src.zip"/>
+	<classpathentry kind="lib" path="lib/httpcore-4.1.2.jar" sourcepath="lib.src/httpcomponents-core-4.1.2-src.zip"/>
+	<classpathentry kind="lib" path="lib/javax.inject.jar"/>
+	<classpathentry kind="lib" path="lib/lambdaj-2.3.3-with-dependencies.jar"/>
+	<classpathentry kind="lib" path="lib/mockito-all-1.9.0.jar"/>
+	<classpathentry kind="lib" path="lib/org.hamcrest.core_1.1.0.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
