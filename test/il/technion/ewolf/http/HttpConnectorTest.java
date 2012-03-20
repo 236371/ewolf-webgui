@@ -31,7 +31,7 @@ public class HttpConnectorTest {
 	
 	@Test
 	public void itShouldSendAndRecvGetRequests() throws Exception{
-		int basePort = 10000;
+		int basePort = 13000;
 		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		List<HttpConnector> connectors = new ArrayList<HttpConnector>();
 		for (int i=0; i < 2; ++i) {
@@ -80,7 +80,7 @@ public class HttpConnectorTest {
 	
 	@Test
 	public void itShouldSendAndRecvPostRequests() throws Exception{
-		int basePort = 10100;
+		int basePort = 13100;
 		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		List<HttpConnector> connectors = new ArrayList<HttpConnector>();
 		for (int i=0; i < 2; ++i) {

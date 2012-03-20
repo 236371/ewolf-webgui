@@ -28,7 +28,7 @@ public class SocialFSTest {
 	
 	@Test
 	public void itShouldCreateANewAccountAndShareAFile() throws Exception {
-		int basePort = 10000;
+		int basePort = 11000;
 		
 		
 		List<Injector> injectors = new ArrayList<Injector>();
@@ -140,7 +140,7 @@ public class SocialFSTest {
 	
 	@Test
 	public void itShouldCreateAFileHirarchyAndSearchInIt() throws Exception {
-		int basePort = 10100;
+		int basePort = 11100;
 		
 		
 		List<Injector> injectors = new ArrayList<Injector>();

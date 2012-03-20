@@ -40,10 +40,10 @@ public class SocialNetworkTest {
 				new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "20")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-					.setProperty("openkad.net.udp.port", "10000"),
+					.setProperty("openkad.net.udp.port", "16000"),
 					
 				new HttpConnectorModule()
-					.setProperty("httpconnector.net.port", "10000"),
+					.setProperty("httpconnector.net.port", "16000"),
 				
 				new SimpleDHTModule(),
 					
@@ -84,7 +84,7 @@ public class SocialNetworkTest {
 	
 	@Test
 	public void itShouldSendMessageToAnotherUser() throws Exception {
-		int basePort = 10100;
+		int basePort = 16100;
 		
 		List<Injector> injectors = new ArrayList<Injector>();
 		
@@ -195,7 +195,7 @@ public class SocialNetworkTest {
 	
 	@Test
 	public void itShouldSendShareAPostWithAnotherUser() throws Exception {
-		int basePort = 10200;
+		int basePort = 16200;
 		
 		List<Injector> injectors = new ArrayList<Injector>();
 		

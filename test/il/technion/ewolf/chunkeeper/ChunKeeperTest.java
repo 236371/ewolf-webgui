@@ -30,7 +30,7 @@ public class ChunKeeperTest {
 	
 	@Test
 	public void itShouldStoreAndRetrieveData() throws Exception {
-		int basePort = 10100;
+		int basePort = 15100;
 		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		List<ChunKeeper> chunkeepers = new ArrayList<ChunKeeper>();
 		for (int i=0; i < 16; ++i) {

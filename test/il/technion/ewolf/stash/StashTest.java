@@ -82,10 +82,10 @@ public class StashTest {
 				new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "2")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "5")
-					.setProperty("openkad.net.udp.port", "10000"),
+					.setProperty("openkad.net.udp.port", "14000"),
 					
 				new HttpConnectorModule()
-					.setProperty("httpconnector.net.port", "10000"),
+					.setProperty("httpconnector.net.port", "14000"),
 				
 				new SimpleDHTModule()
 					.setProperty("chunkeeper.dht.storage.checkInterval", ""+TimeUnit.SECONDS.toMillis(5)),
@@ -130,7 +130,7 @@ public class StashTest {
 	@Test
 	public void itShouldStoreAnObjectWith16Nodes() throws Exception {
 		
-		int basePort = 10100;
+		int basePort = 14100;
 		List<Stash> stashes = new ArrayList<Stash>();
 		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		

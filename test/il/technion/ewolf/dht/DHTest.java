@@ -23,7 +23,7 @@ public class DHTest {
 	
 	@Test
 	public void itShouldStoreData() throws Exception {
-		int basePort = 10100;
+		int basePort = 12100;
 		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		List<DHT> dhts = new ArrayList<DHT>();
 		for (int i=0; i < 16; ++i) {
