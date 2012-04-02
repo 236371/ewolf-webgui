@@ -21,12 +21,13 @@ import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.stash.StashModule;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 import junit.framework.Assert;
 
+import org.junit.After;
 import org.junit.Test;
 
 import com.google.inject.Guice;
@@ -34,16 +35,28 @@ import com.google.inject.Injector;
 
 public class SocialNetworkTest {
 
+	private static final int BASE_PORT = 10000;
+	private List<Injector> injectors = new LinkedList<Injector>();
+
+	@After
+	public void cleanup() {
+		for (Injector inj: injectors) {
+			inj.getInstance(KeybasedRouting.class).shutdown();
+			inj.getInstance(HttpConnector.class).shutdown();
+		}
+		injectors.clear();
+	}
+
 	@Test
 	public void itShouldCreateANewAccount() throws Exception {
 		Injector injector = Guice.createInjector(
 				new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "20")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-					.setProperty("openkad.net.udp.port", "16000"),
+					.setProperty("openkad.net.udp.port", Integer.toString(BASE_PORT)),
 					
 				new HttpConnectorModule()
-					.setProperty("httpconnector.net.port", "16000"),
+					.setProperty("httpconnector.net.port", Integer.toString(BASE_PORT)),
 				
 				new SimpleDHTModule(),
 					
@@ -62,6 +75,7 @@ public class SocialNetworkTest {
 				new EwolfModule()
 		);
 		
+		injectors.add(injector);
 		
 		KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 		kbr.create();
@@ -78,25 +92,21 @@ public class SocialNetworkTest {
 		EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 		
 		accountCreator.create();
-		
 	}
 	
 	
 	@Test
 	public void itShouldSendMessageToAnotherUser() throws Exception {
-		int basePort = 16100;
-		
-		List<Injector> injectors = new ArrayList<Injector>();
 		
 		for (int i=0; i < 5; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
 						.setProperty("openkad.keyfactory.keysize", "20")
 						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(basePort+i)),
+						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
 						
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(basePort+i)),
+						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
 					
 					new SimpleDHTModule(),
 						
@@ -135,7 +145,7 @@ public class SocialNetworkTest {
 		
 		
 		for (int i=1; i < injectors.size(); ++i) {
-			int port = basePort + i - 1;
+			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
@@ -190,24 +200,20 @@ public class SocialNetworkTest {
 		Assert.assertEquals(ContentMessage.class, inbox.get(1).getClass());
 		Assert.assertEquals("hi !", ((ContentMessage)inbox.get(0)).getMessage());
 		Assert.assertEquals("hoe !", ((ContentMessage)inbox.get(1)).getMessage());
-		
 	}
 	
 	@Test
 	public void itShouldSendShareAPostWithAnotherUser() throws Exception {
-		int basePort = 16200;
-		
-		List<Injector> injectors = new ArrayList<Injector>();
 		
 		for (int i=0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
 						.setProperty("openkad.keyfactory.keysize", "20")
 						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(basePort+i)),
+						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
 						
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(basePort+i)),
+						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
 					
 					new SimpleDHTModule(),
 						
@@ -246,7 +252,7 @@ public class SocialNetworkTest {
 		
 		
 		for (int i=1; i < injectors.size(); ++i) {
-			int port = basePort + i - 1;
+			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
