@@ -11,13 +11,14 @@ import il.technion.ewolf.stash.Group;
 import il.technion.ewolf.stash.StashModule;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.Assert;
 
+import org.junit.After;
 import org.junit.Test;
 
 import com.google.inject.Guice;
@@ -25,24 +26,31 @@ import com.google.inject.Injector;
 
 public class SocialFSTest {
 
-	
+	private static final int BASE_PORT = 10000;
+	private List<Injector> injectors = new LinkedList<Injector>();
+
+	@After
+	public void cleanup() {
+		for (Injector inj: injectors) {
+			inj.getInstance(KeybasedRouting.class).shutdown();
+			inj.getInstance(HttpConnector.class).shutdown();
+		}
+		injectors.clear();
+	}
+
 	@Test
 	public void itShouldCreateANewAccountAndShareAFile() throws Exception {
-		int basePort = 11000;
-		
-		
-		List<Injector> injectors = new ArrayList<Injector>();
-		
+
 		for (int i=0; i < 5; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
 						.setProperty("openkad.keyfactory.keysize", "20")
 						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(basePort+i)),
-						
+						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
+
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(basePort+i)),
-					
+						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
+
 					new SimpleDHTModule()
 						.setProperty("chunkeeper.dht.storage.checkInterval", ""+TimeUnit.SECONDS.toMillis(5)),
 						
@@ -77,7 +85,7 @@ public class SocialFSTest {
 		
 		
 		for (int i=1; i < injectors.size(); ++i) {
-			int port = basePort + i - 1;
+			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
@@ -140,20 +148,16 @@ public class SocialFSTest {
 	
 	@Test
 	public void itShouldCreateAFileHirarchyAndSearchInIt() throws Exception {
-		int basePort = 11100;
-		
-		
-		List<Injector> injectors = new ArrayList<Injector>();
-		
+
 		for (int i=0; i < 1; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
 						.setProperty("openkad.keyfactory.keysize", "20")
 						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(basePort+i)),
+						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
 						
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(basePort+i)),
+						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
 					
 					new SimpleDHTModule()
 						.setProperty("chunkeeper.dht.storage.checkInterval", ""+TimeUnit.SECONDS.toMillis(5)),
@@ -189,7 +193,7 @@ public class SocialFSTest {
 		
 		
 		for (int i=1; i < injectors.size(); ++i) {
-			int port = basePort + i - 1;
+			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
