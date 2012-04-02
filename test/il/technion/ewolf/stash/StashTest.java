@@ -14,6 +14,7 @@ import il.technion.ewolf.stash.exception.GroupNotFoundException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -22,12 +23,24 @@ import javax.crypto.SecretKey;
 
 import junit.framework.Assert;
 
+import org.junit.After;
 import org.junit.Test;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 public class StashTest {
+	private static final int BASE_PORT = 10000;
+	private List<Injector> injectors = new LinkedList<Injector>();
+
+	@After
+	public void cleanup() {
+		for (Injector inj: injectors) {
+			inj.getInstance(KeybasedRouting.class).shutdown();
+			inj.getInstance(HttpConnector.class).shutdown();
+		}
+		injectors.clear();
+	}
 
 	@Test
 	public void itShouldCreateAGroup() throws Exception {
@@ -50,6 +63,7 @@ public class StashTest {
 				new StashModule()
 				
 		);
+		injectors.add(injector);
 		
 		// start the Keybased routing
 		KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
@@ -97,6 +111,7 @@ public class StashTest {
 				new StashModule()
 				
 		);
+		injectors.add(injector);
 		
 		// start the Keybased routing
 		KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
@@ -130,7 +145,6 @@ public class StashTest {
 	@Test
 	public void itShouldStoreAnObjectWith16Nodes() throws Exception {
 		
-		int basePort = 14100;
 		List<Stash> stashes = new ArrayList<Stash>();
 		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		
@@ -139,10 +153,10 @@ public class StashTest {
 					new KadNetModule()
 						.setProperty("openkad.keyfactory.keysize", "2")
 						.setProperty("openkad.bucket.kbuckets.maxsize", "5")
-						.setProperty("openkad.net.udp.port", ""+(basePort+i)),
+						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
 						
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(basePort+i)),
+						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
 					
 					new SimpleDHTModule()
 						.setProperty("chunkeeper.dht.storage.checkInterval", ""+TimeUnit.SECONDS.toMillis(5)),
@@ -154,6 +168,7 @@ public class StashTest {
 					new StashModule()
 					
 			);
+			injectors.add(injector);
 			
 			// start the Keybased routing
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
@@ -178,7 +193,7 @@ public class StashTest {
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
