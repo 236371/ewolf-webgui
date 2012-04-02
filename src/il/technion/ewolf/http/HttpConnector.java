@@ -111,12 +111,23 @@ public class HttpConnector {
 							}
 						});
 						
-					} catch (Exception e) {
-						e.printStackTrace();
+					} catch (IOException e) {
+						break;
 					}
 				}
 			}
 		}).start();
+	}
+
+	/**
+	 * shut down the server
+	 */
+	public void shutdown() {
+		try {
+			srvScok.get().close();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 	
 	/**
