@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -21,29 +22,41 @@ import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
+import org.junit.After;
 import org.junit.Test;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 public class HttpConnectorTest {
+	
+	private static final int BASE_PORT = 10000;
+	private List<Injector> injectors = new LinkedList<Injector>();
 
+	@After
+	public void cleanup() {
+		for (Injector inj: injectors) {
+			inj.getInstance(KeybasedRouting.class).shutdown();
+			inj.getInstance(HttpConnector.class).shutdown();
+		}
+		injectors.clear();
+	}
 	
 	@Test
 	public void itShouldSendAndRecvGetRequests() throws Exception{
-		int basePort = 13000;
 		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		List<HttpConnector> connectors = new ArrayList<HttpConnector>();
 		for (int i=0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(i+basePort)),
+						.setProperty("httpconnector.net.port", ""+(i+BASE_PORT)),
 					
 					new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "1")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "3")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
+			injectors.add(injector);
 			
 			HttpConnector connector = injector.getInstance(HttpConnector.class);
 			connector.bind();
@@ -56,7 +69,7 @@ public class HttpConnectorTest {
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
@@ -80,19 +93,19 @@ public class HttpConnectorTest {
 	
 	@Test
 	public void itShouldSendAndRecvPostRequests() throws Exception{
-		int basePort = 13100;
 		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		List<HttpConnector> connectors = new ArrayList<HttpConnector>();
 		for (int i=0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(
 				new HttpConnectorModule()
-					.setProperty("httpconnector.net.port", ""+(i+basePort)),
+					.setProperty("httpconnector.net.port", ""+(i+BASE_PORT)),
 				
 				new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "1")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "3")
-					.setProperty("openkad.seed", ""+(i+basePort))
-					.setProperty("openkad.net.udp.port", ""+(i+basePort)));
+					.setProperty("openkad.seed", ""+(i+BASE_PORT))
+					.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)));
+			injectors.add(injector);
 			
 			HttpConnector connector = injector.getInstance(HttpConnector.class);
 			connector.bind();
@@ -105,7 +118,7 @@ public class HttpConnectorTest {
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
