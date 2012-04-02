@@ -9,21 +9,31 @@ import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.After;
 import org.junit.Test;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 
-
 public class DHTest {
+	private static final int BASE_PORT = 10000;
+	private List<Injector> injectors = new LinkedList<Injector>();
+
+	@After
+	public void cleanup() {
+		for (Injector inj: injectors) {
+			inj.getInstance(KeybasedRouting.class).shutdown();
+		}
+		injectors.clear();
+	}
 	
 	@Test
 	public void itShouldStoreData() throws Exception {
-		int basePort = 12100;
 		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		List<DHT> dhts = new ArrayList<DHT>();
 		for (int i=0; i < 16; ++i) {
@@ -31,12 +41,13 @@ public class DHTest {
 					new KadNetModule()
 						.setProperty("openkad.keyfactory.keysize", "2")
 						.setProperty("openkad.bucket.kbuckets.maxsize", "5")
-						.setProperty("openkad.seed", ""+(i+basePort))
-						.setProperty("openkad.net.udp.port", ""+(i+basePort)),
+						.setProperty("openkad.seed", ""+(i+BASE_PORT))
+						.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)),
 						
 					new SimpleDHTModule()
 						.setProperty("dht.storage.checkInterval", ""+TimeUnit.SECONDS.toMillis(5))
 			);
+			injectors.add(injector);
 			
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
@@ -57,7 +68,7 @@ public class DHTest {
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
