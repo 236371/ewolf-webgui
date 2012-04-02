@@ -12,12 +12,14 @@ import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.Assert;
 
+import org.junit.After;
 import org.junit.Test;
 
 import ch.lambdaj.Lambda;
@@ -26,11 +28,20 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 public class ChunKeeperTest {
+	private static final int BASE_PORT = 10000;
+	private List<Injector> injectors = new LinkedList<Injector>();
 
+	@After
+	public void cleanup() {
+		for (Injector inj: injectors) {
+			inj.getInstance(KeybasedRouting.class).shutdown();
+			inj.getInstance(HttpConnector.class).shutdown();
+		}
+		injectors.clear();
+	}
 	
 	@Test
 	public void itShouldStoreAndRetrieveData() throws Exception {
-		int basePort = 15100;
 		List<KeybasedRouting> kbrs = new ArrayList<KeybasedRouting>();
 		List<ChunKeeper> chunkeepers = new ArrayList<ChunKeeper>();
 		for (int i=0; i < 16; ++i) {
@@ -38,11 +49,11 @@ public class ChunKeeperTest {
 					new KadNetModule()
 						.setProperty("openkad.keyfactory.keysize", "2")
 						.setProperty("openkad.bucket.kbuckets.maxsize", "5")
-						.setProperty("openkad.seed", ""+(i+basePort))
-						.setProperty("openkad.net.udp.port", ""+(i+basePort)),
+						.setProperty("openkad.seed", ""+(i+BASE_PORT))
+						.setProperty("openkad.net.udp.port", ""+(i+BASE_PORT)),
 						
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(i+basePort)),
+						.setProperty("httpconnector.net.port", ""+(i+BASE_PORT)),
 					
 					new SimpleDHTModule()
 						.setProperty("chunkeeper.dht.storage.checkInterval", ""+TimeUnit.SECONDS.toMillis(5)),
@@ -51,6 +62,7 @@ public class ChunKeeperTest {
 						.setProperty("chunkeeper.dht.storage.validtime", ""+TimeUnit.SECONDS.toMillis(10))
 						.setProperty("chunkeeper.dht.storage.maxage", ""+TimeUnit.SECONDS.toMillis(15))
 			);
+			injectors.add(injector);
 			
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
@@ -67,7 +79,7 @@ public class ChunKeeperTest {
 		}
 		
 		for (int i=1; i < kbrs.size(); ++i) {
-			int port = basePort + i -1;
+			int port = BASE_PORT + i -1;
 			System.out.println(i+" ==> "+(i-1));
 			kbrs.get(i).join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
