@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css"/>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+<script src="home.js" type="text/javascript"></script>
+<script src="loading.js" type="text/javascript"></script>
+<script src="menuItem.js" type="text/javascript"></script>
+<script src="spin.min.js" type="text/javascript"></script>
+
+<link rel="stylesheet" type="text/css" href="home.css" />
+
+<title>eWolf</title>
+
+</head>
+
+<body>
+	<!-------------------- Wolf Sign ------------------------------->
+	<div id="howling" class="howling-back">
+		<img src="howling.png"/>
+	</div>
+	
+	<!-------------------- Top Bar --------------------------------->
+	<div id="topbarID" class="topbar topbar-fixed shadow-top">
+		<div class="eWolf-title">
+			&nbsp;&nbsp; eWolf &nbsp; &nbsp;
+		</div>
+		<div class="title-bar">
+			<input id="btnLoad" type="button" value="Load" />
+			<input id="txtSearchBox" class="search-input" type="text" placeholder="Search" autocomplete="off" spellcheck="false"/>
+			<input id="btnSearch" type="button" value="Search" style="display:none;" />
+			<input id="btnAdd" type="button" value="Add" style="display:none;" />
+		</div>		
+	</div>
+	
+	<!----------------------- Side Menu ---------------------------->
+	<div id="menu" class="sideMenu shadow-bar">
+		<div id="toggleButtons" class="toggleButtons">
+			<input id="btnUnPin" type="button" value="Un Pin" />
+			<input id="btnPin" type="button" value="Pin" style="display:none;" />
+			<input id="btnHideMenu" type="button" value="<" class="toggleButton" />
+			<input id="btnShowMenu" type="button" value=">" class="toggleButton" style="display:none;"/>
+		</div>
+		<ul id="menuUL">
+		</ul>
+	</div>
+	<div id="menuBack" class="sideMenu sideMenuBack"></div>
+	
+	<!----------------------- Main Frame ---------------------------->
+	<div id="mainFrame" class="mainFrameCSS">
+		<div id="loading" class="loadingClass">
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...
+		</div>
+		<div id="selfProfileFrame" class="mainFrameClass"></div>
+		<div id="searchResult" class="mainFrameClass"></div>
+		<div id="inboxFrame" class="mainFrameClass"></div>
+		<div id="sendMessageFrame" class="mainFrameClass"></div>
+	</div>
+
+</body>
+
+</html>
