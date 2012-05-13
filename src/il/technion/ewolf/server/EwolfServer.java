@@ -169,7 +169,7 @@ public class EwolfServer {
 		List<Injector> injectors = new LinkedList<Injector>();
 		
 		for (int i=0; i < 5; ++i) {
-			Guice.createInjector(
+			Injector injector = Guice.createInjector(
 					new KadNetModule()
 						.setProperty("openkad.keyfactory.keysize", "20")
 						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
@@ -194,6 +194,7 @@ public class EwolfServer {
 					
 					new EwolfModule()
 			);
+			injectors.add(injector);
 		}
 		
 		for (Injector injector : injectors) {
@@ -228,6 +229,7 @@ public class EwolfServer {
 			System.out.println("done\n");
 			
 		}
+		Thread.sleep(1000);
 		
 	}
 
