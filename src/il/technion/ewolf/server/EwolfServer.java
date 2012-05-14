@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.configuration.ConfigurationException;
@@ -30,14 +28,20 @@ import com.google.inject.Injector;
 
 public class EwolfServer {
 	
-	final static Object lock = new Object();
+	private static final Object lock = new Object();
+	private static Boolean toShutdown = false;
+	
 	private static final int EWOLF_PORT = 10000;
 	private static final int SERVER_PORT = 10200;
 	private static final String EWOLF_CONFIG = "ewolf.config.properties";
 
 
 	public static void main(String[] args) {
-
+		start();
+	}
+	
+	public static void start() {
+		// starting server
 		Injector serverInjector = Guice.createInjector(
 				new HttpConnectorModule()
 					.setProperty("httpconnector.net.port", ""+(SERVER_PORT)),
@@ -69,7 +73,7 @@ public class EwolfServer {
 			e2.printStackTrace();
 		}
 */
-		
+		// starting Ewolf
 		String username = null;
 		String password = null;
 		String name = null;
@@ -137,14 +141,6 @@ public class EwolfServer {
 		ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
 		chnukeeper.bind();
 		
-		//TODO for testing only
-		try {
-			startEwolf();
-		} catch (Exception e3) {
-			// TODO Auto-generated catch block
-			e3.printStackTrace();
-		}
-		
 		//FIXME port for testing
 		kbr.join(kbrURIs);
 
@@ -157,86 +153,20 @@ public class EwolfServer {
 			e1.printStackTrace();
 		}
 		
+		//ewolf resources handlers register
+		connector.register("/selfProflie", injector.getInstance(SelfProfileHandler.class));
+
 		
 		synchronized (lock) {
-			while(true)
+			while(!toShutdown)
 				try {
 					lock.wait();
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 		}
-
 	}
-
-
-	private static void startEwolf() throws Exception {
-		final int base_port = 10100;
-		List<Injector> injectors = new LinkedList<Injector>();
-		
-		for (int i=0; i < 5; ++i) {
-			Injector injector = Guice.createInjector(
-					new KadNetModule()
-						.setProperty("openkad.keyfactory.keysize", "20")
-						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(base_port+i)),
-						
-					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(base_port+i)),
-					
-					new SimpleDHTModule(),
-						
-					new ChunKeeperModule(),
-					
-					new StashModule(),
-						
-					new SocialFSCreatorModule()
-						.setProperty("socialfs.user.username", "user_"+i)
-						.setProperty("socialfs.user.password", "1234"),
-					
-					new SocialFSModule(),
-					
-					new EwolfAccountCreatorModule(),
-					
-					new EwolfModule()
-			);
-			injectors.add(injector);
-		}
-		
-		for (Injector injector : injectors) {
-			
-			// start the Keybased routing
-			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
-			kbr.create();
-			
-			// bind the http connector
-			HttpConnector connector = injector.getInstance(HttpConnector.class);
-			connector.bind();
-			connector.start();
-			
-			// bind the chunkeeper
-			ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
-			chnukeeper.bind();
-		}
-		
-		
-		for (int i=1; i < injectors.size(); ++i) {
-			int port = base_port + i - 1;
-			System.out.println(i+" ==> "+(i-1));
-			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
-			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
-		}
-		
-		
-		for (Injector injector : injectors) {
-			System.out.println("creating...");
-			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
-			accountCreator.create();
-			System.out.println("done\n");
-			
-		}
-		Thread.sleep(1000);
-		
+	public static void shutdown() {
+		toShutdown = true;
 	}
-
 }
