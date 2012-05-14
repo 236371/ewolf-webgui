@@ -14,5 +14,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib/gwt-dev-2.4.0-rc1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-configuration-1.8.jar" sourcepath="lib.src/commons-configuration-1.8-sources.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
