@@ -73,13 +73,15 @@ public class EwolfServer {
 		
 		String username = null;
 		String password = null;
+		String name = null;
 		List<URI> kbrURIs = new ArrayList<URI>();
 		try {
 			PropertiesConfiguration config = new PropertiesConfiguration(EWOLF_CONFIG);
 			username = config.getString("username");
 			password = config.getString("password");
+			name = config.getString("name");
 			for (Object o: config.getList("kbr.urls")) {
-				kbrURIs.add(new URI(o.toString()));
+				kbrURIs.add(new URI((String)o));
 			}
 			if (username == null) {
 				//TODO get username/password from user, store to EWOLF_CONFIG and continue
@@ -109,7 +111,8 @@ public class EwolfServer {
 				
 				new SocialFSCreatorModule()
 					.setProperty("socialfs.user.username", username)
-					.setProperty("socialfs.user.password", password),
+					.setProperty("socialfs.user.password", password)
+					.setProperty("socialfs.user.name", name),
 				
 				new SocialFSModule(),
 				
