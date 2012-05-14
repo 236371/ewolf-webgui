@@ -52,10 +52,9 @@ public class EwolfServer {
 		connector.start();
 
 		
+		//server resources handlers register
 		connector.register("/json*", new JsonHandler() );
-		//TODO
-        //connector.register("*", new HttpFileHandler("/",new ServerResourceFactory()));
-		new HttpFileHandler("/", "*", new ServerResourceFactory(), connector);
+        connector.register("*", new HttpFileHandler("/",new ServerResourceFactory()));
 		
 		System.out.println("server started");
 

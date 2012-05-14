@@ -1,6 +1,5 @@
 package il.technion.ewolf.server;
 
-import il.technion.ewolf.http.HttpConnector;
 import il.technion.ewolf.server.ServerFileFactory.ServerFile;
 
 import java.io.FileNotFoundException;
@@ -11,6 +10,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.entity.InputStreamEntity;
 
 import org.apache.http.protocol.HttpContext;
@@ -23,14 +23,10 @@ public class HttpFileHandler implements HttpRequestHandler {
 	
 	public HttpFileHandler(
 			String					inputPrefix,
-			String					inputRegEx,
-			ServerFileFactory		inputFileFactory, 
-			HttpConnector			inputConnector) {
-		super();
+			ServerFileFactory		inputFileFactory) {
 		
 		fileFactory = inputFileFactory;
 		prefix = inputPrefix;
-		inputConnector.register(inputRegEx, this);
 	}
 	
 	@Override
@@ -44,7 +40,7 @@ public class HttpFileHandler implements HttpRequestHandler {
 		
 		ServerFile file = fileFactory.newInstance();
 		if(!loadFile(file,resName)) {
-			res.setStatusCode(404);
+			res.setStatusCode(HttpStatus.SC_NOT_FOUND);
 			System.out.println("\t[HttpFileHandler] file not found");
 			// Do not exit. Need to send a 404 page.
 		}
@@ -52,7 +48,7 @@ public class HttpFileHandler implements HttpRequestHandler {
 		res.addHeader("Content-Type", file.contentType());
 		
 		if(!isModified(file,req,res)) {
-			res.setStatusCode(304);
+			res.setStatusCode(HttpStatus.SC_NOT_MODIFIED);
 			System.out.println("\t[HttpFileHandler] resource not modified.");
 			return;
 		}
