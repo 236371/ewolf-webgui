@@ -12,7 +12,6 @@ import java.util.List;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
@@ -20,21 +19,15 @@ import org.apache.http.protocol.HttpRequestHandler;
 import com.google.gson.Gson;
 import com.google.inject.Inject;
 
-//@SuppressWarnings("unused")
 public class SelfProfileHandler implements HttpRequestHandler{
+	@SuppressWarnings("unused")
 	private String name;
+	@SuppressWarnings("unused")
 	private String id;
 	private List<String> groups = new ArrayList<String>();
 	
-	// dependencies
-	private final transient SocialFS socialFS;
-	private final transient WolfPackLeader socialGroupsManager;
-	
 	@Inject
 	public SelfProfileHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager) {
-
-		this.socialFS = socialFS;
-		this.socialGroupsManager = socialGroupsManager;
 		
 		Profile profile = socialFS.getCredentials().getProfile();
 		name = profile.getName();
@@ -54,8 +47,7 @@ public class SelfProfileHandler implements HttpRequestHandler{
 		Gson gson = new Gson();
 		String json = gson.toJson(this);
 		
-		res.setEntity(new StringEntity(json));
-		res.setStatusCode(HttpStatus.SC_OK);				
+		res.setEntity(new StringEntity(json));				
 	}
 
 }
