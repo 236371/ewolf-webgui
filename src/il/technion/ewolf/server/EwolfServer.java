@@ -3,6 +3,7 @@ package il.technion.ewolf.server;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -72,16 +73,23 @@ public class EwolfServer {
 		
 		String username = null;
 		String password = null;
+		List<URI> kbrURIs = new ArrayList<URI>();
 		try {
 			PropertiesConfiguration config = new PropertiesConfiguration(EWOLF_CONFIG);
 			username = config.getString("username");
 			password = config.getString("password");
+			for (Object o: config.getList("kbr.urls")) {
+				kbrURIs.add(new URI(o.toString()));
+			}
 			if (username == null) {
 				//TODO get username/password from user, store to EWOLF_CONFIG and continue
 			}
 		} catch (ConfigurationException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
+		} catch (URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		
 		Injector injector = Guice.createInjector(
@@ -135,13 +143,9 @@ public class EwolfServer {
 			e3.printStackTrace();
 		}
 		
-		try {
-			//FIXME port for testing
-			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:10100/")));
-		} catch (URISyntaxException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
-		}
+		//FIXME port for testing
+		kbr.join(kbrURIs);
+
 		EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 		
 		try {
