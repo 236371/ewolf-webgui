@@ -19,27 +19,15 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Test;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
-public class EwolfServerTest {
+public class DummyEwolfNet {
 	private static final int BASE_PORT = 10100;
-	private List<Injector> injectors = new LinkedList<Injector>();
 
-	@After
-	public void cleanup() {
-		for (Injector inj: injectors) {
-			inj.getInstance(KeybasedRouting.class).shutdown();
-			inj.getInstance(HttpConnector.class).shutdown();
-		}
-		injectors.clear();
-	}
-	
-	@Test
-	public void itShouldStartEwolfServer() throws Exception {
+	public static void main(String[] args) throws Exception {
+		List<Injector> injectors = new LinkedList<Injector>();
+
 		for (int i=0; i < 5; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
@@ -99,11 +87,6 @@ public class EwolfServerTest {
 			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 			accountCreator.create();
 			System.out.println("done\n");
-			
 		}
-		Thread.sleep(1000);
-		
-		EwolfServer.start();
 	}
-
 }

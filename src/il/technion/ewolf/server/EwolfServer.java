@@ -28,19 +28,12 @@ import com.google.inject.Injector;
 
 public class EwolfServer {
 	
-	private static final Object lock = new Object();
-	private static Boolean toShutdown = false;
-	
 	private static final int EWOLF_PORT = 10000;
 	private static final int SERVER_PORT = 10200;
 	private static final String EWOLF_CONFIG = "ewolf.config.properties";
 
 
 	public static void main(String[] args) {
-		start();
-	}
-	
-	public static void start() {
 		// starting server
 		Injector serverInjector = Guice.createInjector(
 				new HttpConnectorModule()
@@ -92,9 +85,11 @@ public class EwolfServer {
 		} catch (ConfigurationException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
+			System.out.println("Cant' read configuration file");
 		} catch (URISyntaxException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			System.out.println("String from configuration file could not be parsed as a URI");
 		}
 		
 		Injector injector = Guice.createInjector(
@@ -154,19 +149,6 @@ public class EwolfServer {
 		}
 		
 		//ewolf resources handlers register
-		connector.register("/selfProflie", injector.getInstance(SelfProfileHandler.class));
-
-		
-		synchronized (lock) {
-			while(!toShutdown)
-				try {
-					lock.wait();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-		}
-	}
-	public static void shutdown() {
-		toShutdown = true;
+		connector.register("/selfProflie", injector.getInstance(SelfProfileHandler.class));		
 	}
 }
