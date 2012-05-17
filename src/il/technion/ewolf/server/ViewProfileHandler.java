@@ -31,7 +31,7 @@ public class ViewProfileHandler implements HttpRequestHandler {
 		@SuppressWarnings("unused")
 		private String id;
 		
-		jsonProfile(String name, String id) {
+		private jsonProfile(String name, String id) {
 			this.name = name;
 			this.id = id;
 		}
@@ -67,7 +67,7 @@ public class ViewProfileHandler implements HttpRequestHandler {
 		}
 
 		Gson gson = new Gson();
-		String json = gson.toJson(this.new jsonProfile(profile.getName(), profile.getUserId().toString()));
+		String json = gson.toJson(new jsonProfile(profile.getName(), profile.getUserId().toString()));
 		res.setEntity(new StringEntity(json));
 	}
 }

@@ -62,6 +62,7 @@ public class JsonHandler implements HttpRequestHandler {
 		
 		String s = callBack + "(" + gson.toJson(lst, lst.getClass()) + ")";
 
+		//TODO move adding headers to response intercepter
 		res.addHeader("Server", "e-WolfNode");
 		res.addHeader("Content-Type", "application/json");
 		

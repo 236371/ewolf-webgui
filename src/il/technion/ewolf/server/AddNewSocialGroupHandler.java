@@ -28,7 +28,7 @@ public class AddNewSocialGroupHandler  implements HttpRequestHandler{
 		String groupName = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 		//TODO maybe we should use findOrCreateSocialGroup() method?
 		socialGroupsManager.createSocialGroup(groupName);
-		
+		//TODO what should be in response?
 	}
 
 }

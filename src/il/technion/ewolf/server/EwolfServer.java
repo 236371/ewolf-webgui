@@ -149,9 +149,9 @@ public class EwolfServer {
 		}
 		
 		//ewolf resources handlers register
-		connector.register("/showSelfProflie", injector.getInstance(SelfProfileHandler.class));		
+		connector.register("/viewSelfProflie", injector.getInstance(ViewSelfProfileHandler.class));		
 		connector.register("/addSocialGroup", injector.getInstance(AddNewSocialGroupHandler.class));
-		connector.register("/showProfile/*", injector.getInstance(ProfileHandler.class));
+		connector.register("/viewProfile/*", injector.getInstance(ViewProfileHandler.class));
 		connector.register("/viewSocialGroupMembers/*", injector.getInstance(ViewSocialGroupMembersHandler.class));
 	}
 }

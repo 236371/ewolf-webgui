@@ -102,6 +102,7 @@ public class HttpFileHandler implements HttpRequestHandler {
 	}
 	
 	private void addGeneralHeaders(HttpResponse res) {
+		//TODO move adding headers to response intercepter
 		res.addHeader("Server", "e-WolfNode");
 		res.addHeader("Date",Calendar.getInstance().getTime().toString());
 	}
