@@ -22,7 +22,7 @@ import org.apache.http.protocol.HttpRequestHandler;
 import com.google.gson.Gson;
 import com.google.inject.Inject;
 
-public class ProfileHandler implements HttpRequestHandler {
+public class ViewProfileHandler implements HttpRequestHandler {
 	private SocialFS socialFS;
 	
 	private class jsonProfile {
@@ -38,15 +38,16 @@ public class ProfileHandler implements HttpRequestHandler {
 	}
 	
 	@Inject
-	public ProfileHandler(SocialFS socialFS) {		
+	public ViewProfileHandler(SocialFS socialFS) {		
 		this.socialFS = socialFS;
 		
 	}
 
-	//XXX req of type GET with "/showProfile/12345" URI
+	//XXX req of type GET with "/viewProfile/{UserID}" URI
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
+		//TODO move adding headers to response intercepter
 		res.addHeader("Server", "e-WolfNode");
 		res.addHeader("Date",Calendar.getInstance().getTime().toString());
 		
@@ -64,9 +65,6 @@ public class ProfileHandler implements HttpRequestHandler {
 			res.setEntity(new FileEntity(new File("404.html"),"text/html"));
 			return;
 		}
-		
-		res.addHeader("Server", "e-WolfNode");
-		res.addHeader("Content-Type", "application/json");
 
 		Gson gson = new Gson();
 		String json = gson.toJson(this.new jsonProfile(profile.getName(), profile.getUserId().toString()));

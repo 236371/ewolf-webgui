@@ -19,7 +19,7 @@ import org.apache.http.protocol.HttpRequestHandler;
 import com.google.gson.Gson;
 import com.google.inject.Inject;
 
-public class SelfProfileHandler implements HttpRequestHandler{
+public class ViewSelfProfileHandler implements HttpRequestHandler{
 	@SuppressWarnings("unused")
 	private String name;
 	@SuppressWarnings("unused")
@@ -27,7 +27,7 @@ public class SelfProfileHandler implements HttpRequestHandler{
 	private List<String> groups = new ArrayList<String>();
 	
 	@Inject
-	public SelfProfileHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager) {
+	public ViewSelfProfileHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager) {
 		
 		Profile profile = socialFS.getCredentials().getProfile();
 		name = profile.getName();
@@ -41,6 +41,7 @@ public class SelfProfileHandler implements HttpRequestHandler{
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
+		//TODO move adding headers to response intercepter
 		res.addHeader("Server", "e-WolfNode");
 		res.addHeader("Content-Type", "application/json");
 		
