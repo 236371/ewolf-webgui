@@ -153,5 +153,6 @@ public class EwolfServer {
 		connector.register("/addSocialGroup", injector.getInstance(AddNewSocialGroupHandler.class));
 		connector.register("/viewProfile/*", injector.getInstance(ViewProfileHandler.class));
 		connector.register("/viewSocialGroupMembers/*", injector.getInstance(ViewSocialGroupMembersHandler.class));
+		connector.register("/addTextPost/*", injector.getInstance(AddMessageBoardPostHandler.class));
 	}
 }
