@@ -7,6 +7,7 @@ import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
@@ -28,7 +29,11 @@ public class AddNewSocialGroupHandler  implements HttpRequestHandler{
 		String groupName = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 		//TODO maybe we should use findOrCreateSocialGroup() method?
 		socialGroupsManager.createSocialGroup(groupName);
+
 		//TODO what should be in response?
+		res.setStatusCode(HttpStatus.SC_SEE_OTHER);
+		//FIXME where to redirect?
+		res.setHeader("Location", "/viewSocialGroups");
 	}
 
 }
