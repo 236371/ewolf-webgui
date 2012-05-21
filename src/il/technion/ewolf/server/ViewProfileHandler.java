@@ -25,13 +25,13 @@ import com.google.inject.Inject;
 public class ViewProfileHandler implements HttpRequestHandler {
 	private SocialFS socialFS;
 	
-	private class jsonProfile {
+	private class JsonProfile {
 		@SuppressWarnings("unused")
 		private String name;
 		@SuppressWarnings("unused")
 		private String id;
 		
-		private jsonProfile(String name, String id) {
+		private JsonProfile(String name, String id) {
 			this.name = name;
 			this.id = id;
 		}
@@ -67,7 +67,7 @@ public class ViewProfileHandler implements HttpRequestHandler {
 		}
 
 		Gson gson = new Gson();
-		String json = gson.toJson(new jsonProfile(profile.getName(), profile.getUserId().toString()));
+		String json = gson.toJson(new JsonProfile(profile.getName(), profile.getUserId().toString()));
 		res.setEntity(new StringEntity(json));
 	}
 }

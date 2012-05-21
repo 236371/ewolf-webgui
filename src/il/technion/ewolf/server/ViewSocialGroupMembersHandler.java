@@ -20,13 +20,13 @@ import com.google.inject.Inject;
 public class ViewSocialGroupMembersHandler implements HttpRequestHandler {
 	WolfPackLeader socialGroupsManager = null;
 	
-	private class jsonProfile {
+	private class JsonProfile {
 		@SuppressWarnings("unused")
 		private String name;
 		@SuppressWarnings("unused")
 		private String id;
 		
-		private jsonProfile(String name, String id) {
+		private JsonProfile(String name, String id) {
 			this.name = name;
 			this.id = id;
 		}
@@ -47,9 +47,9 @@ public class ViewSocialGroupMembersHandler implements HttpRequestHandler {
 		List<Profile> profiles = socialGroupsManager.findSocialGroup(socialGroupName).getMembers();
 		
 		Gson gson = new Gson();
-		List<ViewSocialGroupMembersHandler.jsonProfile> lst = new ArrayList<ViewSocialGroupMembersHandler.jsonProfile>();
+		List<ViewSocialGroupMembersHandler.JsonProfile> lst = new ArrayList<ViewSocialGroupMembersHandler.JsonProfile>();
 		for (Profile profile: profiles) {
-			lst.add(new jsonProfile(profile.getName(), profile.getUserId().toString()));
+			lst.add(new JsonProfile(profile.getName(), profile.getUserId().toString()));
 		}
 		String json = gson.toJson(lst, lst.getClass());
 		res.setEntity(new StringEntity(json));
