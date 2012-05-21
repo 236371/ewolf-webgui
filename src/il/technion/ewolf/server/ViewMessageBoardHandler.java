@@ -84,6 +84,7 @@ public class ViewMessageBoardHandler implements HttpRequestHandler {
 			res.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return;
 		}
 		
 		Gson gson = new Gson();

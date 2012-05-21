@@ -62,16 +62,19 @@ public class AddMessageBoardPostHandler implements HttpRequestHandler {
 			res.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return;
 		} catch (WallNotFound e) {
 			System.out.println("Wall not found");
 			res.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return;
 		} catch (FileNotFoundException e) {
 			System.out.println("File /wall/posts/ not found");
 			res.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return;
 		}
 		//TODO what should be in response?
 		res.setStatusCode(HttpStatus.SC_SEE_OTHER);
