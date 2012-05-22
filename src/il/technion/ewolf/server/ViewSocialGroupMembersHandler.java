@@ -15,6 +15,7 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class ViewSocialGroupMembersHandler implements HttpRequestHandler {
@@ -46,7 +47,7 @@ public class ViewSocialGroupMembersHandler implements HttpRequestHandler {
 		String socialGroupName = splitedURI[splitedURI.length-1];
 		List<Profile> profiles = socialGroupsManager.findSocialGroup(socialGroupName).getMembers();
 		
-		Gson gson = new Gson();
+		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
 		List<ViewSocialGroupMembersHandler.JsonProfile> lst = new ArrayList<ViewSocialGroupMembersHandler.JsonProfile>();
 		for (Profile profile: profiles) {
 			lst.add(new JsonProfile(profile.getName(), profile.getUserId().toString()));

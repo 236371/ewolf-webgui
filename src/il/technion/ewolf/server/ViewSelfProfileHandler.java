@@ -17,6 +17,7 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class ViewSelfProfileHandler implements HttpRequestHandler{
@@ -45,7 +46,7 @@ public class ViewSelfProfileHandler implements HttpRequestHandler{
 		res.addHeader("Server", "e-WolfNode");
 		res.addHeader("Content-Type", "application/json");
 		
-		Gson gson = new Gson();
+		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
 		String json = gson.toJson(this);
 		
 		res.setEntity(new StringEntity(json));				

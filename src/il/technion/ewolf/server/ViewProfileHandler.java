@@ -20,6 +20,7 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class ViewProfileHandler implements HttpRequestHandler {
@@ -66,7 +67,7 @@ public class ViewProfileHandler implements HttpRequestHandler {
 			return;
 		}
 
-		Gson gson = new Gson();
+		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
 		String json = gson.toJson(new JsonProfile(profile.getName(), profile.getUserId().toString()));
 		res.setEntity(new StringEntity(json));
 	}

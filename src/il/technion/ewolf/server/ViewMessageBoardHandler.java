@@ -26,6 +26,7 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class ViewMessageBoardHandler implements HttpRequestHandler {
@@ -87,7 +88,7 @@ public class ViewMessageBoardHandler implements HttpRequestHandler {
 			return;
 		}
 		
-		Gson gson = new Gson();
+		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
 		List<ViewMessageBoardHandler.JsonPost> lst = new ArrayList<ViewMessageBoardHandler.JsonPost>();
 		for (Post post: posts) {
 			lst.add(new JsonPost(post.getPostId().toString(), post.getTimestamp(), ((TextPost)post).getText()));
