@@ -53,7 +53,7 @@ public class ViewProfileHandler implements HttpRequestHandler {
 		
 		String reqURI = req.getRequestLine().getUri();
 		String[] splitedURI = reqURI.split("/");
-		String strUid = splitedURI[splitedURI.length];
+		String strUid = splitedURI[splitedURI.length-1];
 		UserID uid = new UserID(Key.fromString(strUid));
 		Profile profile = null;
 		try {

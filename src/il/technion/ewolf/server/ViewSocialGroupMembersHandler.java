@@ -43,7 +43,7 @@ public class ViewSocialGroupMembersHandler implements HttpRequestHandler {
 		
 		String reqURI = req.getRequestLine().getUri();
 		String[] splitedURI = reqURI.split("/");
-		String socialGroupName = splitedURI[splitedURI.length];
+		String socialGroupName = splitedURI[splitedURI.length-1];
 		List<Profile> profiles = socialGroupsManager.findSocialGroup(socialGroupName).getMembers();
 		
 		Gson gson = new Gson();

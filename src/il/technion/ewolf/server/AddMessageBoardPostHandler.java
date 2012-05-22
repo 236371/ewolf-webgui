@@ -47,7 +47,7 @@ public class AddMessageBoardPostHandler implements HttpRequestHandler {
 		//get social group name from URI
 		String reqURI = req.getRequestLine().getUri();
 		String[] splitedURI = reqURI.split("/");
-		String groupName = splitedURI[splitedURI.length];
+		String groupName = splitedURI[splitedURI.length-1];
 		
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(groupName);
 		if (socialGroup == null) {
