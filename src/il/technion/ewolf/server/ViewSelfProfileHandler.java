@@ -35,7 +35,7 @@ public class ViewSelfProfileHandler implements HttpRequestHandler{
 		id = profile.getUserId().toString();
 		
 		for (WolfPack w : socialGroupsManager.getAllSocialGroups()) {
-			groups.add(w.toString());
+			groups.add(w.getName());
 		}
 	}
 
