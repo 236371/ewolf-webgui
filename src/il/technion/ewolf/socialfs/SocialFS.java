@@ -40,7 +40,7 @@ public class SocialFS {
 	private final SFSFileFactory fileFactory;
 	private final Cache<SFSFile> fileCache;
 	private final Cache<Profile> profileCache;
-	private final UserIDFacroty uidFactory;
+	private final UserIDFactory uidFactory;
 	
 	@Inject
 	SocialFS(KeyFactory keyFactory,
@@ -54,7 +54,7 @@ public class SocialFS {
 			SFSFileFactory fileFactory,
 			@Named("socialfs.cache.filecache") Cache<SFSFile> fileCache,
 			@Named("socialfs.cache.profilecache") Cache<Profile> profileCache,
-			UserIDFacroty uidFactory) {
+			UserIDFactory uidFactory) {
 		
 		this.keyFactory = keyFactory;
 		this.username = username;

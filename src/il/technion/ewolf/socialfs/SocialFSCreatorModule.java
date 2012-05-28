@@ -59,7 +59,7 @@ public class SocialFSCreatorModule extends AbstractModule {
 		
 		bind(SFSFile.class);
 		bind(SFSFileFactory.class).in(Scopes.SINGLETON);
-		bind(UserIDFacroty.class).in(Scopes.SINGLETON);
+		bind(UserIDFactory.class).in(Scopes.SINGLETON);
 		bind(SecureRandom.class).toInstance(new SecureRandom());
 		bind(SocialFSCreator.class).in(Scopes.SINGLETON);
 	}
@@ -157,7 +157,7 @@ public class SocialFSCreatorModule extends AbstractModule {
 			@Named("socialfs.user.name") String name,
 			@Named("socialfs.rnd.key") Key rndKey,
 			Stash stash,
-			UserIDFacroty uidFactory,
+			UserIDFactory uidFactory,
 			@Named("socialfs.cache.filecache") Cache<SFSFile> fileCache) throws InvalidKeyException, IOException {
 		return new Profile(privSigKey, pubSigKey, pubEncKey, name, rndKey, stash, uidFactory, fileCache);
 	}

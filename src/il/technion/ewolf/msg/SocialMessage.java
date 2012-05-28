@@ -4,7 +4,7 @@ import il.technion.ewolf.exceptions.ForgeryException;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
-import il.technion.ewolf.socialfs.UserIDFacroty;
+import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 import il.technion.ewolf.stash.crypto.Signable;
 
@@ -50,7 +50,7 @@ public abstract class SocialMessage extends Signable {
 		return this;
 	}
 	
-	public void verifySender(UserIDFacroty uidFactory) throws ForgeryException {
+	public void verifySender(UserIDFactory uidFactory) throws ForgeryException {
 		UserID expectingUID = uidFactory.create(getPubSigKey());
 		if (!expectingUID.equals(sender))
 			throw new ForgeryException("expecting uid: "+expectingUID+", but got: "+sender);

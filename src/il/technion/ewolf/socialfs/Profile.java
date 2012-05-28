@@ -24,7 +24,7 @@ public class Profile extends Signable implements KeyHolder {
 	
 	private transient Stash stash;
 	private transient Cache<SFSFile> fileCache;
-	private transient UserIDFacroty uidFactory;
+	private transient UserIDFactory uidFactory;
 	
 	private final PublicKey pubEncKey;
 	private final String name;
@@ -38,7 +38,7 @@ public class Profile extends Signable implements KeyHolder {
 			String name,
 			Key rootKey,
 			Stash stash,
-			UserIDFacroty uidFactory,
+			UserIDFactory uidFactory,
 			@Named("socialfs.cache.filecache") Cache<SFSFile> fileCache) throws InvalidKeyException, IOException {
 		
 		super(prvSigKey, pubSigKey);
@@ -52,7 +52,7 @@ public class Profile extends Signable implements KeyHolder {
 		this.fileCache = fileCache;
 	}
 	
-	Profile setTransientParams(Stash stash, Cache<SFSFile> fileCache, UserIDFacroty uidFactory) {
+	Profile setTransientParams(Stash stash, Cache<SFSFile> fileCache, UserIDFactory uidFactory) {
 		this.stash = stash;
 		this.uidFactory = uidFactory;
 		this.fileCache = fileCache;

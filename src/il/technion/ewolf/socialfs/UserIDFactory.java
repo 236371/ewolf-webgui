@@ -10,12 +10,12 @@ import java.security.PublicKey;
 
 import com.google.inject.Inject;
 
-public class UserIDFacroty {
+public class UserIDFactory {
 
 	private final KeyFactory keyFactory;
 	
 	@Inject
-	UserIDFacroty(KeyFactory keyFactory) {
+	UserIDFactory(KeyFactory keyFactory) {
 		this.keyFactory = keyFactory;
 		
 	}
