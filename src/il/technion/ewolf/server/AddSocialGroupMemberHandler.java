@@ -37,7 +37,7 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 		this.userIDFactory = userIDFactory;
 	}
 
-	//XXX req of type POST with "/addSocialGroupMember/{groupName}" URI and body containing user ID
+	//XXX req of type POST with "/addSocialGroupMember/{groupName}" URI and body containing userID=id
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
@@ -45,9 +45,10 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 		res.addHeader("Server", "e-WolfNode");
 		res.addHeader("Content-Type", "application/json");
 		
-		//get user ID from body
-		String strUid = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
-		UserID uid = userIDFactory.getFromBase64(strUid);
+		//get user ID from the body
+		String dataSet = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
+		String key = dataSet.substring(dataSet.indexOf("=") + 1).trim();
+		UserID uid = userIDFactory.getFromBase64(key);
 
 		Profile profile = null;
 		try {

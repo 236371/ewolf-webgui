@@ -22,13 +22,16 @@ public class AddNewSocialGroupHandler  implements HttpRequestHandler{
 		this.socialGroupsManager = socialGroupsManager;
 	}
 
-	//XXX req of type POST with "/addSocialGroup" URI and body containing groupName
+	//XXX req of type POST with "/addSocialGroup" URI and body containing groupName=name
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
-		String groupName = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 		//TODO maybe we should use findOrCreateSocialGroup() method?
 		socialGroupsManager.createSocialGroup(groupName);
+
+		//get group name from the body
+		String dataSet = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
+		String groupName = dataSet.substring(dataSet.indexOf("=") + 1).trim();
 
 		//TODO what should be in response?
 		res.setStatusCode(HttpStatus.SC_SEE_OTHER);

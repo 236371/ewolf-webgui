@@ -33,7 +33,7 @@ public class AddMessageBoardPostHandler implements HttpRequestHandler {
 		this.socialGroupsManager = socialGroupsManager;
 	}
 	
-	//XXX req of type POST with "/addTextPost/{groupName}" URI and body containing post text
+	//XXX req of type POST with "/addTextPost/{groupName}" URI and body containing text=post text
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
@@ -42,7 +42,8 @@ public class AddMessageBoardPostHandler implements HttpRequestHandler {
 		res.addHeader("Content-Type", "application/json");
 		
 		//get post text from body
-		String text = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
+		String dataSet = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
+		String text = dataSet.substring(dataSet.indexOf("=") + 1);
 		
 		//get social group name from URI
 		String reqURI = req.getRequestLine().getUri();
