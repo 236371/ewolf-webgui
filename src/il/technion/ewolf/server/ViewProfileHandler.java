@@ -1,9 +1,9 @@
 package il.technion.ewolf.server;
 
-import il.technion.ewolf.kbr.Key;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
+import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
 import java.io.File;
@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 
 public class ViewProfileHandler implements HttpRequestHandler {
 	private final SocialFS socialFS;
+	private final UserIDFactory userIDFactory;
 	
 	private class JsonProfile {
 		@SuppressWarnings("unused")
@@ -39,9 +40,9 @@ public class ViewProfileHandler implements HttpRequestHandler {
 	}
 	
 	@Inject
-	public ViewProfileHandler(SocialFS socialFS) {		
+	public ViewProfileHandler(SocialFS socialFS, UserIDFactory userIDFactory) {
 		this.socialFS = socialFS;
-		
+		this.userIDFactory = userIDFactory;
 	}
 
 	//XXX req of type GET with "/viewProfile/{UserID}" URI
@@ -55,7 +56,8 @@ public class ViewProfileHandler implements HttpRequestHandler {
 		String reqURI = req.getRequestLine().getUri();
 		String[] splitedURI = reqURI.split("/");
 		String strUid = splitedURI[splitedURI.length-1];
-		UserID uid = new UserID(Key.fromString(strUid));
+		UserID uid = userIDFactory.getFromBase64(strUid);
+
 		Profile profile = null;
 		try {
 			profile = socialFS.findProfile(uid);			

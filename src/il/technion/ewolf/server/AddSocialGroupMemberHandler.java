@@ -2,10 +2,10 @@ package il.technion.ewolf.server;
 
 import il.technion.ewolf.WolfPack;
 import il.technion.ewolf.WolfPackLeader;
-import il.technion.ewolf.kbr.Key;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
+import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
@@ -27,11 +27,14 @@ import com.google.inject.Inject;
 public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 	private final WolfPackLeader socialGroupsManager;
 	private final SocialFS socialFS;
+	private final UserIDFactory userIDFactory;
 	
 	@Inject
-	public AddSocialGroupMemberHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager) {
+	public AddSocialGroupMemberHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager,
+			UserIDFactory userIDFactory) {
 		this.socialGroupsManager = socialGroupsManager;
 		this.socialFS = socialFS;
+		this.userIDFactory = userIDFactory;
 	}
 
 	//XXX req of type POST with "/addSocialGroupMember/{groupName}" URI and body containing user ID
@@ -44,14 +47,14 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 		
 		//get user ID from body
 		String strUid = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
-		UserID uid = new UserID(Key.fromString(strUid));
-		
+		UserID uid = userIDFactory.getFromBase64(strUid);
+
 		Profile profile = null;
 		try {
 			profile = socialFS.findProfile(uid);			
 		} catch (ProfileNotFoundException e) {
 			// TODO Auto-generated catch block
-			System.out.println("Profile with UserID" + uid + "not found");
+			System.out.println("Profile with UserID " + uid + "not found");
 			res.setStatusCode(HttpStatus.SC_NOT_FOUND);
 			res.setEntity(new FileEntity(new File("404.html"),"text/html"));
 			return;

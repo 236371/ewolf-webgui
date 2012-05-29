@@ -2,12 +2,12 @@ package il.technion.ewolf.server;
 
 import il.technion.ewolf.SocialNetwork;
 import il.technion.ewolf.exceptions.WallNotFound;
-import il.technion.ewolf.kbr.Key;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
+import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
 import java.io.File;
@@ -32,6 +32,7 @@ import com.google.inject.Inject;
 public class ViewMessageBoardHandler implements HttpRequestHandler {
 	private final SocialNetwork snet;
 	private final SocialFS socialFS;
+	private final UserIDFactory userIDFactory;
 	
 	@SuppressWarnings("unused")
 	private class JsonPost {
@@ -47,9 +48,10 @@ public class ViewMessageBoardHandler implements HttpRequestHandler {
 	}
 	
 	@Inject
-	public ViewMessageBoardHandler(SocialNetwork snet, SocialFS socialFS) {
+	public ViewMessageBoardHandler(SocialNetwork snet, SocialFS socialFS, UserIDFactory userIDFactory) {
 		this.snet = snet;
 		this.socialFS = socialFS;
+		this.userIDFactory = userIDFactory;
 	}
 
 	//XXX req of type GET with "/viewMessageBoard/{UserID}" URI
@@ -64,7 +66,7 @@ public class ViewMessageBoardHandler implements HttpRequestHandler {
 		String reqURI = req.getRequestLine().getUri();
 		String[] splitedURI = reqURI.split("/");
 		String strUid = splitedURI[splitedURI.length-1];
-		UserID uid = new UserID(Key.fromString(strUid));
+		UserID uid = userIDFactory.getFromBase64(strUid);
 
 		Profile profile = null;
 		try {

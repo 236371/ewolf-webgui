@@ -127,11 +127,6 @@ public class Key implements Serializable {
 		return Base64.encodeBase64String(bytes);
 	}
 	
-	//str have to be base64String
-	public static Key fromString(String str) {
-		return new Key(Base64.decodeBase64(str));		
-	}
-	
 	/**
 	 * 
 	 * @return the key encoded in binary string
