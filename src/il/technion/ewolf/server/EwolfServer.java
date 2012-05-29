@@ -47,10 +47,8 @@ public class EwolfServer {
 		
 		//server resources handlers register
 		connector.register("/json*", new JsonHandler() );
-        connector.register("*", new HttpFileHandler("/",new ServerResourceFactory()));
+        connector.register("/file*", new HttpFileHandler("/",new ServerResourceFactory()));
 		
-		System.out.println("server started");
-
 /*
 		try {
 			PropertiesConfiguration config = new PropertiesConfiguration(EWOLF_CONFIG);
@@ -145,12 +143,14 @@ public class EwolfServer {
 		}
 		
 		//ewolf resources handlers register
-		connector.register("/viewSelfProflie", injector.getInstance(ViewSelfProfileHandler.class));		
+		connector.register("/viewSelfProfile", injector.getInstance(ViewSelfProfileHandler.class));
 		connector.register("/addSocialGroup", injector.getInstance(AddNewSocialGroupHandler.class));
 		connector.register("/viewProfile/*", injector.getInstance(ViewProfileHandler.class));
 		connector.register("/viewSocialGroupMembers/*", injector.getInstance(ViewSocialGroupMembersHandler.class));
 		connector.register("/addTextPost/*", injector.getInstance(AddMessageBoardPostHandler.class));
 		connector.register("/viewMessageBoard/*", injector.getInstance(ViewMessageBoardHandler.class));
 		connector.register("/addSocialGroupMember/*", injector.getInstance(AddSocialGroupMemberHandler.class));
+
+		System.out.println("server started");
 	}
 }
