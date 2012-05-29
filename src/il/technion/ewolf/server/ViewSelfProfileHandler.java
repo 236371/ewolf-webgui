@@ -21,22 +21,29 @@ import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class ViewSelfProfileHandler implements HttpRequestHandler{
-	@SuppressWarnings("unused")
-	private String name;
-	@SuppressWarnings("unused")
-	private String id;
-	private List<String> groups = new ArrayList<String>();
+	private final SocialFS socialFS;
+	private final WolfPackLeader socialGroupsManager;
+
+	private class JsonProfile {
+		@SuppressWarnings("unused")
+		private String name;
+		@SuppressWarnings("unused")
+		private String id;
+		private List<String> groups = new ArrayList<String>();
+
+		private JsonProfile(String name, String id) {
+			this.name = name;
+			this.id = id;
+		}
+		void addGroup(String groupName) {
+			groups.add(groupName);
+		}
+	}
 	
 	@Inject
 	public ViewSelfProfileHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager) {
-		
-		Profile profile = socialFS.getCredentials().getProfile();
-		name = profile.getName();
-		id = profile.getUserId().toString();
-		
-		for (WolfPack w : socialGroupsManager.getAllSocialGroups()) {
-			groups.add(w.getName());
-		}
+		this.socialFS = socialFS;
+		this.socialGroupsManager = socialGroupsManager;
 	}
 
 	@Override
@@ -45,10 +52,15 @@ public class ViewSelfProfileHandler implements HttpRequestHandler{
 		//TODO move adding headers to response intercepter
 		res.addHeader("Server", "e-WolfNode");
 		res.addHeader("Content-Type", "application/json");
-		
+
+		Profile profile = socialFS.getCredentials().getProfile();
 		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-		String json = gson.toJson(this);
+		JsonProfile jsonObj = new JsonProfile(profile.getName(), profile.getUserId().toString());
+		for (WolfPack w : socialGroupsManager.getAllSocialGroups()) {
+			jsonObj.addGroup(w.getName());
+		}
 		
+		String json = gson.toJson(jsonObj);
 		res.setEntity(new StringEntity(json));				
 	}
 
