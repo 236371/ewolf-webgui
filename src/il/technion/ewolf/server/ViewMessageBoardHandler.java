@@ -30,8 +30,8 @@ import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class ViewMessageBoardHandler implements HttpRequestHandler {
-	private SocialNetwork snet;
-	private SocialFS socialFS;
+	private final SocialNetwork snet;
+	private final SocialFS socialFS;
 	
 	@SuppressWarnings("unused")
 	private class JsonPost {

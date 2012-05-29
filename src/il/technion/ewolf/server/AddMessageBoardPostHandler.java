@@ -22,9 +22,9 @@ import org.apache.http.util.EntityUtils;
 import com.google.inject.Inject;
 
 public class AddMessageBoardPostHandler implements HttpRequestHandler {
-	private SocialNetwork snet;
-	private TextPost textPost;
-	private WolfPackLeader socialGroupsManager;
+	private final SocialNetwork snet;
+	private final TextPost textPost;
+	private final WolfPackLeader socialGroupsManager;
 	
 	@Inject
 	public AddMessageBoardPostHandler(SocialNetwork snet, TextPost textPost, WolfPackLeader socialGroupsManager) {

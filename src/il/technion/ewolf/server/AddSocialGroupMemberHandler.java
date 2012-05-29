@@ -26,7 +26,7 @@ import com.google.inject.Inject;
 
 public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 	private final WolfPackLeader socialGroupsManager;
-	private SocialFS socialFS;
+	private final SocialFS socialFS;
 	
 	@Inject
 	public AddSocialGroupMemberHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager) {

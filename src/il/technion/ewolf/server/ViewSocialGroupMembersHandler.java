@@ -19,7 +19,7 @@ import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class ViewSocialGroupMembersHandler implements HttpRequestHandler {
-	WolfPackLeader socialGroupsManager = null;
+	private final WolfPackLeader socialGroupsManager;
 	
 	private class JsonProfile {
 		@SuppressWarnings("unused")

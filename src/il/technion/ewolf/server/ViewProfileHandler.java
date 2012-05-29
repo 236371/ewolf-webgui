@@ -24,7 +24,7 @@ import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class ViewProfileHandler implements HttpRequestHandler {
-	private SocialFS socialFS;
+	private final SocialFS socialFS;
 	
 	private class JsonProfile {
 		@SuppressWarnings("unused")
