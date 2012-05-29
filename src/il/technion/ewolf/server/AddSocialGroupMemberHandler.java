@@ -23,18 +23,25 @@ import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
 
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 	private final WolfPackLeader socialGroupsManager;
 	private final SocialFS socialFS;
 	private final UserIDFactory userIDFactory;
+	private final String hostName;
+	private final String port;
+
 	
 	@Inject
 	public AddSocialGroupMemberHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager,
-			UserIDFactory userIDFactory) {
+			UserIDFactory userIDFactory, @Named("server.port") String port,
+			@Named("server.host.name") String hostName) {
 		this.socialGroupsManager = socialGroupsManager;
 		this.socialFS = socialFS;
 		this.userIDFactory = userIDFactory;
+		this.hostName = hostName;
+		this.port = port;
 	}
 
 	//XXX req of type POST with "/addSocialGroupMember/{groupName}" URI and body containing userID=id
@@ -81,11 +88,10 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 			e.printStackTrace();
 			return;
 		}
-		
-		//TODO what should be in response?
+
 		res.setStatusCode(HttpStatus.SC_SEE_OTHER);
 		//FIXME where to redirect?
-		res.setHeader("Location", "/viewSocialGroupMembers/" + groupName);
+		res.setHeader("Location", hostName + ":" + port + "/viewSocialGroupMembers/" + groupName);
 	}
 
 }

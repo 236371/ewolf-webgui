@@ -20,17 +20,23 @@ import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
 
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 public class AddMessageBoardPostHandler implements HttpRequestHandler {
 	private final SocialNetwork snet;
 	private final TextPost textPost;
 	private final WolfPackLeader socialGroupsManager;
+	private final String port;
+	private final String hostName;
 	
 	@Inject
-	public AddMessageBoardPostHandler(SocialNetwork snet, TextPost textPost, WolfPackLeader socialGroupsManager) {
+	public AddMessageBoardPostHandler(SocialNetwork snet, TextPost textPost, WolfPackLeader socialGroupsManager,
+			 @Named("server.port") String port, @Named("server.host.name") String hostName) {
 		this.snet = snet;
 		this.textPost = textPost;
 		this.socialGroupsManager = socialGroupsManager;
+		this.hostName = hostName;
+		this.port = port;
 	}
 	
 	//XXX req of type POST with "/addTextPost/{groupName}" URI and body containing text=post text
@@ -80,6 +86,6 @@ public class AddMessageBoardPostHandler implements HttpRequestHandler {
 		//TODO what should be in response?
 		res.setStatusCode(HttpStatus.SC_SEE_OTHER);
 		//FIXME where to redirect?
-		res.setHeader("Location", "/viewMessageBoard");
+		res.setHeader("Location", hostName + ":" + port + "/viewMessageBoard");
 	}
 }

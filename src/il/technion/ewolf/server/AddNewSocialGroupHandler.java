@@ -13,13 +13,19 @@ import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
 
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 public class AddNewSocialGroupHandler  implements HttpRequestHandler{
 	private final WolfPackLeader socialGroupsManager;
+	private final String hostName;
+	private final String port;
 	
 	@Inject
-	public AddNewSocialGroupHandler(WolfPackLeader socialGroupsManager) {
+	public AddNewSocialGroupHandler(WolfPackLeader socialGroupsManager, @Named("server.port") String port,
+			@Named("server.host.name") String hostName) {
 		this.socialGroupsManager = socialGroupsManager;
+		this.port = port;
+		this.hostName = hostName;
 	}
 
 	//XXX req of type POST with "/addSocialGroup" URI and body containing groupName=name
@@ -33,10 +39,10 @@ public class AddNewSocialGroupHandler  implements HttpRequestHandler{
 		String dataSet = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 		String groupName = dataSet.substring(dataSet.indexOf("=") + 1).trim();
 
-		//TODO what should be in response?
 		res.setStatusCode(HttpStatus.SC_SEE_OTHER);
 		//FIXME where to redirect?
-		res.setHeader("Location", "/viewSocialGroups");
+		//res.setHeader("Location", "/viewSocialGroups");
+		res.setHeader("Location", hostName + ":" + port + "/viewSelfProfile");
 	}
 
 }

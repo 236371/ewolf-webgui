@@ -29,20 +29,16 @@ import com.google.inject.Injector;
 public class EwolfServer {
 	
 	private static final int EWOLF_PORT = 10000;
-	private static final int SERVER_PORT = 10200;
 	private static final String EWOLF_CONFIG = "ewolf.config.properties";
 
 
 	public static void main(String[] args) {
 		// starting server
+		ServerModule serverModule = new ServerModule();
 		Injector serverInjector = Guice.createInjector(
 				new HttpConnectorModule()
-					.setProperty("httpconnector.net.port", ""+(SERVER_PORT)),
-				new KadNetModule()
-					.setProperty("openkad.keyfactory.keysize", "1")
-					.setProperty("openkad.bucket.kbuckets.maxsize", "3")
-					.setProperty("openkad.seed", ""+(SERVER_PORT))
-					.setProperty("openkad.net.udp.port", ""+(SERVER_PORT)));
+					.setProperty("httpconnector.net.port", serverModule.getPort()),
+					serverModule);
 		
 		HttpConnector connector = serverInjector.getInstance(HttpConnector.class);
 		connector.bind();
