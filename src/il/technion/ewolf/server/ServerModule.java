@@ -4,7 +4,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.name.Names;
 
 public class ServerModule extends AbstractModule {
-	private static final String SERVER_PORT = "10200"; 
+	private static final String SERVER_PORT = "10000"; 
 
 	public ServerModule() {
 	}

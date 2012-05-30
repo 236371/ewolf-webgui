@@ -1,14 +1,5 @@
 package il.technion.ewolf.server;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
-
 import il.technion.ewolf.EwolfAccountCreator;
 import il.technion.ewolf.EwolfAccountCreatorModule;
 import il.technion.ewolf.EwolfModule;
@@ -23,32 +14,23 @@ import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 public class EwolfServer {
 	
-	private static final int EWOLF_PORT = 10000;
 	private static final String EWOLF_CONFIG = "ewolf.config.properties";
 
 
-	public static void main(String[] args) {
-		// starting server
-		ServerModule serverModule = new ServerModule();
-		Injector serverInjector = Guice.createInjector(
-				new HttpConnectorModule()
-					.setProperty("httpconnector.net.port", serverModule.getPort()),
-					serverModule);
-		
-		HttpConnector connector = serverInjector.getInstance(HttpConnector.class);
-		connector.bind();
-		connector.start();
-
-		
-		//server resources handlers register
-		connector.register("/json*", new JsonHandler() );
-        connector.register("/file*", new HttpFileHandler("/",new ServerResourceFactory()));
-		
+	public static void main(String[] args) throws Exception {
 /*
 		try {
 			PropertiesConfiguration config = new PropertiesConfiguration(EWOLF_CONFIG);
@@ -86,16 +68,10 @@ public class EwolfServer {
 			System.out.println("String from configuration file could not be parsed as a URI");
 			return;
 		}
+
+		ServerModule serverModule = new ServerModule();
 		
 		Injector injector = Guice.createInjector(
-				new KadNetModule()
-					.setProperty("openkad.keyfactory.keysize", "20")
-					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-					.setProperty("openkad.net.udp.port", ""+(EWOLF_PORT)),
-					
-				new HttpConnectorModule()
-					.setProperty("httpconnector.net.port", ""+(EWOLF_PORT)),
-				
 				new SimpleDHTModule(),
 					
 				new ChunKeeperModule(),
@@ -106,26 +82,27 @@ public class EwolfServer {
 					.setProperty("socialfs.user.username", username)
 					.setProperty("socialfs.user.password", password)
 					.setProperty("socialfs.user.name", name),
-				
+
 				new SocialFSModule(),
 				
 				new EwolfAccountCreatorModule(),
-				
-				new EwolfModule()
+
+				new EwolfModule(),
+
+				new HttpConnectorModule()
+					.setProperty("httpconnector.net.port", serverModule.getPort()),
+
+					serverModule,
+
+				new KadNetModule()
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.seed", serverModule.getPort())
+					.setProperty("openkad.net.udp.port", serverModule.getPort())
 		);
 		
 		KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
-		try {
-			kbr.create();
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		
-		// bind the http connector
-		HttpConnector ewolfConnector = injector.getInstance(HttpConnector.class);
-		ewolfConnector.bind();
-		ewolfConnector.start();
+		kbr.create();
 		
 		// bind the chunkeeper
 		ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
@@ -133,16 +110,17 @@ public class EwolfServer {
 		
 		//FIXME port for testing
 		kbr.join(kbrURIs);
-
+		
+		HttpConnector connector = injector.getInstance(HttpConnector.class);
+		connector.bind();
+		connector.start();
+		
 		EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
-		
-		try {
-			accountCreator.create();
-		} catch (Exception e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		
+		accountCreator.create();
+
+		//server resources handlers register
+		connector.register("/json*", new JsonHandler() );
+		connector.register("/file*", new HttpFileHandler("/",new ServerResourceFactory()));
 		//ewolf resources handlers register
 		connector.register("/viewSelfProfile", injector.getInstance(ViewSelfProfileHandler.class));
 		connector.register("/addSocialGroup", injector.getInstance(AddNewSocialGroupHandler.class));
