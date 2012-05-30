@@ -32,12 +32,14 @@ public class AddNewSocialGroupHandler  implements HttpRequestHandler{
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
-		//TODO maybe we should use findOrCreateSocialGroup() method?
-		socialGroupsManager.createSocialGroup(groupName);
+		//TODO move adding headers to response intercepter
+		res.addHeader("Server", "e-WolfNode");
 
 		//get group name from the body
 		String dataSet = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 		String groupName = dataSet.substring(dataSet.indexOf("=") + 1).trim();
+
+		socialGroupsManager.findOrCreateSocialGroup(groupName);
 
 		res.setStatusCode(HttpStatus.SC_SEE_OTHER);
 		//FIXME where to redirect?
