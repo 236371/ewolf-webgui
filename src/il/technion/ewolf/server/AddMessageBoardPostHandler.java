@@ -5,6 +5,7 @@ import il.technion.ewolf.WolfPack;
 import il.technion.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.posts.TextPost;
+import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
 import java.io.FileNotFoundException;
@@ -24,17 +25,20 @@ import com.google.inject.name.Named;
 
 public class AddMessageBoardPostHandler implements HttpRequestHandler {
 	private final SocialNetwork snet;
-	private final TextPost textPost;
+	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
+	private final TextPost textPost;
 	private final String port;
 	private final String hostName;
 	
 	@Inject
-	public AddMessageBoardPostHandler(SocialNetwork snet, TextPost textPost, WolfPackLeader socialGroupsManager,
+	public AddMessageBoardPostHandler(SocialNetwork snet, WolfPackLeader socialGroupsManager,
+			SocialFS socialFS, TextPost textPost,
 			 @Named("server.port") String port, @Named("server.host.name") String hostName) {
 		this.snet = snet;
-		this.textPost = textPost;
 		this.socialGroupsManager = socialGroupsManager;
+		this.socialFS = socialFS;
+		this.textPost = textPost;
 		this.hostName = hostName;
 		this.port = port;
 	}
@@ -83,9 +87,10 @@ public class AddMessageBoardPostHandler implements HttpRequestHandler {
 			e.printStackTrace();
 			return;
 		}
-		//TODO what should be in response?
+
 		res.setStatusCode(HttpStatus.SC_SEE_OTHER);
 		//FIXME where to redirect?
-		res.setHeader("Location", hostName + ":" + port + "/viewMessageBoard");
+		res.setHeader("Location", hostName + ":" + port +
+				"/viewMessageBoard/" + socialFS.getCredentials().getProfile().getUserId().toString());
 	}
 }
