@@ -6,10 +6,7 @@
 <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css"/>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
 <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
-<script src="home.js" type="text/javascript"></script>
-<script src="loading.js" type="text/javascript"></script>
-<script src="menuItem.js" type="text/javascript"></script>
-<script src="spin.min.js" type="text/javascript"></script>
+<script src="core.mini.js" type="text/javascript"></script>
 
 <link rel="stylesheet" type="text/css" href="home.css" />
 
@@ -44,20 +41,15 @@
 			<input id="btnHideMenu" type="button" value="<" class="toggleButton" />
 			<input id="btnShowMenu" type="button" value=">" class="toggleButton" style="display:none;"/>
 		</div>
-		<ul id="menuUL">
-		</ul>
+		<ul id="menuUL"></ul>
 	</div>
-	<div id="menuBack" class="sideMenu sideMenuBack"></div>
 	
 	<!----------------------- Main Frame ---------------------------->
 	<div id="mainFrame" class="mainFrameCSS">
-		<div id="loading" class="loadingClass">
+		<div id="loadingFrame" class="loadingClass">
 			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...
 		</div>
-		<div id="selfProfileFrame" class="mainFrameClass"></div>
-		<div id="searchResult" class="mainFrameClass"></div>
-		<div id="inboxFrame" class="mainFrameClass"></div>
-		<div id="sendMessageFrame" class="mainFrameClass"></div>
+		<div id="applicationFrame" class="applicationClass"></div>
 	</div>
 
 </body>

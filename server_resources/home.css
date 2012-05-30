@@ -29,7 +29,8 @@ button, input[type="button"] {
 button, input[type="button"]:hover {
 	background-color:#eee;
 	border:3px;
-	/*border-style:dashed;*/
+	cursor:pointer;
+	box-shadow:0px 0px 15px rgba(0,0,0,0.4);
 }
 
 input[type="text"] {
@@ -72,8 +73,7 @@ input[type="text"]:focus::-webkit-input-placeholder {
 
 
 /*************************** Main Frame Style ********************/
-.mainFrameClass {
-	display:none;
+.applicationClass {
 	text-align:justify;
 }
 
@@ -128,7 +128,7 @@ input[type="text"]:focus::-webkit-input-placeholder {
 	width:750px;
 }
 
-.messageClass {
+.menuItemMessageClass {
 	background-color:white;
 	opacity: 0.8;
 	border-radius:13px;
@@ -157,8 +157,9 @@ input[type="text"]:focus::-webkit-input-placeholder {
 
 /****************************** Menu Style ***********************/
 .currentMenuSelection {
-	font-size:18px;
+	/*font-size:18px;*/
 	font-weight:bold;
+	cursor:default !important;
 }
 
 .sideMenu {
@@ -175,6 +176,11 @@ input[type="text"]:focus::-webkit-input-placeholder {
 	
 	top:45px;right:0;left:-35px;z-index:999;
 	position:fixed;	
+}
+
+.menuListTitle {	
+	margin-left:37px;
+	max-height:7px;
 }
 
 .shadow-bar {
@@ -223,19 +229,28 @@ input[type="text"]:focus::-webkit-input-placeholder {
 }
 
 .refreshButton {
-	display:none;
+	/*display:none;*/
+	width:18px !important;
+	height:18px !important;
+	/*float:right;*/
+	opacity:0.7;
+	cursor:pointer;
+}
+
+.refreshButtonArea {
+	/*display:none;*/
 	width:20px !important;
 	height:20px !important;
 	float:right;
-}
-
-.refreshButtonAlign {
-	width:20px !important;
-	height:20px !important;
-	float:right;	
 	padding-top:5px;
 	padding-right:5px;
 }
 
-.toggleButton {max-width:25px;}
-.toggleButtons {text-align:right;}
+.toggleButton {
+	max-width:25px;
+}
+
+.toggleButtons {
+	text-align:right;
+	margin-right:3px;
+}
