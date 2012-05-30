@@ -60,10 +60,9 @@ public class EwolfServer {
 			e2.printStackTrace();
 		}
 */
-		// starting Ewolf
-		String username = null;
-		String password = null;
-		String name = null;
+		String username;
+		String password;
+		String name;
 		List<URI> kbrURIs = new ArrayList<URI>();
 		try {
 			PropertiesConfiguration config = new PropertiesConfiguration(EWOLF_CONFIG);
@@ -80,10 +79,12 @@ public class EwolfServer {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
 			System.out.println("Cant' read configuration file");
+			return;
 		} catch (URISyntaxException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			System.out.println("String from configuration file could not be parsed as a URI");
+			return;
 		}
 		
 		Injector injector = Guice.createInjector(

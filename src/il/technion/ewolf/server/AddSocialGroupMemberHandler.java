@@ -57,7 +57,7 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 		String key = dataSet.substring(dataSet.indexOf("=") + 1).trim();
 		UserID uid = userIDFactory.getFromBase64(key);
 
-		Profile profile = null;
+		Profile profile;
 		try {
 			profile = socialFS.findProfile(uid);			
 		} catch (ProfileNotFoundException e) {

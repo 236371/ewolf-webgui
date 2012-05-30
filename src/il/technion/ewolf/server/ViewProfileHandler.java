@@ -58,7 +58,7 @@ public class ViewProfileHandler implements HttpRequestHandler {
 		String strUid = splitedURI[splitedURI.length-1];
 		UserID uid = userIDFactory.getFromBase64(strUid);
 
-		Profile profile = null;
+		Profile profile;
 		try {
 			profile = socialFS.findProfile(uid);			
 		} catch (ProfileNotFoundException e) {
