@@ -10,8 +10,10 @@ import il.technion.ewolf.http.HttpConnector;
 import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
+import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
+import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.stash.StashModule;
 
 import java.net.URI;
@@ -88,5 +90,11 @@ public class DummyEwolfNet {
 			accountCreator.create();
 			System.out.println("done\n");
 		}
+
+		//FIXME for testing purposes only
+		SocialFS sfs1 = injectors.get(0).getInstance(SocialFS.class);
+		UserID uid1 = sfs1.getCredentials().getProfile().getUserId();
+		System.out.println("UserID = "+ uid1.toString());
+		System.out.println("Profile = "+ sfs1.getCredentials().getProfile().toString());
 	}
 }

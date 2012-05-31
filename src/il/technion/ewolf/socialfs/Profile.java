@@ -135,6 +135,7 @@ public class Profile extends Signable implements KeyHolder {
 				"name: "+name+"\n\n"+
 				"rootKey: "+rootKey.toBase64()+"\n\n"+
 				"pubSigKey: "+getPubSigKey()+"\n\n";
+				//"userID: " + getUserId()+ "\n\n";
 				//"privSigKey: "+getPrivSigKey()+"\n\n";
 	}
 
