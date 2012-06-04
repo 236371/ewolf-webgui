@@ -1,5 +1,7 @@
 package il.technion.ewolf.server.handlers;
 
+import il.technion.ewolf.WolfPack;
+import il.technion.ewolf.WolfPackLeader;
 import il.technion.ewolf.server.HttpStringExtractor;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
@@ -9,6 +11,9 @@ import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
@@ -23,30 +28,28 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
-public class ViewProfileHandler implements HttpRequestHandler {
-	private static final String HANDLER_REGISTER_PATTERN = "/viewProfile/*";
-	private final SocialFS socialFS;
+public class ViewSocialGroupsHandler implements HttpRequestHandler {
+	private static final String HANDLER_REGISTER_PATTERN = "/viewSocialGroups";
+	private final WolfPackLeader socialGroupsManager;
 	private final UserIDFactory userIDFactory;
-	
+	private final SocialFS socialFS;
+
 	private class JsonProfile {
-		@SuppressWarnings("unused")
-		private String name;
-		@SuppressWarnings("unused")
-		private String id;
-	
-		private JsonProfile(String name, String id) {
-			this.name = name;
-			this.id = id;
+		private final List<String> groups = new ArrayList<String>();
+
+		void addGroup(String groupName) {
+			groups.add(groupName);
 		}
 	}
 	
 	@Inject
-	public ViewProfileHandler(SocialFS socialFS, UserIDFactory userIDFactory) {
-		this.socialFS = socialFS;
+	public ViewSocialGroupsHandler(WolfPackLeader socialGroupsManager, UserIDFactory userIDFactory, SocialFS socialFS) {
+		this.socialGroupsManager = socialGroupsManager;
 		this.userIDFactory = userIDFactory;
+		this.socialFS = socialFS;
 	}
 
-	//XXX req of type GET with "/viewProfile/{UserID}" or "/viewProfile/my" URI
+	//XXX req of type GET with "/viewSocialGroups/{userID}" or "/viewSocialGroups/my" URI
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
@@ -55,26 +58,33 @@ public class ViewProfileHandler implements HttpRequestHandler {
 		
 		String strUid = HttpStringExtractor.fromURIAfterLastSlash(req);
 		
-		Profile profile;
+		JsonProfile jsonObj = new JsonProfile();
+		List<WolfPack> groups = socialGroupsManager.getAllSocialGroups();
+		
 		if (strUid.equals("my")) {
-			profile = socialFS.getCredentials().getProfile();
-			strUid = profile.getUserId().toString();
+			for (WolfPack w : groups) {
+				jsonObj.addGroup(w.getName());
+			}
 		} else {
 			UserID uid = userIDFactory.getFromBase64(strUid);
+			Profile profile;
 			try {
 				profile = socialFS.findProfile(uid);			
 			} catch (ProfileNotFoundException e) {
 				// TODO Auto-generated catch block
 				System.out.println("Profile with UserID" + uid + "not found");
 				res.setStatusCode(HttpStatus.SC_NOT_FOUND);
-				res.setHeader(HTTP.CONTENT_TYPE, "text/html");
 				res.setEntity(new FileEntity(new File("404.html"),"text/html"));
 				return;
 			}
+			for (WolfPack w : groups) {
+				if (w.getMembers().contains(profile)) {
+					jsonObj.addGroup(w.getName());
+				}				
+			}
 		}
-
+		
 		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-		JsonProfile jsonObj = new JsonProfile(profile.getName(), strUid);
 		String json = gson.toJson(jsonObj);
 		res.setEntity(new StringEntity(json));
 		res.addHeader(HTTP.CONTENT_TYPE, "application/json");
@@ -83,4 +93,5 @@ public class ViewProfileHandler implements HttpRequestHandler {
 	public static String getRegisterPattern() {
 		return HANDLER_REGISTER_PATTERN;
 	}
+
 }

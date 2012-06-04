@@ -4,6 +4,7 @@ import il.technion.ewolf.SocialNetwork;
 import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
+import il.technion.ewolf.server.HttpStringExtractor;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -13,7 +14,6 @@ import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 
 import org.apache.http.HttpException;
@@ -22,6 +22,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.FileEntity;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
@@ -30,6 +31,7 @@ import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class ViewMessageBoardHandler implements HttpRequestHandler {
+	private static final String HANDLER_REGISTER_PATTERN = "/viewMessageBoard/*";
 	private final SocialNetwork snet;
 	private final SocialFS socialFS;
 	private final UserIDFactory userIDFactory;
@@ -58,14 +60,11 @@ public class ViewMessageBoardHandler implements HttpRequestHandler {
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
-		//TODO move adding headers to response intercepter
-		res.addHeader("Server", "e-WolfNode");
-		res.addHeader("Date",Calendar.getInstance().getTime().toString());
+		//TODO move adding general headers to response intercepter
+		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
 		
 		//get user ID from URI
-		String reqURI = req.getRequestLine().getUri();
-		String[] splitedURI = reqURI.split("/");
-		String strUid = splitedURI[splitedURI.length-1];
+		String strUid = HttpStringExtractor.fromURIAfterLastSlash(req);
 		UserID uid = userIDFactory.getFromBase64(strUid);
 
 		Profile profile;
@@ -76,6 +75,7 @@ public class ViewMessageBoardHandler implements HttpRequestHandler {
 			System.out.println("Profile with UserID" + uid + "not found");
 			res.setStatusCode(HttpStatus.SC_NOT_FOUND);
 			res.setEntity(new FileEntity(new File("404.html"),"text/html"));
+			e.printStackTrace();
 			return;
 		}
 		
@@ -97,6 +97,10 @@ public class ViewMessageBoardHandler implements HttpRequestHandler {
 		}
 		String json = gson.toJson(lst, lst.getClass());
 		res.setEntity(new StringEntity(json));
+		res.addHeader(HTTP.CONTENT_TYPE, "application/json");
 	}
-
+	
+	public static String getRegisterPattern() {
+		return HANDLER_REGISTER_PATTERN;
+	}
 }

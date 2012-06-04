@@ -65,28 +65,32 @@ public class ServerResourceFactory implements ServerFileFactory {
 				}
 				
 				String path = url.getPath();
-				String contentType = null;
+//				String contentType = null;
 				
-				try {
-					PropertiesConfiguration config = new PropertiesConfiguration(MIME_TYPES);
-					String extension = path.substring( path.lastIndexOf('.') );
-					contentType = config.getString(extension);
-				} catch (ConfigurationException e2) {
-					// TODO Auto-generated catch block
-					System.out.println("Can't read configuration file:" + MIME_TYPES);
-					e2.printStackTrace();
-				}
-				
-				if (contentType == null) {
-					return "application/unknown";
-				}
-				else {
-					return contentType;
-				}
-/*				
-				if(path.endsWith(".ico") || path.endsWith(".jpg")
-						|| path.endsWith(".gif")) {					
+//				try {
+//					PropertiesConfiguration config = new PropertiesConfiguration(MIME_TYPES);
+//					String extension = path.substring( path.lastIndexOf('.') );
+//					contentType = config.getString(extension);
+//					System.out.println(contentType);
+//				} catch (ConfigurationException e2) {
+//					// TODO Auto-generated catch block
+//					System.out.println("Can't read configuration file:" + MIME_TYPES);
+//					e2.printStackTrace();
+//				}
+//				
+//				if (contentType == null) {
+//					return "application/unknown";
+//				}
+//				else {
+//					return contentType;
+//				}
+			
+				if(path.endsWith(".ico") || path.endsWith(".gif")) {
 					return "image/gif";
+				} else if(path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+					return "image/jpeg";
+				} else if(path.endsWith(".svg")) {					
+					return "image/svg+xml";
 				} else if(path.endsWith(".html") || path.endsWith(".htm") ) {
 					return "text/html";
 				} else if(path.endsWith(".js")) {
@@ -96,7 +100,6 @@ public class ServerResourceFactory implements ServerFileFactory {
 				} else {
 					return "application/unknown";
 				}
-*/
 			}
 		};
 	}

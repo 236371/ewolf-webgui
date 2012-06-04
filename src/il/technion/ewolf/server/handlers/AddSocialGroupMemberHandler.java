@@ -2,6 +2,7 @@ package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.WolfPack;
 import il.technion.ewolf.WolfPackLeader;
+import il.technion.ewolf.server.HttpStringExtractor;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -12,20 +13,19 @@ import il.technion.ewolf.stash.exception.GroupNotFoundException;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.FileEntity;
+import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
-import org.apache.http.util.EntityUtils;
-
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
 public class AddSocialGroupMemberHandler implements HttpRequestHandler {
+	private static final String HANDLER_REGISTER_PATTERN = "/addSocialGroupMember/*";
 	private final WolfPackLeader socialGroupsManager;
 	private final SocialFS socialFS;
 	private final UserIDFactory userIDFactory;
@@ -48,14 +48,12 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
-		//TODO move adding headers to response intercepter
-		res.addHeader("Server", "e-WolfNode");
-		res.addHeader("Content-Type", "application/json");
+		//TODO move adding general headers to response intercepter
+		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
 		
 		//get user ID from the body
-		String dataSet = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
-		String key = dataSet.substring(dataSet.indexOf("=") + 1).trim();
-		UserID uid = userIDFactory.getFromBase64(key);
+		String strUid = HttpStringExtractor.fromBodyAfterFirstEqualsSign(req);
+		UserID uid = userIDFactory.getFromBase64(strUid);
 
 		Profile profile;
 		try {
@@ -69,9 +67,7 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 		}
 		
 		//get social group name from URI
-		String reqURI = req.getRequestLine().getUri();
-		String[] splitedURI = reqURI.split("/");
-		String groupName = splitedURI[splitedURI.length-1];
+		String groupName = HttpStringExtractor.fromURIAfterLastSlash(req);
 		
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(groupName);
 		if (socialGroup == null) {
@@ -93,5 +89,8 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 		//FIXME where to redirect?
 		res.setHeader("Location", hostName + ":" + port + "/viewSocialGroupMembers/" + groupName);
 	}
-
+	
+	public static String getRegisterPattern() {
+		return HANDLER_REGISTER_PATTERN;
+	}
 }

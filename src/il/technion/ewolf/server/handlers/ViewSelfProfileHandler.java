@@ -13,14 +13,18 @@ import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
-
+/**
+ * @deprecated
+ */
 public class ViewSelfProfileHandler implements HttpRequestHandler{
+	private static final String HANDLER_REGISTER_PATTERN = "/viewSelfProfile";
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
 
@@ -46,12 +50,12 @@ public class ViewSelfProfileHandler implements HttpRequestHandler{
 		this.socialGroupsManager = socialGroupsManager;
 	}
 
+	//XXX req of type GET with "/viewSelfProfile" URI
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
-		//TODO move adding headers to response intercepter
-		res.addHeader("Server", "e-WolfNode");
-		res.addHeader("Content-Type", "application/json");
+		//TODO move adding general headers to response intercepter
+		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
 
 		Profile profile = socialFS.getCredentials().getProfile();
 		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
@@ -61,7 +65,11 @@ public class ViewSelfProfileHandler implements HttpRequestHandler{
 		}
 		
 		String json = gson.toJson(jsonObj);
-		res.setEntity(new StringEntity(json));				
+		res.setEntity(new StringEntity(json));
+		res.addHeader(HTTP.CONTENT_TYPE, "application/json");				
 	}
-
+	
+	public static String getRegisterPattern() {
+		return HANDLER_REGISTER_PATTERN;
+	}
 }

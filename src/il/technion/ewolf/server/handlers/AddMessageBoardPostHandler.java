@@ -5,25 +5,25 @@ import il.technion.ewolf.WolfPack;
 import il.technion.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.posts.TextPost;
+import il.technion.ewolf.server.HttpStringExtractor;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-
-import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
-import org.apache.http.util.EntityUtils;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
 public class AddMessageBoardPostHandler implements HttpRequestHandler {
+	private static final String HANDLER_REGISTER_PATTERN = "/addTextPost/*";
 	private final SocialNetwork snet;
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
@@ -47,18 +47,14 @@ public class AddMessageBoardPostHandler implements HttpRequestHandler {
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
-		//TODO move adding headers to response intercepter
-		res.addHeader("Server", "e-WolfNode");
-		res.addHeader("Content-Type", "application/json");
+		//TODO move adding general headers to response intercepter
+		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
 		
 		//get post text from body
-		String dataSet = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
-		String text = dataSet.substring(dataSet.indexOf("=") + 1);
+		String text = HttpStringExtractor.fromBodyAfterFirstEqualsSign(req);
 		
 		//get social group name from URI
-		String reqURI = req.getRequestLine().getUri();
-		String[] splitedURI = reqURI.split("/");
-		String groupName = splitedURI[splitedURI.length-1];
+		String groupName = HttpStringExtractor.fromURIAfterLastSlash(req);
 		
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(groupName);
 		if (socialGroup == null) {
@@ -92,5 +88,9 @@ public class AddMessageBoardPostHandler implements HttpRequestHandler {
 		//FIXME where to redirect?
 		res.setHeader("Location", hostName + ":" + port +
 				"/viewMessageBoard/" + socialFS.getCredentials().getProfile().getUserId().toString());
+	}
+	
+	public static String getRegisterPattern() {
+		return HANDLER_REGISTER_PATTERN;
 	}
 }

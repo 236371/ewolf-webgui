@@ -1,16 +1,17 @@
 package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.WolfPackLeader;
+import il.technion.ewolf.server.HttpStringExtractor;
 import il.technion.ewolf.socialfs.Profile;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
@@ -19,6 +20,7 @@ import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class ViewSocialGroupMembersHandler implements HttpRequestHandler {
+	private static final String HANDLER_REGISTER_PATTERN = "/viewSocialGroupMembers/*";
 	private final WolfPackLeader socialGroupsManager;
 	
 	private class JsonProfile {
@@ -42,9 +44,10 @@ public class ViewSocialGroupMembersHandler implements HttpRequestHandler {
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
 		
-		String reqURI = req.getRequestLine().getUri();
-		String[] splitedURI = reqURI.split("/");
-		String socialGroupName = splitedURI[splitedURI.length-1];
+		//TODO move adding general headers to response intercepter
+		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
+		
+		String socialGroupName = HttpStringExtractor.fromURIAfterLastSlash(req);
 		List<Profile> profiles = socialGroupsManager.findSocialGroup(socialGroupName).getMembers();
 		
 		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
@@ -54,10 +57,10 @@ public class ViewSocialGroupMembersHandler implements HttpRequestHandler {
 		}
 		String json = gson.toJson(lst, lst.getClass());
 		res.setEntity(new StringEntity(json));
-		
-		//TODO move adding headers to response intercepter
-		res.addHeader("Server", "e-WolfNode");
-		res.addHeader("Date",Calendar.getInstance().getTime().toString());
+		res.addHeader(HTTP.CONTENT_TYPE, "application/json");
 	}
-
+	
+	public static String getRegisterPattern() {
+		return HANDLER_REGISTER_PATTERN;
+	}
 }

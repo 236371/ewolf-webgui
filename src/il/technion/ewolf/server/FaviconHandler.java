@@ -11,6 +11,7 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.entity.InputStreamEntity;
 
+import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
@@ -39,9 +40,9 @@ public class FaviconHandler implements HttpRequestHandler {
 			}			
 		}
 				
-		res.addHeader("Connection", "close");
-		res.addHeader("Server", "e-WolfNode");
-		res.addHeader("Content-Type", "image/gif");
+		res.addHeader(HTTP.CONN_DIRECTIVE, HTTP.CONN_CLOSE);
+		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
+		res.addHeader(HTTP.CONTENT_TYPE, "image/gif");
 		res.addHeader("Last-Modified", modDate);
 		
 	    res.setEntity(new InputStreamEntity(url.openStream(), -1));

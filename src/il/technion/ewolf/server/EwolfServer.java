@@ -11,12 +11,14 @@ import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.server.handlers.AddMessageBoardPostHandler;
-import il.technion.ewolf.server.handlers.AddNewSocialGroupHandler;
+import il.technion.ewolf.server.handlers.AddSocialGroupHandler;
 import il.technion.ewolf.server.handlers.AddSocialGroupMemberHandler;
+import il.technion.ewolf.server.handlers.ViewInboxHandler;
 import il.technion.ewolf.server.handlers.ViewMessageBoardHandler;
 import il.technion.ewolf.server.handlers.ViewProfileHandler;
 import il.technion.ewolf.server.handlers.ViewSelfProfileHandler;
 import il.technion.ewolf.server.handlers.ViewSocialGroupMembersHandler;
+import il.technion.ewolf.server.handlers.ViewSocialGroupsHandler;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
@@ -79,6 +81,16 @@ public class EwolfServer {
 		ServerModule serverModule = new ServerModule();
 		
 		Injector injector = Guice.createInjector(
+
+				new KadNetModule()
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.seed", serverModule.getPort())
+					.setProperty("openkad.net.udp.port", serverModule.getPort()),
+					
+				new HttpConnectorModule()
+					.setProperty("httpconnector.net.port", serverModule.getPort()),
+
 				new SimpleDHTModule(),
 					
 				new ChunKeeperModule(),
@@ -96,16 +108,7 @@ public class EwolfServer {
 
 				new EwolfModule(),
 
-				new HttpConnectorModule()
-					.setProperty("httpconnector.net.port", serverModule.getPort()),
-
-					serverModule,
-
-				new KadNetModule()
-					.setProperty("openkad.keyfactory.keysize", "20")
-					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-					.setProperty("openkad.seed", serverModule.getPort())
-					.setProperty("openkad.net.udp.port", serverModule.getPort())
+					serverModule
 		);
 		
 		KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
@@ -115,28 +118,30 @@ public class EwolfServer {
 		ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
 		chnukeeper.bind();
 		
-		//FIXME port for testing
-		kbr.join(kbrURIs);
-		
 		HttpConnector connector = injector.getInstance(HttpConnector.class);
 		connector.bind();
 		connector.start();
 		
 		EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 		accountCreator.create();
+		
+		//FIXME port for testing
+		kbr.join(kbrURIs);
 
+		//ewolf resources handlers register
+		connector.register(ViewSelfProfileHandler.getRegisterPattern(), injector.getInstance(ViewSelfProfileHandler.class));
+		connector.register(ViewProfileHandler.getRegisterPattern(), injector.getInstance(ViewProfileHandler.class));
+		connector.register(ViewSocialGroupsHandler.getRegisterPattern(), injector.getInstance(ViewSocialGroupsHandler.class));
+		connector.register(AddSocialGroupHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupHandler.class));
+		connector.register(ViewSocialGroupMembersHandler.getRegisterPattern(), injector.getInstance(ViewSocialGroupMembersHandler.class));
+		connector.register(AddSocialGroupMemberHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupMemberHandler.class));
+		connector.register(AddMessageBoardPostHandler.getRegisterPattern(), injector.getInstance(AddMessageBoardPostHandler.class));
+		connector.register(ViewMessageBoardHandler.getRegisterPattern(), injector.getInstance(ViewMessageBoardHandler.class));
+		connector.register(ViewInboxHandler.getRegisterPattern(), injector.getInstance(ViewInboxHandler.class));
 		//server resources handlers register
 		connector.register("/json*", new JsonHandler() );
-		connector.register("/file*", new HttpFileHandler("/",new ServerResourceFactory()));
-		//ewolf resources handlers register
-		connector.register("/viewSelfProfile", injector.getInstance(ViewSelfProfileHandler.class));
-		connector.register("/addSocialGroup", injector.getInstance(AddNewSocialGroupHandler.class));
-		connector.register("/viewProfile/*", injector.getInstance(ViewProfileHandler.class));
-		connector.register("/viewSocialGroupMembers/*", injector.getInstance(ViewSocialGroupMembersHandler.class));
-		connector.register("/addTextPost/*", injector.getInstance(AddMessageBoardPostHandler.class));
-		connector.register("/viewMessageBoard/*", injector.getInstance(ViewMessageBoardHandler.class));
-		connector.register("/addSocialGroupMember/*", injector.getInstance(AddSocialGroupMemberHandler.class));
-
+		connector.register("*", new HttpFileHandler("/",new ServerResourceFactory()));
+		
 		System.out.println("server started");
 	}
 }

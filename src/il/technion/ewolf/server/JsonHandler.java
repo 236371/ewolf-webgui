@@ -12,6 +12,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
@@ -33,6 +34,9 @@ public class JsonHandler implements HttpRequestHandler {
 	@Override
 	public void handle(HttpRequest req, HttpResponse res, HttpContext ctx)
 			throws HttpException, IOException {
+		//TODO move adding general headers to response intercepter
+		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
+		
 		String uri = req.getRequestLine().getUri();
 		System.out.println("\t[JsonHandler] requesting: " + uri);
 		
@@ -62,9 +66,7 @@ public class JsonHandler implements HttpRequestHandler {
 		
 		String s = callBack + "(" + gson.toJson(lst, lst.getClass()) + ")";
 
-		//TODO move adding headers to response intercepter
-		res.addHeader("Server", "e-WolfNode");
-		res.addHeader("Content-Type", "application/json");
+		res.addHeader(HTTP.CONTENT_TYPE, "application/json");
 		
 		res.setEntity(new StringEntity(s));
 	}
