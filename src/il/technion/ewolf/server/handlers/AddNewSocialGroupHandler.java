@@ -1,4 +1,4 @@
-package il.technion.ewolf.server;
+package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.WolfPackLeader;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package il.technion.ewolf.server;
+package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.WolfPack;
 import il.technion.ewolf.WolfPackLeader;

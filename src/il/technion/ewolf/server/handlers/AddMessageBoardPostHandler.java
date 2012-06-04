@@ -1,15 +1,14 @@
-package il.technion.ewolf.server;
+package il.technion.ewolf.server.handlers;
 
+import il.technion.ewolf.SocialNetwork;
 import il.technion.ewolf.WolfPack;
 import il.technion.ewolf.WolfPackLeader;
-import il.technion.ewolf.socialfs.Profile;
+import il.technion.ewolf.exceptions.WallNotFound;
+import il.technion.ewolf.posts.TextPost;
 import il.technion.ewolf.socialfs.SocialFS;
-import il.technion.ewolf.socialfs.UserID;
-import il.technion.ewolf.socialfs.UserIDFactory;
-import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
-import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.http.HttpEntityEnclosingRequest;
@@ -17,7 +16,6 @@ import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.entity.FileEntity;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
@@ -25,26 +23,27 @@ import org.apache.http.util.EntityUtils;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
-public class AddSocialGroupMemberHandler implements HttpRequestHandler {
-	private final WolfPackLeader socialGroupsManager;
+public class AddMessageBoardPostHandler implements HttpRequestHandler {
+	private final SocialNetwork snet;
 	private final SocialFS socialFS;
-	private final UserIDFactory userIDFactory;
-	private final String hostName;
+	private final WolfPackLeader socialGroupsManager;
+	private final TextPost textPost;
 	private final String port;
-
+	private final String hostName;
 	
 	@Inject
-	public AddSocialGroupMemberHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager,
-			UserIDFactory userIDFactory, @Named("server.port") String port,
-			@Named("server.host.name") String hostName) {
+	public AddMessageBoardPostHandler(SocialNetwork snet, WolfPackLeader socialGroupsManager,
+			SocialFS socialFS, TextPost textPost,
+			 @Named("server.port") String port, @Named("server.host.name") String hostName) {
+		this.snet = snet;
 		this.socialGroupsManager = socialGroupsManager;
 		this.socialFS = socialFS;
-		this.userIDFactory = userIDFactory;
+		this.textPost = textPost;
 		this.hostName = hostName;
 		this.port = port;
 	}
-
-	//XXX req of type POST with "/addSocialGroupMember/{groupName}" URI and body containing userID=id
+	
+	//XXX req of type POST with "/addTextPost/{groupName}" URI and body containing text=post text
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
@@ -52,21 +51,9 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 		res.addHeader("Server", "e-WolfNode");
 		res.addHeader("Content-Type", "application/json");
 		
-		//get user ID from the body
+		//get post text from body
 		String dataSet = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
-		String key = dataSet.substring(dataSet.indexOf("=") + 1).trim();
-		UserID uid = userIDFactory.getFromBase64(key);
-
-		Profile profile;
-		try {
-			profile = socialFS.findProfile(uid);			
-		} catch (ProfileNotFoundException e) {
-			// TODO Auto-generated catch block
-			System.out.println("Profile with UserID " + uid + "not found");
-			res.setStatusCode(HttpStatus.SC_NOT_FOUND);
-			res.setEntity(new FileEntity(new File("404.html"),"text/html"));
-			return;
-		}
+		String text = dataSet.substring(dataSet.indexOf("=") + 1);
 		
 		//get social group name from URI
 		String reqURI = req.getRequestLine().getUri();
@@ -80,9 +67,21 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 		}
 		
 		try {
-			socialGroup.addMember(profile);
+			snet.getWall().publish(textPost.setText(text), socialGroup);
 		} catch (GroupNotFoundException e) {
-			System.out.println("Social group" + groupName + "not found");
+			System.out.println("Social group" + socialGroup + "not found");
+			res.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return;
+		} catch (WallNotFound e) {
+			System.out.println("Wall not found");
+			res.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return;
+		} catch (FileNotFoundException e) {
+			System.out.println("File /wall/posts/ not found");
 			res.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -91,7 +90,7 @@ public class AddSocialGroupMemberHandler implements HttpRequestHandler {
 
 		res.setStatusCode(HttpStatus.SC_SEE_OTHER);
 		//FIXME where to redirect?
-		res.setHeader("Location", hostName + ":" + port + "/viewSocialGroupMembers/" + groupName);
+		res.setHeader("Location", hostName + ":" + port +
+				"/viewMessageBoard/" + socialFS.getCredentials().getProfile().getUserId().toString());
 	}
-
 }
