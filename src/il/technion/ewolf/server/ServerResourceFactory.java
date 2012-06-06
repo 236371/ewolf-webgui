@@ -3,6 +3,7 @@ package il.technion.ewolf.server;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Date;
 
@@ -11,6 +12,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 
 public class ServerResourceFactory implements ServerFileFactory {
 	private static final String MIME_TYPES = "mime.properties";
+	private final String CWD = System.getProperty("user.dir") + "/";
 	
 	@Override
 	public ServerFile newInstance() {
@@ -24,7 +26,13 @@ public class ServerResourceFactory implements ServerFileFactory {
 					path = "home.html";
 				}
 				
-				url = getClass().getResource(path);
+				//url = getClass().getResource(path);
+				try {
+					url = new URL("file", "", CWD + path);
+				} catch (MalformedURLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 				
 				if(url == null) {
 					throw new FileNotFoundException();
@@ -63,43 +71,43 @@ public class ServerResourceFactory implements ServerFileFactory {
 				if(url == null) {
 					throw new FileNotFoundException();
 				}
-				
+
 				String path = url.getPath();
-//				String contentType = null;
+				String contentType = null;
+
+				try {
+					PropertiesConfiguration config = new PropertiesConfiguration(MIME_TYPES);
+					String extension = path.substring( path.lastIndexOf('.'));
+					contentType = config.getString(extension);
+					System.out.println(contentType);
+				} catch (ConfigurationException e2) {
+					// TODO Auto-generated catch block
+					System.out.println("Can't read configuration file:" + MIME_TYPES);
+					e2.printStackTrace();
+				}
 				
-//				try {
-//					PropertiesConfiguration config = new PropertiesConfiguration(MIME_TYPES);
-//					String extension = path.substring( path.lastIndexOf('.') );
-//					contentType = config.getString(extension);
-//					System.out.println(contentType);
-//				} catch (ConfigurationException e2) {
-//					// TODO Auto-generated catch block
-//					System.out.println("Can't read configuration file:" + MIME_TYPES);
-//					e2.printStackTrace();
-//				}
-//				
-//				if (contentType == null) {
-//					return "application/unknown";
-//				}
-//				else {
-//					return contentType;
-//				}
-			
-				if(path.endsWith(".ico") || path.endsWith(".gif")) {
-					return "image/gif";
-				} else if(path.endsWith(".jpg") || path.endsWith(".jpeg")) {
-					return "image/jpeg";
-				} else if(path.endsWith(".svg")) {					
-					return "image/svg+xml";
-				} else if(path.endsWith(".html") || path.endsWith(".htm") ) {
-					return "text/html";
-				} else if(path.endsWith(".js")) {
-					return "text/javascript";
-				} else if(path.endsWith(".css")) {
-					return "text/css";
-				} else {
+				if (contentType == null) {
 					return "application/unknown";
 				}
+				else {
+					return contentType;
+				}
+
+//				if(path.endsWith(".ico") || path.endsWith(".gif")) {
+//					return "image/gif";
+//				} else if(path.endsWith(".jpg") || path.endsWith(".jpeg")) {
+//					return "image/jpeg";
+//				} else if(path.endsWith(".svg")) {
+//					return "image/svg+xml";
+//				} else if(path.endsWith(".html") || path.endsWith(".htm") ) {
+//					return "text/html";
+//				} else if(path.endsWith(".js")) {
+//					return "text/javascript";
+//				} else if(path.endsWith(".css")) {
+//					return "text/css";
+//				} else {
+//					return "application/unknown";
+//				}
 			}
 		};
 	}
