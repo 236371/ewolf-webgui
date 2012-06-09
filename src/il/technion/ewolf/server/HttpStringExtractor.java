@@ -7,6 +7,7 @@ import org.apache.http.HttpRequest;
 import org.apache.http.ParseException;
 import org.apache.http.util.EntityUtils;
 
+@Deprecated
 public class HttpStringExtractor {
 	
 	public static String fromURIAfterLastSlash(HttpRequest req) {

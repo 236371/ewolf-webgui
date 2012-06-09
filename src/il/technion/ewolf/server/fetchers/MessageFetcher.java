@@ -1,4 +1,4 @@
-package il.technion.ewolf.server;
+package il.technion.ewolf.server.fetchers;
 
 public class MessageFetcher implements JsonDataFetcher {
 

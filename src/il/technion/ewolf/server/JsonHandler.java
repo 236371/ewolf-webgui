@@ -1,5 +1,7 @@
 package il.technion.ewolf.server;
 
+import il.technion.ewolf.server.fetchers.JsonDataFetcher;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
