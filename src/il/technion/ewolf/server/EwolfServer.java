@@ -23,10 +23,15 @@ import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.activation.FileTypeMap;
+import javax.activation.MimetypesFileTypeMap;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
@@ -34,50 +39,109 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
+@SuppressWarnings("deprecation")
 public class EwolfServer {
 	
 	private static final String EWOLF_CONFIG = "ewolf.config.properties";
+	private static final String MIME_TYPES = "mime.types";
+	
+	private static class EwolfConfigurations {
+		public String username;
+		public String password;
+		public String name;
+		public List<URI> kbrURIs = new ArrayList<URI>();
+	}
 
 
 	public static void main(String[] args) throws Exception {
-/*
+		EwolfConfigurations configurations = getConfigurations();
+		
+		Injector injector = createInjector(configurations.username,
+				configurations.password, configurations.name);
+		
+		HttpConnector connector = initEwolf(configurations.kbrURIs, injector);
+
+		registerConnectorHandlers(injector, connector);
+		
+		System.out.println("server started");
+	}
+
+
+	private static EwolfConfigurations getConfigurations() {
+		EwolfConfigurations configurations = new EwolfConfigurations();
+		
 		try {
 			PropertiesConfiguration config = new PropertiesConfiguration(EWOLF_CONFIG);
-			config.setProperty("username", "user");
-			config.setProperty("password", "1234");
-			config.save(EWOLF_CONFIG);
-		} catch (ConfigurationException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
-		}
-*/
-		String username;
-		String password;
-		String name;
-		List<URI> kbrURIs = new ArrayList<URI>();
-		try {
-			PropertiesConfiguration config = new PropertiesConfiguration(EWOLF_CONFIG);
-			username = config.getString("username");
-			password = config.getString("password");
-			name = config.getString("name");
+			configurations.username = config.getString("username");
+			configurations.password = config.getString("password");
+			configurations.name = config.getString("name");
 			for (Object o: config.getList("kbr.urls")) {
-				kbrURIs.add(new URI((String)o));
+				configurations.kbrURIs.add(new URI((String)o));
 			}
-			if (username == null) {
+			if (configurations.username == null) {
 				//TODO get username/password from user, store to EWOLF_CONFIG and continue
 			}
 		} catch (ConfigurationException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
 			System.out.println("Cant' read configuration file");
-			return;
+			return null;
 		} catch (URISyntaxException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			System.out.println("String from configuration file could not be parsed as a URI");
-			return;
+			return null;
 		}
+		
+		return configurations;
+	}
 
+
+	private static void registerConnectorHandlers(Injector injector, HttpConnector connector) {
+		//ewolf resources handlers register
+		connector.register(ViewSelfProfileHandler.getRegisterPattern(), injector.getInstance(ViewSelfProfileHandler.class));
+		connector.register(ViewProfileHandler.getRegisterPattern(), injector.getInstance(ViewProfileHandler.class));
+		connector.register(ViewSocialGroupsHandler.getRegisterPattern(), injector.getInstance(ViewSocialGroupsHandler.class));
+		connector.register(AddSocialGroupHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupHandler.class));
+		connector.register(ViewSocialGroupMembersHandler.getRegisterPattern(), injector.getInstance(ViewSocialGroupMembersHandler.class));
+		connector.register(AddSocialGroupMemberHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupMemberHandler.class));
+		connector.register(AddMessageBoardPostHandler.getRegisterPattern(), injector.getInstance(AddMessageBoardPostHandler.class));
+		connector.register(ViewMessageBoardHandler.getRegisterPattern(), injector.getInstance(ViewMessageBoardHandler.class));
+		connector.register(ViewInboxHandler.getRegisterPattern(), injector.getInstance(ViewInboxHandler.class));
+		//server resources handlers register
+		
+		JsonHandler serverJsonHandler = createJsonHandler();
+		
+		connector.register("/json*", serverJsonHandler );
+		connector.register("*", new HttpFileHandler("/",
+				new ServerResourceFactory(getFileTypeMap())));
+	}
+
+
+	private static HttpConnector initEwolf(List<URI> kbrURIs, Injector injector)
+			throws IOException, Exception {
+		KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
+		kbr.create();
+		
+		// bind the chunkeeper
+		ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
+		chnukeeper.bind();
+		
+		HttpConnector connector = injector.getInstance(HttpConnector.class);
+		connector.bind();
+		connector.start();
+		
+		EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
+		accountCreator.create();
+		
+		//FIXME port for testing
+		kbr.join(kbrURIs);
+		return connector;
+	}
+
+
+	private static Injector createInjector(String username, String password,
+			String name) {		
 		ServerModule serverModule = new ServerModule();
 		
 		Injector injector = Guice.createInjector(
@@ -110,38 +174,25 @@ public class EwolfServer {
 
 					serverModule
 		);
-		
-		KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
-		kbr.create();
-		
-		// bind the chunkeeper
-		ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
-		chnukeeper.bind();
-		
-		HttpConnector connector = injector.getInstance(HttpConnector.class);
-		connector.bind();
-		connector.start();
-		
-		EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
-		accountCreator.create();
-		
-		//FIXME port for testing
-		kbr.join(kbrURIs);
-
-		//ewolf resources handlers register
-		connector.register(ViewSelfProfileHandler.getRegisterPattern(), injector.getInstance(ViewSelfProfileHandler.class));
-		connector.register(ViewProfileHandler.getRegisterPattern(), injector.getInstance(ViewProfileHandler.class));
-		connector.register(ViewSocialGroupsHandler.getRegisterPattern(), injector.getInstance(ViewSocialGroupsHandler.class));
-		connector.register(AddSocialGroupHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupHandler.class));
-		connector.register(ViewSocialGroupMembersHandler.getRegisterPattern(), injector.getInstance(ViewSocialGroupMembersHandler.class));
-		connector.register(AddSocialGroupMemberHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupMemberHandler.class));
-		connector.register(AddMessageBoardPostHandler.getRegisterPattern(), injector.getInstance(AddMessageBoardPostHandler.class));
-		connector.register(ViewMessageBoardHandler.getRegisterPattern(), injector.getInstance(ViewMessageBoardHandler.class));
-		connector.register(ViewInboxHandler.getRegisterPattern(), injector.getInstance(ViewInboxHandler.class));
-		//server resources handlers register
-		connector.register("/json*", new JsonHandler() );
-		connector.register("*", new HttpFileHandler("/",new ServerResourceFactory()));
-		
-		System.out.println("server started");
+		return injector;
+	}
+	
+	private static FileTypeMap getFileTypeMap() {
+		MimetypesFileTypeMap map;
+		try {
+			URL mime = EwolfServer.class.getResource(MIME_TYPES);			
+			map = new MimetypesFileTypeMap(mime.openStream());
+		} catch (IOException e1) {
+			map = new MimetypesFileTypeMap();
+		}
+		return map;
+	}
+	
+	private static JsonHandler createJsonHandler() {
+		JsonHandler serverJsonHandler = new JsonHandler();
+		serverJsonHandler.addFetcher("wolfpacks", new WolfpacksFetcher());
+		serverJsonHandler.addFetcher("inbox", new InboxFetcher());
+		serverJsonHandler.addFetcher("message", new MessageFetcher());
+		return serverJsonHandler;
 	}
 }

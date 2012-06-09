@@ -34,7 +34,7 @@ public class ViewSocialGroupsHandler implements HttpRequestHandler {
 	private final UserIDFactory userIDFactory;
 	private final SocialFS socialFS;
 
-	private class JsonProfile {
+	private class JsonSocialGroups {
 		private final List<String> groups = new ArrayList<String>();
 
 		void addGroup(String groupName) {
@@ -58,7 +58,7 @@ public class ViewSocialGroupsHandler implements HttpRequestHandler {
 		
 		String strUid = HttpStringExtractor.fromURIAfterLastSlash(req);
 		
-		JsonProfile jsonObj = new JsonProfile();
+		JsonSocialGroups jsonObj = new JsonSocialGroups();
 		List<WolfPack> groups = socialGroupsManager.getAllSocialGroups();
 		
 		if (strUid.equals("my")) {

@@ -3,6 +3,7 @@ package il.technion.ewolf.server;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.inject.Inject;
@@ -11,6 +12,7 @@ import il.technion.ewolf.SocialNetwork;
 import il.technion.ewolf.WolfPack;
 import il.technion.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
+import il.technion.ewolf.msg.PokeMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.posts.Post;
@@ -128,7 +130,7 @@ public class EwolfConnector {
 
 	public Object getInbox() {
 		@SuppressWarnings("unused")
-		class MessageObj {
+		class MessageObj implements Comparable<MessageObj>{
 			private String sender;
 			private Long timestamp;
 			private String className;
@@ -138,20 +140,38 @@ public class EwolfConnector {
 				this.timestamp = timestamp;
 				this.className = className;
 			}
+
+			@Override
+			public int compareTo(MessageObj o) {
+				return Long.signum(this.timestamp - o.timestamp);
+			}
 		}
 		
 		List<SocialMessage> messages = smail.readInbox();
 		List<MessageObj> lst = new ArrayList<MessageObj>();
 		for (SocialMessage m : messages) {
 			try {
+				//XXX also accepts PokeMessages
+				Class<? extends SocialMessage> messageClass = m.getClass();
+				if (messageClass == PokeMessage.class) {
+					try {
+						((PokeMessage)m).accept();
+					} catch (Exception e) {
+						// TODO Gil should not throw this exception at all! 
+						e.printStackTrace();
+					}
+					continue;
+				}
 				lst.add(new MessageObj(m.getSender().getUserId().toString(), m.getTimestamp(),
-						m.getClass().getCanonicalName()));
+						messageClass.getCanonicalName()));
 			} catch (ProfileNotFoundException e) {
 				System.out.println("Sender of social message" + m.toString() + "not found");
 				e.printStackTrace();
-				//TODO what torethrow?
+				//TODO what to rethrow?
 			}
 		}
+		//sort by timestamp
+		Collections.sort(lst);
 		return lst;
 	}
 

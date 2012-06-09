@@ -42,7 +42,7 @@ public class HttpFileHandler implements HttpRequestHandler {
 		if(!loadFile(file,resName)) {
 			res.setStatusCode(HttpStatus.SC_NOT_FOUND);
 			System.out.println("\t[HttpFileHandler] file not found");
-			// Do not exit. Need to send a 404 page.
+			// FIXME Do not exit. Need to send a 404 page.
 		}
 		
 		res.addHeader(HTTP.CONTENT_TYPE, file.contentType());
@@ -112,7 +112,7 @@ public class HttpFileHandler implements HttpRequestHandler {
 			file.read(path.substring(prefix.length()));
 			return true;
 		} catch (FileNotFoundException e) {
-			file.read("server_resources/404.html");
+			file.read("404.html");
 			return false;
 		}
 	}

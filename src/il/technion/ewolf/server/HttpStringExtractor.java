@@ -16,6 +16,12 @@ public class HttpStringExtractor {
 		return strUid;
 	}
 	
+	public static String fromURIAfterPrefix(HttpRequest req, String prefix) {
+		String reqURI = req.getRequestLine().getUri();
+		String strUid = reqURI.substring(prefix.length()-1);
+		return strUid;
+	}
+	
 	public static String fromBodyAfterFirstEqualsSign(HttpRequest req) throws ParseException, IOException {
 		String dataSet = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 		String value = dataSet.substring(dataSet.indexOf("=") + 1);

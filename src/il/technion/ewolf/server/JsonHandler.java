@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
@@ -17,38 +19,54 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class JsonHandler implements HttpRequestHandler {
 	
+	Map<String,JsonDataFetcher> fetchers = new HashMap<String,JsonDataFetcher>();
+	
 	public class jSonData {
 		
-		public jSonData(String t, String k) {
-			title = t;
-			key = k;
+		public jSonData(String itsKey, Object itsJSonData) {
+			key = itsKey;
+			data = itsJSonData;
 		}
 		
-		public String title;
 		public String key;
+		public Object data;
+	}
+	
+	public JsonDataFetcher addFetcher(String key, JsonDataFetcher fetcher) {
+		return fetchers.put(key, fetcher);
 	}
 	
 	@Override
 	public void handle(HttpRequest req, HttpResponse res, HttpContext ctx)
 			throws HttpException, IOException {
-		//TODO move adding general headers to response intercepter
-		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
-		
 		String uri = req.getRequestLine().getUri();
 		System.out.println("\t[JsonHandler] requesting: " + uri);
 		
-		String callBack = new String();
+		String callBack = null;
+		List<JsonHandler.jSonData> lst = new ArrayList<JsonHandler.jSonData>();
+		
 		try {
+			
 			List<NameValuePair> parameters = 
-					URLEncodedUtils.parse(new URI(uri),"HTTP.UTF_8");
+					URLEncodedUtils.parse(new URI(uri),HTTP.UTF_8);
 			
 			for (NameValuePair nameValuePair : parameters) {
-//				System.out.println(nameValuePair.getName() +
-//						": " + nameValuePair.getValue());
-				if(nameValuePair.getName().equals("callBack")) {
+				String key = nameValuePair.getName();
+				
+				JsonDataFetcher fetcher = fetchers.get(nameValuePair.getName());
+				if(fetcher != null) {
+					String[] fetchParameters = nameValuePair.getValue().split(",");
+					Object o = fetcher.fetchData(fetchParameters);
+					if(o != null) {
+						lst.add(new jSonData(key, o));
+					}
+				}
+				
+				if(key.equals("callBack")) {
 					callBack = new String(nameValuePair.getValue());
 				}
 			}			
@@ -56,19 +74,19 @@ public class JsonHandler implements HttpRequestHandler {
 			e.printStackTrace();
 		}
 		
-		Gson gson = new Gson();
+		Gson gson = new GsonBuilder()
+        	.serializeNulls()
+        	.create();
 		
-		List<JsonHandler.jSonData> lst = new ArrayList<JsonHandler.jSonData>();
-		lst.add(new jSonData("Show cats","cat"));
-		lst.add(new jSonData("Show people","people"));
-		lst.add(new jSonData("Show wolf","wolf"));
-		lst.add(new jSonData("Show models","model"));
-		
-		String s = callBack + "(" + gson.toJson(lst, lst.getClass()) + ")";
+		String s = gson.toJson(lst, lst.getClass());
+		if(callBack != null) {
+			s = callBack + "(" + s  + ")";
+		}
 
+		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
 		res.addHeader(HTTP.CONTENT_TYPE, "application/json");
 		
-		res.setEntity(new StringEntity(s));
+		res.setEntity(new StringEntity(s,HTTP.UTF_8));
 	}
 
 }
