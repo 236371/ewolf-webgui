@@ -1,5 +1,7 @@
 package il.technion.ewolf.server;
 
+import il.technion.ewolf.server.resources.ServerResources;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,23 +32,15 @@ public class ServerResourceFactory implements ServerFileFactory {
 					path = "home.html";
 				}
 				
-				//url = getClass().getResource(path);
-				try {
-					url = new URL("file", "", CWD + path);
-				} catch (MalformedURLException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				url = ServerResources.getResource(path);
 				
 				if(url == null) {
-					throw new FileNotFoundException();
+					try {
+						url = new URL("file", "", CWD + path);
+					} catch (MalformedURLException e) {
+						throw new FileNotFoundException();
+					}
 				}
-				
-//				url = getClass().getResource(path);
-//				
-//				if(url == null) {
-//					throw new FileNotFoundException();
-//				}
 			}
 
 			@Override
