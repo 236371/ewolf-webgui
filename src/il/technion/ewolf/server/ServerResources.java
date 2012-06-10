@@ -1,6 +1,5 @@
-package il.technion.ewolf.server.resources;
+package il.technion.ewolf.server;
 
-import il.technion.ewolf.server.EwolfServer;
 
 import java.io.IOException;
 import java.net.URI;

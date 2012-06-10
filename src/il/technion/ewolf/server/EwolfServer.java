@@ -22,7 +22,6 @@ import il.technion.ewolf.server.handlers.ViewProfileHandler;
 import il.technion.ewolf.server.handlers.ViewSelfProfileHandler;
 import il.technion.ewolf.server.handlers.ViewSocialGroupMembersHandler;
 import il.technion.ewolf.server.handlers.ViewSocialGroupsHandler;
-import il.technion.ewolf.server.resources.ServerResources;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;

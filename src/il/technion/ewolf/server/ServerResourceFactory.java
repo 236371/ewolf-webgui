@@ -1,6 +1,5 @@
 package il.technion.ewolf.server;
 
-import il.technion.ewolf.server.resources.ServerResources;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
