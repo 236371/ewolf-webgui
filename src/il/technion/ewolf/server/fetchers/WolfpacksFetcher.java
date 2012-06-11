@@ -26,18 +26,17 @@ public class WolfpacksFetcher implements JsonDataFetcher {
 		this.userIDFactory = userIDFactory;
 	}
 
-	/*!
-	 * The parameters should be a pair of strings:
-	 * 	First string:		strUid
-	 * 	Second string:	strUid value
+	/**
+	 * @param	parameters	user ID in parameters[0]  
+	 * @return	list of all social groups (wolfpacks), the user has access to them
 	 */
 	@Override
 	public Object fetchData(String... parameters) throws ProfileNotFoundException {
-		if(parameters.length != 2) {
+		if(parameters.length != 1) {
 			return null;
 		}
 
-		String strUid = parameters[1];
+		String strUid = parameters[0];
 		List<WolfPack> wgroups = socialGroupsManager.getAllSocialGroups();
 		List<String> groups = new ArrayList<String>();
 
