@@ -31,7 +31,7 @@ public class ServerResourceFactory implements ServerFileFactory {
 					path = "home.html";
 				}
 				
-				url = ServerResources.getResource(path);
+				//url = ServerResources.getResource(path);
 				
 				if(url == null) {
 					try {

@@ -16,7 +16,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 
 public class ServerResources {	
 	private static final String EWOLF_CONFIG = "ewolf.config.properties";
-	private static final String MIME_TYPES = "mime.types";
+	private static final String MIME_TYPES = "/mime.types";
 	
 	public static class EwolfConfigurations {
 		public String username;
@@ -25,6 +25,7 @@ public class ServerResources {
 		public List<URI> kbrURIs = new ArrayList<URI>();
 	}
 	
+	//FIXME infinite loop!
 	static public URL getResource(String name) {
 		return ServerResources.getResource(name);
 	}
