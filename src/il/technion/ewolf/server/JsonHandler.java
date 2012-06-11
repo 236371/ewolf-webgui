@@ -1,6 +1,7 @@
 package il.technion.ewolf.server;
 
 import il.technion.ewolf.server.fetchers.JsonDataFetcher;
+import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -62,7 +63,15 @@ public class JsonHandler implements HttpRequestHandler {
 				JsonDataFetcher fetcher = fetchers.get(nameValuePair.getName());
 				if(fetcher != null) {
 					String[] fetchParameters = nameValuePair.getValue().split(",");
-					Object o = fetcher.fetchData(fetchParameters);
+					Object o = null;
+
+					try {
+						o = fetcher.fetchData(fetchParameters);
+					} catch (ProfileNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+
 					if(o != null) {
 						lst.add(new jSonData(key, o));
 					}

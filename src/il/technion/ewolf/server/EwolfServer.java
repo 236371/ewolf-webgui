@@ -63,7 +63,7 @@ public class EwolfServer {
 		connector.register(ViewInboxHandler.getRegisterPattern(), injector.getInstance(ViewInboxHandler.class));
 		//server resources handlers register
 		
-		JsonHandler serverJsonHandler = createJsonHandler();
+		JsonHandler serverJsonHandler = createJsonHandler(injector);
 		
 		connector.register("/json*", serverJsonHandler );
 		connector.register("*", new HttpFileHandler("/",
@@ -130,9 +130,9 @@ public class EwolfServer {
 		return injector;
 	}
 	
-	private static JsonHandler createJsonHandler() {
+	private static JsonHandler createJsonHandler(Injector injector) {
 		JsonHandler serverJsonHandler = new JsonHandler();
-		serverJsonHandler.addFetcher("wolfpacks", new WolfpacksFetcher());
+		serverJsonHandler.addFetcher("wolfpacks", injector.getInstance(WolfpacksFetcher.class));
 		serverJsonHandler.addFetcher("inbox", new InboxFetcher());
 		serverJsonHandler.addFetcher("message", new MessageFetcher());
 		return serverJsonHandler;
