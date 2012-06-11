@@ -39,8 +39,9 @@ public class JsonHandler implements HttpRequestHandler {
 		public Object data;
 	}
 	
-	public JsonDataFetcher addFetcher(String key, JsonDataFetcher fetcher) {
-		return fetchers.put(key, fetcher);
+	public JsonHandler addFetcher(String key, JsonDataFetcher fetcher) {
+		fetchers.put(key, fetcher);
+		return this;
 	}
 	
 	@Override
