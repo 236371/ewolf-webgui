@@ -35,7 +35,7 @@ public class PokeMessage extends SocialMessage {
 	}
 	
 	
-	public void accept() throws Exception {
+	public void accept() {
 		for (Group group : groups) {
 			//System.out.println("adding group "+group);
 			socialFS.getStash().addGroup(group);

@@ -154,12 +154,7 @@ public class EwolfConnector {
 				//XXX also accepts PokeMessages
 				Class<? extends SocialMessage> messageClass = m.getClass();
 				if (messageClass == PokeMessage.class) {
-					try {
-						((PokeMessage)m).accept();
-					} catch (Exception e) {
-						// TODO Gil should not throw this exception at all! 
-						e.printStackTrace();
-					}
+					((PokeMessage)m).accept();
 					continue;
 				}
 				lst.add(new MessageObj(m.getSender().getUserId().toString(), m.getTimestamp(),
