@@ -1,5 +1,7 @@
 package il.technion.ewolf.server.fetchers;
 
+import com.google.inject.Inject;
+
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -10,6 +12,7 @@ public class ProfileFetcher implements JsonDataFetcher {
 	private final SocialFS socialFS;
 	private final UserIDFactory userIDFactory;
 
+	@Inject
 	public ProfileFetcher(SocialFS socialFS, UserIDFactory userIDFactory) {
 		this.socialFS = socialFS;
 		this.userIDFactory = userIDFactory;
