@@ -25,9 +25,8 @@ public class ServerResources {
 		public List<URI> kbrURIs = new ArrayList<URI>();
 	}
 	
-	//FIXME infinite loop!
 	static public URL getResource(String name) {
-		return ServerResources.getResource(name);
+		return ServerResources.class.getResource(name);
 	}
 	
 	public static EwolfConfigurations getConfigurations() {
