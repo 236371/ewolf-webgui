@@ -30,7 +30,7 @@ public class ProfileFetcher implements JsonDataFetcher {
 	}
 
 	/**
-	 * @param	parameters	user ID in parameters[0]  
+	 * @param	parameters	user ID or "my" in parameters[0]  
 	 * @return	ProfileData object that contains user's name and ID
 	 */
 	@Override

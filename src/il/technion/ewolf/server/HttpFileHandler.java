@@ -17,6 +17,7 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
 public class HttpFileHandler implements HttpRequestHandler {
+	private static final String PAGE_404 = "404.html";
 	
 	ServerFileFactory fileFactory;
 	final String prefix;
@@ -39,10 +40,15 @@ public class HttpFileHandler implements HttpRequestHandler {
 		addGeneralHeaders(res);
 		
 		ServerFile file = fileFactory.newInstance();
-		if(!loadFile(file,resName)) {
+		try {
+			if(!loadFile(file,resName)) {
+				res.setStatusCode(HttpStatus.SC_NOT_FOUND);
+				System.out.println("\t[HttpFileHandler] file not found");
+				// comment: Do not exit. Need to send a 404 page.
+			}
+		} catch(FileNotFoundException e) {
 			res.setStatusCode(HttpStatus.SC_NOT_FOUND);
-			System.out.println("\t[HttpFileHandler] file not found");
-			// FIXME Do not exit. Need to send a 404 page.
+			System.out.println("\t[HttpFileHandler] could not load "+PAGE_404);
 		}
 		
 		res.addHeader(HTTP.CONTENT_TYPE, file.contentType());
@@ -112,7 +118,7 @@ public class HttpFileHandler implements HttpRequestHandler {
 			file.read(path.substring(prefix.length()));
 			return true;
 		} catch (FileNotFoundException e) {
-			file.read("404.html");
+			file.read(PAGE_404);
 			return false;
 		}
 	}
