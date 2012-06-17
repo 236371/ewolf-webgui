@@ -16,13 +16,12 @@ public class InboxFetcher implements JsonDataFetcher {
 	private int year = 2000;
 	private int globalKey = 1;
 	
-	public class InboxItem implements Comparable<InboxItem> {
+	public class InboxMessage implements Comparable<InboxMessage> {
 		
-		public InboxItem(String sender, String timestamp, String key){
-			super();
+		public InboxMessage(String sender, String timestamp, String message){
 			this.sender = sender;
 			this.timestamp = timestamp;
-			this.key = key;
+			this.message = message;
 			
 			try {
 				itsDate = df.parse(timestamp);
@@ -34,12 +33,12 @@ public class InboxFetcher implements JsonDataFetcher {
 		
 		public String sender;
 		public String timestamp;
-		public String key;
+		public String message;
 		
 		transient private Date itsDate;
 
 		@Override
-		public int compareTo(InboxItem o) {			
+		public int compareTo(InboxMessage o) {			
 			int res = -itsDate.compareTo(o.itsDate);
 			
 			if(res == 0) {
@@ -54,7 +53,7 @@ public class InboxFetcher implements JsonDataFetcher {
 		}
 	}
 	
-	public class DummyInboxItem extends InboxItem {
+	public class DummyInboxItem extends InboxMessage {
 		
 		public DummyInboxItem(String timestamp, boolean alwaysErlier) {
 			super(new String(), timestamp, new String());
@@ -66,7 +65,7 @@ public class InboxFetcher implements JsonDataFetcher {
 		transient private boolean alwaysErlier;
 
 		@Override
-		public int compareTo(InboxItem o) {			
+		public int compareTo(InboxMessage o) {			
 			int res = -super.itsDate.compareTo(o.itsDate);
 			
 			if(res == 0) {
@@ -81,21 +80,20 @@ public class InboxFetcher implements JsonDataFetcher {
 		}
 	}
 
-	@SuppressWarnings("deprecation")
 	@Override
 	public Object fetchData(String... parameters) {
 		/*!
 		 * The parameters should be:
 		 * 	0:	The amount of messages to retrieve.
-		 * 	1:	Retrieve messages older from this date
-		 * 	2:	Retrieve messages newer from this date
+		 * 	1:	Retrieve messages older than this date
+		 * 	2:	Retrieve messages newer than this date
 		 * 	3:	Retrieve messages from a specific sender (id)
 		 */
 		
 		if(parameters.length != 4) {
 			return null;
 		}
-		
+
 		int maxCount = Integer.parseInt(parameters[0]);
 		
 		String olderThen,newerThen;
@@ -113,15 +111,15 @@ public class InboxFetcher implements JsonDataFetcher {
 			newerThen = parameters[2];
 		}
 		
-		InboxItem olderThenElement = new DummyInboxItem(olderThen,true);				
-		InboxItem newerThenElement = new DummyInboxItem(newerThen,false);
+		InboxMessage olderThenElement = new DummyInboxItem(olderThen,true);				
+		InboxMessage newerThenElement = new DummyInboxItem(newerThen,false);
 		
-		SortedSet<InboxFetcher.InboxItem> inbox = getInbox().
+		SortedSet<InboxFetcher.InboxMessage> inbox = getInbox().
 				subSet(olderThenElement,newerThenElement);
 		
-		List<InboxFetcher.InboxItem> smallInbox = new ArrayList<InboxFetcher.InboxItem>();
+		List<InboxFetcher.InboxMessage> smallInbox = new ArrayList<InboxFetcher.InboxMessage>();
 		
-		for (InboxItem item : inbox) {
+		for (InboxMessage item : inbox) {
 			if(smallInbox.size() >= maxCount) {
 				break;
 			}
@@ -138,36 +136,36 @@ public class InboxFetcher implements JsonDataFetcher {
 		return smallInbox;
 	}
 	
-	private SortedSet<InboxFetcher.InboxItem> getInbox() {
-		SortedSet<InboxFetcher.InboxItem> inbox =
-				new TreeSet<InboxFetcher.InboxItem>();	
-		inbox.add(new InboxItem("Liran","01/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Anna","02/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Moshe","03/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Moshe","04/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("David","05/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Haim","06/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("לירן","07/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("אנה","08/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("גיל","09/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("דודו","10/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("חנה","12/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Craig","13/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("שלמה","14/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Facebook","15/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Gmail","16/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Google+","17/02/"+year,""+globalKey++));
-		inbox.add(new InboxItem("eWolf System","20/02/"+year,""+globalKey++));
+	private SortedSet<InboxFetcher.InboxMessage> getInbox() {
+		SortedSet<InboxFetcher.InboxMessage> inbox =
+				new TreeSet<InboxFetcher.InboxMessage>();	
+		inbox.add(new InboxMessage("Liran","01/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Anna","02/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Moshe","03/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Moshe","04/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("David","05/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Haim","06/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("לירן","07/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("אנה","08/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("גיל","09/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("דודו","10/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("חנה","12/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Craig","13/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("שלמה","14/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Facebook","15/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Gmail","16/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Google+","17/02/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("eWolf System","20/02/"+year,""+globalKey++));
 		
-		inbox.add(new InboxItem("Liran","21/01/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Liran","22/01/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Liran","23/01/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Liran","24/01/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Liran","25/01/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Liran","26/01/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Liran","27/01/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Liran","29/01/"+year,""+globalKey++));
-		inbox.add(new InboxItem("Liran","30/01/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Liran","21/01/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Liran","22/01/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Liran","23/01/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Liran","24/01/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Liran","25/01/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Liran","26/01/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Liran","27/01/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Liran","29/01/"+year,""+globalKey++));
+		inbox.add(new InboxMessage("Liran","30/01/"+year,""+globalKey++));
 		
 		return inbox;
 	}
