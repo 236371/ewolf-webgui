@@ -12,7 +12,7 @@ public class UserID implements Serializable {
 	private final Key key;
 
 
-	public UserID(Key key) {
+	UserID(Key key) {
 		this.key = key;
 	}
 	
