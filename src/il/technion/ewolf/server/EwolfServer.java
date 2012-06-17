@@ -10,7 +10,7 @@ import il.technion.ewolf.http.HttpConnector;
 import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
-import il.technion.ewolf.server.fetchers.InboxFetcher;
+import il.technion.ewolf.server.fetchers.InboxFetcherNew;
 import il.technion.ewolf.server.fetchers.ProfileFetcher;
 import il.technion.ewolf.server.fetchers.WolfpackMembersFetcher;
 import il.technion.ewolf.server.fetchers.WolfpacksFetcher;
@@ -136,6 +136,6 @@ public class EwolfServer {
 		.addFetcher("profile", injector.getInstance(ProfileFetcher.class))
 		.addFetcher("wolfpacks", injector.getInstance(WolfpacksFetcher.class))
 		.addFetcher("wolfpackMembers", injector.getInstance(WolfpackMembersFetcher.class))
-		.addFetcher("inbox", new InboxFetcher());
+		.addFetcher("inbox", injector.getInstance(InboxFetcherNew.class));
 	}
 }
