@@ -1,9 +1,11 @@
 package il.technion.ewolf.server;
 
+import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.server.fetchers.JsonDataFetcher;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
-import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -46,7 +48,7 @@ public class JsonHandler implements HttpRequestHandler {
 	
 	@Override
 	public void handle(HttpRequest req, HttpResponse res, HttpContext ctx)
-			throws HttpException, IOException {
+			throws HttpException {
 		String uri = req.getRequestLine().getUri();
 		System.out.println("\t[JsonHandler] requesting: " + uri);
 		
@@ -61,7 +63,7 @@ public class JsonHandler implements HttpRequestHandler {
 			for (NameValuePair nameValuePair : parameters) {
 				String key = nameValuePair.getName();
 				
-				JsonDataFetcher fetcher = fetchers.get(nameValuePair.getName());
+				JsonDataFetcher fetcher = fetchers.get(key);
 				if(fetcher != null) {
 					String[] fetchParameters = nameValuePair.getValue().split(",");
 					Object o = null;
@@ -69,6 +71,12 @@ public class JsonHandler implements HttpRequestHandler {
 					try {
 						o = fetcher.fetchData(fetchParameters);
 					} catch (ProfileNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (WallNotFound e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (FileNotFoundException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
@@ -98,7 +106,12 @@ public class JsonHandler implements HttpRequestHandler {
 		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
 		res.addHeader(HTTP.CONTENT_TYPE, "application/json");
 		
-		res.setEntity(new StringEntity(s,HTTP.UTF_8));
+		try {
+			res.setEntity(new StringEntity(s, HTTP.UTF_8));
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }

@@ -12,6 +12,7 @@ import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.server.fetchers.InboxFetcher;
 import il.technion.ewolf.server.fetchers.ProfileFetcher;
+import il.technion.ewolf.server.fetchers.NewsFeedFetcher;
 import il.technion.ewolf.server.fetchers.WolfpackMembersFetcher;
 import il.technion.ewolf.server.fetchers.WolfpacksFetcher;
 import il.technion.ewolf.server.handlers.AddMessageBoardPostHandler;
@@ -136,6 +137,7 @@ public class EwolfServer {
 		.addFetcher("profile", injector.getInstance(ProfileFetcher.class))
 		.addFetcher("wolfpacks", injector.getInstance(WolfpacksFetcher.class))
 		.addFetcher("wolfpackMembers", injector.getInstance(WolfpackMembersFetcher.class))
-		.addFetcher("inbox", injector.getInstance(InboxFetcher.class));
+		.addFetcher("inbox", injector.getInstance(InboxFetcher.class))
+		.addFetcher("newsFeed", injector.getInstance(NewsFeedFetcher.class));
 	}
 }
