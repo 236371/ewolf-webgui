@@ -99,6 +99,88 @@ input[type="text"]:focus::-webkit-input-placeholder {
 	overflow:hidden;
 }
 
+.showMoreClass {
+	background-color:white;
+	color:black;
+	text-align:center;
+	opacity: 0.7;
+	border-radius:13px;
+	padding:2px 12px 2px 12px;	
+	margin: 0px 2px 5px 0px;
+	font-size:16px;
+	overflow:hidden;
+	cursor:pointer;
+}
+
+/*** APP *** APP *** APP *** APP *** APP *** Messages ***/
+
+.inboxListTitle {
+	padding-left:10px;
+	width:200px;
+	font-size:30px;
+	font-weight:bold;
+	color:#af9c7c;
+}
+
+.preMessageBox {
+	width:30px;
+	font-size:12px;
+}
+
+.timestampBox {
+	width:80px;
+	float:right;
+	font-size:12px;
+}
+
+.messageBox {
+	font-family:Georgia, Times, serif;
+	padding-left:15px;
+	padding-right:10px;
+	padding-top:10px;
+	padding-bottom:10px;
+	margin-right:10px;
+	margin-left:10px;
+	margin-bottom:5px;
+	font-size:16px;
+	color:black;
+	background-color:#feff9b;
+	border-bottom-right-radius:15px;
+	border-bottom-left-radius:15px;
+}
+
+#messagesApplicationFrame ul {
+	list-style:none;
+	/*width:400px;*/
+	font-family:Georgia, Times, serif;
+	font-size:22px;
+	opacity:0.65;
+}
+
+#messagesApplicationFrame ul li { }
+#messagesApplicationFrame ul li a {
+	display:block;
+	text-decoration:none;
+	color:#000000;
+	background-color:#FFFFFF;
+	line-height:30px;
+	border-bottom-style:solid;
+	border-bottom-width:1px;
+	border-bottom-color:#CCCCCC;
+	padding-left:10px;
+	cursor:pointer;
+}
+
+#messagesApplicationFrame ul li a:hover {
+	color:#FFFFFF;
+	background-image:url(hover.png);
+	background-repeat:repeat-x;
+}
+
+#messagesApplicationFrame ul li a strong {
+	margin-right:10px;
+}
+
 /**************************** Top Bar Style *********************/
 .topbar {
 	background-color:/*black*/ whitesmoke;
