@@ -1,6 +1,5 @@
 package il.technion.ewolf.server;
 
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -15,7 +14,7 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
 public class ServerResources {	
-	private static final String EWOLF_CONFIG = "ewolf.config.properties";
+	private static final String EWOLF_CONFIG = "/ewolf.config.properties";
 	private static final String MIME_TYPES = "/mime.types";
 	
 	public static class EwolfConfigurations {
@@ -33,7 +32,8 @@ public class ServerResources {
 		EwolfConfigurations configurations = new EwolfConfigurations();
 		
 		try {
-			PropertiesConfiguration config = new PropertiesConfiguration(EWOLF_CONFIG);
+			URL configFile = getResource(EWOLF_CONFIG);
+			PropertiesConfiguration config = new PropertiesConfiguration(configFile);
 			configurations.username = config.getString("username");
 			configurations.password = config.getString("password");
 			configurations.name = config.getString("name");
@@ -62,7 +62,7 @@ public class ServerResources {
 	public static FileTypeMap getFileTypeMap() {
 		MimetypesFileTypeMap map;
 		try {
-			URL mime = EwolfServer.class.getResource(MIME_TYPES);			
+			URL mime = getResource(MIME_TYPES);
 			map = new MimetypesFileTypeMap(mime.openStream());
 		} catch (IOException e1) {
 			map = new MimetypesFileTypeMap();
