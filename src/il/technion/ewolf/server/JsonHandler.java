@@ -1,7 +1,7 @@
 package il.technion.ewolf.server;
 
 import il.technion.ewolf.exceptions.WallNotFound;
-import il.technion.ewolf.server.fetchers.JsonDataFetcher;
+import il.technion.ewolf.server.handlers.JsonDataHandler;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
 import java.io.FileNotFoundException;
@@ -28,7 +28,7 @@ import com.google.gson.GsonBuilder;
 
 public class JsonHandler implements HttpRequestHandler {
 	
-	Map<String,JsonDataFetcher> fetchers = new HashMap<String,JsonDataFetcher>();
+	private Map<String,JsonDataHandler> handlers = new HashMap<String,JsonDataHandler>();
 	
 	public class jSonData {
 		
@@ -41,8 +41,8 @@ public class JsonHandler implements HttpRequestHandler {
 		public Object data;
 	}
 	
-	public JsonHandler addFetcher(String key, JsonDataFetcher fetcher) {
-		fetchers.put(key, fetcher);
+	public JsonHandler addHandler(String key, JsonDataHandler fetcher) {
+		handlers.put(key, fetcher);
 		return this;
 	}
 	
@@ -63,13 +63,13 @@ public class JsonHandler implements HttpRequestHandler {
 			for (NameValuePair nameValuePair : parameters) {
 				String key = nameValuePair.getName();
 				
-				JsonDataFetcher fetcher = fetchers.get(key);
+				JsonDataHandler fetcher = handlers.get(key);
 				if(fetcher != null) {
-					String[] fetchParameters = nameValuePair.getValue().split(",");
+					String[] handlerParameters = nameValuePair.getValue().split(",");
 					Object o = null;
 
 					try {
-						o = fetcher.fetchData(fetchParameters);
+						o = fetcher.handleData(handlerParameters);
 					} catch (ProfileNotFoundException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -96,6 +96,7 @@ public class JsonHandler implements HttpRequestHandler {
 		
 		Gson gson = new GsonBuilder()
         	.serializeNulls()
+        	.disableHtmlEscaping()
         	.create();
 		
 		String s = gson.toJson(lst, lst.getClass());

@@ -10,14 +10,14 @@ import il.technion.ewolf.http.HttpConnector;
 import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
-import il.technion.ewolf.server.fetchers.InboxFetcher;
-import il.technion.ewolf.server.fetchers.ProfileFetcher;
-import il.technion.ewolf.server.fetchers.NewsFeedFetcher;
-import il.technion.ewolf.server.fetchers.WolfpackMembersFetcher;
-import il.technion.ewolf.server.fetchers.WolfpacksFetcher;
-import il.technion.ewolf.server.handlers.AddMessageBoardPostHandler;
-import il.technion.ewolf.server.handlers.AddSocialGroupHandler;
-import il.technion.ewolf.server.handlers.AddSocialGroupMemberHandler;
+import il.technion.ewolf.server.handlers.InboxFetcher;
+import il.technion.ewolf.server.handlers.NewsFeedFetcher;
+import il.technion.ewolf.server.handlers.ProfileFetcher;
+import il.technion.ewolf.server.handlers.WolfpackMembersFetcher;
+import il.technion.ewolf.server.handlers.WolfpacksFetcher;
+import il.technion.ewolf.server.handlersOld.AddMessageBoardPostHandler;
+import il.technion.ewolf.server.handlersOld.AddSocialGroupHandler;
+import il.technion.ewolf.server.handlersOld.AddSocialGroupMemberHandler;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
@@ -121,10 +121,11 @@ public class EwolfServer {
 	
 	private static JsonHandler createJsonHandler(Injector injector) {
 		return new JsonHandler()
-		.addFetcher("profile", injector.getInstance(ProfileFetcher.class))
-		.addFetcher("wolfpacks", injector.getInstance(WolfpacksFetcher.class))
-		.addFetcher("wolfpackMembers", injector.getInstance(WolfpackMembersFetcher.class))
-		.addFetcher("inbox", injector.getInstance(InboxFetcher.class))
-		.addFetcher("newsFeed", injector.getInstance(NewsFeedFetcher.class));
+		.addHandler("profile", injector.getInstance(ProfileFetcher.class))
+		.addHandler("wolfpacks", injector.getInstance(WolfpacksFetcher.class))
+		.addHandler("wolfpackMembers", injector.getInstance(WolfpackMembersFetcher.class))
+		.addHandler("inbox", injector.getInstance(InboxFetcher.class))
+		.addHandler("newsFeed", injector.getInstance(NewsFeedFetcher.class));
+//		.addHandler("createWolfpack", injector.getInstance(AddSocialGroupHandler.class));
 	}
 }
