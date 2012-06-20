@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.fetchers;
+package il.technion.ewolf.server.handlers;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
-public class NewsFeedFetcher implements JsonDataFetcher {
+public class NewsFeedFetcher implements JsonDataHandler {
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
 	private final UserIDFactory userIDFactory;
@@ -70,7 +70,7 @@ public class NewsFeedFetcher implements JsonDataFetcher {
 	 * @return	list of posts, each contains post ID, sender ID, sender name, timestamp and post text
 	 */
 	@Override
-	public Object fetchData(String... parameters) throws ProfileNotFoundException, FileNotFoundException, WallNotFound {
+	public Object handleData(String... parameters) throws ProfileNotFoundException, FileNotFoundException, WallNotFound {
 		if(parameters.length != 5) {
 			return null;
 		}

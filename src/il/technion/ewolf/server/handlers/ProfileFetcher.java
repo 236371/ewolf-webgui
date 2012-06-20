@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.fetchers;
+package il.technion.ewolf.server.handlers;
 
 import com.google.inject.Inject;
 
@@ -8,7 +8,7 @@ import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
-public class ProfileFetcher implements JsonDataFetcher {
+public class ProfileFetcher implements JsonDataHandler {
 	private final SocialFS socialFS;
 	private final UserIDFactory userIDFactory;
 
@@ -34,7 +34,7 @@ public class ProfileFetcher implements JsonDataFetcher {
 	 * @return	ProfileData object that contains user's name and ID
 	 */
 	@Override
-	public Object fetchData(String... parameters)
+	public Object handleData(String... parameters)
 			throws ProfileNotFoundException {
 		if(parameters.length != 1) {
 			return null;

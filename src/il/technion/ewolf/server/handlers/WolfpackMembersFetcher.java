@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.fetchers;
+package il.technion.ewolf.server.handlers;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -11,7 +11,7 @@ import il.technion.ewolf.WolfPack;
 import il.technion.ewolf.WolfPackLeader;
 import il.technion.ewolf.socialfs.Profile;
 
-public class WolfpackMembersFetcher implements JsonDataFetcher {
+public class WolfpackMembersFetcher implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 
 	@Inject
@@ -34,7 +34,7 @@ public class WolfpackMembersFetcher implements JsonDataFetcher {
 	 * @return	list of ProfileData objects. Each object contains name and user ID.
 	 */
 	@Override
-	public Object fetchData(String... parameters) {
+	public Object handleData(String... parameters) {
 		if(parameters.length != 1) {
 			return null;
 		}

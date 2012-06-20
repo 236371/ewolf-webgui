@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.fetchers;
+package il.technion.ewolf.server.handlers;
 
 
 import il.technion.ewolf.msg.ContentMessage;
@@ -15,7 +15,7 @@ import java.util.List;
 
 import com.google.inject.Inject;
 
-public class InboxFetcher implements JsonDataFetcher {
+public class InboxFetcher implements JsonDataHandler {
 	private final SocialMail smail;
 
 	@Inject
@@ -30,7 +30,8 @@ public class InboxFetcher implements JsonDataFetcher {
 		String message;
 		String className; //TODO field for tests, delete at the end
 		
-		private InboxMessage(String senderID, String senderName, Long timestamp, String message, String className) {
+		private InboxMessage(String senderID, String senderName, Long timestamp,
+				String message, String className) {
 			this.senderID = senderID;
 			this.senderName = senderName;
 			this.timestamp = timestamp;
@@ -54,7 +55,7 @@ public class InboxFetcher implements JsonDataFetcher {
 	 * sorted from newer date to older
 	 */
 	@Override
-	public Object fetchData(String... parameters) {
+	public Object handleData(String... parameters) {
 		if(parameters.length != 4) {
 			return null;
 		}

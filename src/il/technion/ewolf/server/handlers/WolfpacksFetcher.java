@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.fetchers;
+package il.technion.ewolf.server.handlers;
 
 
 import il.technion.ewolf.WolfPack;
@@ -14,7 +14,7 @@ import java.util.List;
 
 import com.google.inject.Inject;
 
-public class WolfpacksFetcher implements JsonDataFetcher {
+public class WolfpacksFetcher implements JsonDataHandler {
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
 	private final UserIDFactory userIDFactory;
@@ -31,7 +31,7 @@ public class WolfpacksFetcher implements JsonDataFetcher {
 	 * @return	list of all social groups (wolfpacks) names, the user has access to them
 	 */
 	@Override
-	public Object fetchData(String... parameters) throws ProfileNotFoundException {
+	public Object handleData(String... parameters) throws ProfileNotFoundException {
 		if(parameters.length != 1) {
 			return null;
 		}

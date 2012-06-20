@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.fetchers;
+package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.EwolfAccountCreator;
 import il.technion.ewolf.EwolfAccountCreatorModule;
@@ -18,7 +18,8 @@ import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
-import il.technion.ewolf.server.fetchers.NewsFeedFetcher.PostData;
+import il.technion.ewolf.server.handlers.NewsFeedFetcher;
+import il.technion.ewolf.server.handlers.NewsFeedFetcher.PostData;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
@@ -163,7 +164,7 @@ public class NewsFeedFetcherTest {
 		}
 		Thread.sleep(1000);
 		
-		List<PostData> lst = ((List<PostData>)injectors.get(1).getInstance(NewsFeedFetcher.class).fetchData("userID", uid1.toString(), "null", "null", "null"));
+		List<PostData> lst = ((List<PostData>)injectors.get(1).getInstance(NewsFeedFetcher.class).handleData("userID", uid1.toString(), "null", "null", "null"));
 		Assert.assertEquals(lst.size(), 10);
 		for (int i=0; i<10; i++) {
 			PostData post = lst.get(i);

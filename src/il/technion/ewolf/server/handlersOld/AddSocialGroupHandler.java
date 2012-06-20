@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.handlers;
+package il.technion.ewolf.server.handlersOld;
 
 import il.technion.ewolf.WolfPackLeader;
 import il.technion.ewolf.server.HttpStringExtractor;
@@ -15,7 +15,7 @@ import org.apache.http.protocol.HttpRequestHandler;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-
+@Deprecated
 public class AddSocialGroupHandler  implements HttpRequestHandler{
 	private static final String HANDLER_REGISTER_PATTERN = "/addSocialGroup";
 	private final WolfPackLeader socialGroupsManager;

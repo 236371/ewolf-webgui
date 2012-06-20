@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.fetchers;
+package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.EwolfAccountCreator;
 import il.technion.ewolf.EwolfAccountCreatorModule;
@@ -13,8 +13,8 @@ import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.msg.ContentMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
-import il.technion.ewolf.server.fetchers.InboxFetcher;
-import il.technion.ewolf.server.fetchers.InboxFetcher.InboxMessage;
+import il.technion.ewolf.server.handlers.InboxFetcher;
+import il.technion.ewolf.server.handlers.InboxFetcher.InboxMessage;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
@@ -152,7 +152,7 @@ public class InboxFetcherTest {
 		
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).fetchData("null", "null", "null", "null"));
+		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData("null", "null", "null", "null"));
 		for (int i=0; i<10; i++) {
 			InboxMessage im = lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user3");
@@ -263,7 +263,7 @@ public class InboxFetcherTest {
 		
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).fetchData("null", "null", "null", uid1.toString()));
+		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData("null", "null", "null", uid1.toString()));
 		for (int i=0; i<10; i++) {
 			InboxMessage im = lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user1");
@@ -381,7 +381,7 @@ public class InboxFetcherTest {
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class)
-				.fetchData("null", String.valueOf(timestamps[20]), String.valueOf(timestamps[0]), "null"));
+				.handleData("null", String.valueOf(timestamps[20]), String.valueOf(timestamps[0]), "null"));
 		for (int i=0; i<10; i++) {
 			InboxMessage im = lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user3");
@@ -497,7 +497,7 @@ public class InboxFetcherTest {
 		
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).fetchData("5", "null", "null", uid1.toString()));
+		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData("5", "null", "null", uid1.toString()));
 		Assert.assertEquals(lst.size(), 5);
 		for (int i=0; i<5; i++) {
 			InboxMessage im = lst.get(i);
@@ -614,7 +614,7 @@ public class InboxFetcherTest {
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class)
-				.fetchData("5", String.valueOf(timestamps[20]), String.valueOf(timestamps[18]), "null"));
+				.handleData("5", String.valueOf(timestamps[20]), String.valueOf(timestamps[18]), "null"));
 		Assert.assertEquals(lst.size(), 2);
 		for (int i=0; i<2; i++) {
 			InboxMessage im = lst.get(i);

@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.fetchers;
+package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.EwolfAccountCreator;
 import il.technion.ewolf.EwolfAccountCreatorModule;
@@ -15,7 +15,8 @@ import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.msg.PokeMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
-import il.technion.ewolf.server.fetchers.WolfpackMembersFetcher.ProfileData;
+import il.technion.ewolf.server.handlers.WolfpackMembersFetcher;
+import il.technion.ewolf.server.handlers.WolfpackMembersFetcher.ProfileData;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
@@ -159,7 +160,7 @@ public class WolfpackMembersFetcherTest {
 			((PokeMessage)inbox.get(1)).accept();
 		}
 		
-		List<ProfileData> lst = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).fetchData("all"));
+		List<ProfileData> lst = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData("all"));
 		List<String> strUidListAfter = new ArrayList<String>();
 		for (int i=0; i<lst.size(); i++) {
 			strUidListAfter.add(lst.get(i).id);
@@ -287,7 +288,7 @@ public class WolfpackMembersFetcherTest {
 			((PokeMessage)inbox.get(0)).accept();
 		}
 		
-		List<ProfileData> lst1 = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).fetchData("wall-readers"));
+		List<ProfileData> lst1 = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData("wall-readers"));
 		List<String> strUidListAfter = new ArrayList<String>();
 		for (int i=0; i<lst1.size(); i++) {
 			strUidListAfter.add(lst1.get(i).id);
@@ -295,7 +296,7 @@ public class WolfpackMembersFetcherTest {
 		strUidListAfter.add(userIDList.get(0).toString());
 		Assert.assertTrue(CollectionUtils.isEqualCollection(strUidListBefore, strUidListAfter));
 		
-		List<ProfileData> lst2 = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).fetchData("friends"));
+		List<ProfileData> lst2 = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData("friends"));
 		List<String> strUidList2After = new ArrayList<String>();
 		for (int i=0; i<lst2.size(); i++) {
 			strUidList2After.add(lst2.get(i).id);
