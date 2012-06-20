@@ -10,13 +10,14 @@ import il.technion.ewolf.http.HttpConnector;
 import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
+import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
+import il.technion.ewolf.server.handlers.AddSocialGroupHandler;
 import il.technion.ewolf.server.handlers.InboxFetcher;
 import il.technion.ewolf.server.handlers.NewsFeedFetcher;
 import il.technion.ewolf.server.handlers.ProfileFetcher;
 import il.technion.ewolf.server.handlers.WolfpackMembersFetcher;
 import il.technion.ewolf.server.handlers.WolfpacksFetcher;
 import il.technion.ewolf.server.handlersOld.AddMessageBoardPostHandler;
-import il.technion.ewolf.server.handlersOld.AddSocialGroupHandler;
 import il.technion.ewolf.server.handlersOld.AddSocialGroupMemberHandler;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
@@ -33,7 +34,7 @@ import com.google.inject.Injector;
 public class EwolfServer {
 
 	public static void main(String[] args) throws Exception {
-		ServerResources.EwolfConfigurations configurations = 
+		EwolfConfigurations configurations = 
 				ServerResources.getConfigurations();
 		
 		Injector injector = createInjector(configurations.username,
@@ -48,7 +49,6 @@ public class EwolfServer {
 
 	private static void registerConnectorHandlers(Injector injector, HttpConnector connector) {
 		//ewolf resources handlers register
-		connector.register(AddSocialGroupHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupHandler.class));
 		connector.register(AddSocialGroupMemberHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupMemberHandler.class));
 		connector.register(AddMessageBoardPostHandler.getRegisterPattern(), injector.getInstance(AddMessageBoardPostHandler.class));
 
@@ -125,7 +125,7 @@ public class EwolfServer {
 		.addHandler("wolfpacks", injector.getInstance(WolfpacksFetcher.class))
 		.addHandler("wolfpackMembers", injector.getInstance(WolfpackMembersFetcher.class))
 		.addHandler("inbox", injector.getInstance(InboxFetcher.class))
-		.addHandler("newsFeed", injector.getInstance(NewsFeedFetcher.class));
-//		.addHandler("createWolfpack", injector.getInstance(AddSocialGroupHandler.class));
+		.addHandler("newsFeed", injector.getInstance(NewsFeedFetcher.class))
+		.addHandler("createWolfpack", injector.getInstance(AddSocialGroupHandler.class));
 	}
 }
