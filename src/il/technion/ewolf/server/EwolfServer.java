@@ -18,12 +18,6 @@ import il.technion.ewolf.server.fetchers.WolfpacksFetcher;
 import il.technion.ewolf.server.handlers.AddMessageBoardPostHandler;
 import il.technion.ewolf.server.handlers.AddSocialGroupHandler;
 import il.technion.ewolf.server.handlers.AddSocialGroupMemberHandler;
-import il.technion.ewolf.server.handlers.ViewInboxHandler;
-import il.technion.ewolf.server.handlers.ViewMessageBoardHandler;
-import il.technion.ewolf.server.handlers.ViewProfileHandler;
-import il.technion.ewolf.server.handlers.ViewSelfProfileHandler;
-import il.technion.ewolf.server.handlers.ViewSocialGroupMembersHandler;
-import il.technion.ewolf.server.handlers.ViewSocialGroupsHandler;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
@@ -54,19 +48,12 @@ public class EwolfServer {
 
 	private static void registerConnectorHandlers(Injector injector, HttpConnector connector) {
 		//ewolf resources handlers register
-		connector.register(ViewSelfProfileHandler.getRegisterPattern(), injector.getInstance(ViewSelfProfileHandler.class));
-		connector.register(ViewProfileHandler.getRegisterPattern(), injector.getInstance(ViewProfileHandler.class));
-		connector.register(ViewSocialGroupsHandler.getRegisterPattern(), injector.getInstance(ViewSocialGroupsHandler.class));
 		connector.register(AddSocialGroupHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupHandler.class));
-		connector.register(ViewSocialGroupMembersHandler.getRegisterPattern(), injector.getInstance(ViewSocialGroupMembersHandler.class));
 		connector.register(AddSocialGroupMemberHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupMemberHandler.class));
 		connector.register(AddMessageBoardPostHandler.getRegisterPattern(), injector.getInstance(AddMessageBoardPostHandler.class));
-		connector.register(ViewMessageBoardHandler.getRegisterPattern(), injector.getInstance(ViewMessageBoardHandler.class));
-		connector.register(ViewInboxHandler.getRegisterPattern(), injector.getInstance(ViewInboxHandler.class));
+
 		//server resources handlers register
-		
 		JsonHandler serverJsonHandler = createJsonHandler(injector);
-		
 		connector.register("/json*", serverJsonHandler );
 		connector.register("*", new HttpFileHandler("/",
 				new ServerResourceFactory(ServerResources.getFileTypeMap())));
