@@ -12,12 +12,16 @@ import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
 import java.io.FileNotFoundException;
 
+import com.google.inject.Inject;
+
+
 public class AddWolfpackMemberHandler implements JsonDataHandler {
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
 	private final UserIDFactory userIDFactory;
 
 
+	@Inject
 	public AddWolfpackMemberHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager, UserIDFactory userIDFactory) {
 		this.socialFS = socialFS;
 		this.socialGroupsManager = socialGroupsManager;
@@ -34,6 +38,10 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 	public Object handleData(String... parameters)
 			throws ProfileNotFoundException, FileNotFoundException,
 			WallNotFound {
+		if(parameters.length != 2) {
+			return null;
+		}
+		
 		String strUid = parameters[1];
 		UserID uid = userIDFactory.getFromBase64(strUid);
 		Profile profile = socialFS.findProfile(uid);
