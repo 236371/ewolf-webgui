@@ -19,7 +19,6 @@ import il.technion.ewolf.server.handlers.ProfileFetcher;
 import il.technion.ewolf.server.handlers.WolfpackMembersFetcher;
 import il.technion.ewolf.server.handlers.WolfpacksFetcher;
 import il.technion.ewolf.server.handlersOld.AddMessageBoardPostHandler;
-import il.technion.ewolf.server.handlersOld.AddSocialGroupMemberHandler;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
@@ -52,7 +51,6 @@ public class EwolfServer {
 
 	private static void registerConnectorHandlers(Injector injector, HttpConnector connector) {
 		//ewolf resources handlers register
-		connector.register(AddSocialGroupMemberHandler.getRegisterPattern(), injector.getInstance(AddSocialGroupMemberHandler.class));
 		connector.register(AddMessageBoardPostHandler.getRegisterPattern(), injector.getInstance(AddMessageBoardPostHandler.class));
 
 		//server resources handlers register
