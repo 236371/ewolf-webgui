@@ -5,23 +5,28 @@ import il.technion.ewolf.server.handlers.JsonDataHandler;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.ParseException;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
+import org.apache.http.util.EntityUtils;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -66,6 +71,13 @@ public class JsonHandler implements HttpRequestHandler {
 				JsonDataHandler fetcher = handlers.get(key);
 				if(fetcher != null) {
 					String[] handlerParameters = nameValuePair.getValue().split(",");
+					if (req.getRequestLine().getMethod().equalsIgnoreCase("POST")) {
+						String text = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
+						List<String> tmpList = Arrays.asList(handlerParameters);
+						tmpList.add(text);
+						handlerParameters = tmpList.toArray(new String[tmpList.size()]);
+					}
+
 					Object o = null;
 
 					try {
@@ -91,6 +103,12 @@ public class JsonHandler implements HttpRequestHandler {
 				}
 			}			
 		} catch (URISyntaxException e) {
+			e.printStackTrace();
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
