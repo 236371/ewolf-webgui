@@ -17,18 +17,18 @@ public class ServerResources {
 	private static final String EWOLF_CONFIG = "/ewolf.config.properties";
 	private static final String MIME_TYPES = "/mime.types";
 	
-	public static class EwolfConfigurations {
-		public String username;
-		public String password;
-		public String name;
-		public List<URI> kbrURIs = new ArrayList<URI>();
+	static class EwolfConfigurations {
+		String username;
+		String password;
+		String name;
+		List<URI> kbrURIs = new ArrayList<URI>();
 	}
 	
-	static public URL getResource(String name) {
+	public static URL getResource(String name) {
 		return ServerResources.class.getResource(name);
 	}
 	
-	public static EwolfConfigurations getConfigurations() {
+	public static EwolfConfigurations getConfigurations() throws ConfigurationException, URISyntaxException {
 		EwolfConfigurations configurations = new EwolfConfigurations();
 		
 		try {
@@ -44,16 +44,14 @@ public class ServerResources {
 			if (configurations.username == null) {
 				//TODO get username/password from user, store to EWOLF_CONFIG and continue
 			}
-		} catch (ConfigurationException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
+		} catch (ConfigurationException e) {
+			e.printStackTrace();
 			System.out.println("Cant' read configuration file");
-			return null;
+			throw e;
 		} catch (URISyntaxException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			System.out.println("String from configuration file could not be parsed as a URI");
-			return null;
+			throw e;
 		}
 		
 		return configurations;

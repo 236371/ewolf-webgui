@@ -35,12 +35,14 @@ import com.google.inject.Injector;
 public class EwolfServer {
 
 	public static void main(String[] args) throws Exception {
+		//TODO handle getConfigurations exceptions
 		EwolfConfigurations configurations = 
 				ServerResources.getConfigurations();
 		
 		Injector injector = createInjector(configurations.username,
 				configurations.password, configurations.name);
 		
+		//TODO handle initEwolf exceptions
 		HttpConnector connector = initEwolf(configurations.kbrURIs, injector);
 
 		registerConnectorHandlers(injector, connector);
