@@ -8,16 +8,16 @@ import java.io.FileNotFoundException;
 
 import com.google.inject.Inject;
 
-public class AddSocialGroupHandler implements JsonDataHandler {
+public class CreateWolfpackHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 	
 	@Inject
-	public AddSocialGroupHandler(WolfPackLeader socialGroupsManager) {
+	public CreateWolfpackHandler(WolfPackLeader socialGroupsManager) {
 		this.socialGroupsManager = socialGroupsManager;
 	}
 
 	/**
-	 * @param	parameters	group name in parameters[0]
+	 * @param	parameters	wolfpack name in parameters[0]
 	 * @return	"success" or error message
 	 */
 	@Override
