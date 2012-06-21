@@ -11,6 +11,7 @@ import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
+import il.technion.ewolf.server.handlers.AddWolfpackMemberHandler;
 import il.technion.ewolf.server.handlers.CreateWolfpackHandler;
 import il.technion.ewolf.server.handlers.InboxFetcher;
 import il.technion.ewolf.server.handlers.NewsFeedFetcher;
@@ -126,6 +127,7 @@ public class EwolfServer {
 		.addHandler("wolfpackMembers", injector.getInstance(WolfpackMembersFetcher.class))
 		.addHandler("inbox", injector.getInstance(InboxFetcher.class))
 		.addHandler("newsFeed", injector.getInstance(NewsFeedFetcher.class))
-		.addHandler("createWolfpack", injector.getInstance(CreateWolfpackHandler.class));
+		.addHandler("createWolfpack", injector.getInstance(CreateWolfpackHandler.class))
+		.addHandler("addWolfpackMember", injector.getInstance(AddWolfpackMemberHandler.class));
 	}
 }
