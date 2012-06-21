@@ -19,7 +19,6 @@ import il.technion.ewolf.server.handlers.PostToNewsFeed;
 import il.technion.ewolf.server.handlers.ProfileFetcher;
 import il.technion.ewolf.server.handlers.WolfpackMembersFetcher;
 import il.technion.ewolf.server.handlers.WolfpacksFetcher;
-import il.technion.ewolf.server.handlersOld.AddMessageBoardPostHandler;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
@@ -31,7 +30,6 @@ import java.util.List;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
-@SuppressWarnings("deprecation")
 public class EwolfServer {
 
 	public static void main(String[] args) throws Exception {
@@ -52,9 +50,6 @@ public class EwolfServer {
 
 	private static void registerConnectorHandlers(Injector injector, HttpConnector connector) {
 		//ewolf resources handlers register
-		connector.register(AddMessageBoardPostHandler.getRegisterPattern(), injector.getInstance(AddMessageBoardPostHandler.class));
-
-		//server resources handlers register
 		JsonHandler serverJsonHandler = createJsonHandler(injector);
 		connector.register("/json*", serverJsonHandler );
 		connector.register("*", new HttpFileHandler("/",
