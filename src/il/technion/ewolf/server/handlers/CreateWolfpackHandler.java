@@ -1,10 +1,6 @@
 package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.WolfPackLeader;
-import il.technion.ewolf.exceptions.WallNotFound;
-import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
-
-import java.io.FileNotFoundException;
 
 import com.google.inject.Inject;
 
@@ -21,9 +17,7 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 	 * @return	"success" or error message
 	 */
 	@Override
-	public Object handleData(String... parameters)
-			throws ProfileNotFoundException, FileNotFoundException,
-			WallNotFound {
+	public Object handleData(String... parameters) {
 		if(parameters.length != 1) {
 			return null;
 		}
