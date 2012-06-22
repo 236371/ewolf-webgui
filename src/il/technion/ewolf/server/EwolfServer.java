@@ -17,6 +17,7 @@ import il.technion.ewolf.server.handlers.InboxFetcher;
 import il.technion.ewolf.server.handlers.NewsFeedFetcher;
 import il.technion.ewolf.server.handlers.PostToNewsFeedHandler;
 import il.technion.ewolf.server.handlers.ProfileFetcher;
+import il.technion.ewolf.server.handlers.SendMessageHandler;
 import il.technion.ewolf.server.handlers.WolfpackMembersFetcher;
 import il.technion.ewolf.server.handlers.WolfpacksFetcher;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
@@ -125,6 +126,7 @@ public class EwolfServer {
 		.addHandler("newsFeed", injector.getInstance(NewsFeedFetcher.class))
 		.addHandler("createWolfpack", injector.getInstance(CreateWolfpackHandler.class))
 		.addHandler("addWolfpackMember", injector.getInstance(AddWolfpackMemberHandler.class))
-		.addHandler("post", injector.getInstance(PostToNewsFeedHandler.class));
+		.addHandler("post", injector.getInstance(PostToNewsFeedHandler.class))
+		.addHandler("sendMessage", injector.getInstance(SendMessageHandler.class));
 	}
 }
