@@ -5,20 +5,19 @@ import il.technion.ewolf.WolfPack;
 import il.technion.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.posts.TextPost;
-import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
 import java.io.FileNotFoundException;
 
 import com.google.inject.Inject;
 
-public class PostToNewsFeed implements JsonDataHandler {
+public class PostToNewsFeedHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 	private final SocialNetwork snet;
 	private final TextPost textPost;
 
 	@Inject
-	public PostToNewsFeed(SocialNetwork snet, WolfPackLeader socialGroupsManager,
+	public PostToNewsFeedHandler(SocialNetwork snet, WolfPackLeader socialGroupsManager,
 			TextPost textPost) {
 		this.snet = snet;
 		this.socialGroupsManager = socialGroupsManager;
@@ -32,9 +31,7 @@ public class PostToNewsFeed implements JsonDataHandler {
 	 * @return	"success" or error message
 	 */
 	@Override
-	public Object handleData(String... parameters)
-			throws ProfileNotFoundException, FileNotFoundException,
-			WallNotFound {
+	public Object handleData(String... parameters) {
 		if(parameters.length != 2) {
 			return null;
 		}

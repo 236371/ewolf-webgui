@@ -15,7 +15,7 @@ import il.technion.ewolf.server.handlers.AddWolfpackMemberHandler;
 import il.technion.ewolf.server.handlers.CreateWolfpackHandler;
 import il.technion.ewolf.server.handlers.InboxFetcher;
 import il.technion.ewolf.server.handlers.NewsFeedFetcher;
-import il.technion.ewolf.server.handlers.PostToNewsFeed;
+import il.technion.ewolf.server.handlers.PostToNewsFeedHandler;
 import il.technion.ewolf.server.handlers.ProfileFetcher;
 import il.technion.ewolf.server.handlers.WolfpackMembersFetcher;
 import il.technion.ewolf.server.handlers.WolfpacksFetcher;
@@ -125,6 +125,6 @@ public class EwolfServer {
 		.addHandler("newsFeed", injector.getInstance(NewsFeedFetcher.class))
 		.addHandler("createWolfpack", injector.getInstance(CreateWolfpackHandler.class))
 		.addHandler("addWolfpackMember", injector.getInstance(AddWolfpackMemberHandler.class))
-		.addHandler("post", injector.getInstance(PostToNewsFeed.class));
+		.addHandler("post", injector.getInstance(PostToNewsFeedHandler.class));
 	}
 }
