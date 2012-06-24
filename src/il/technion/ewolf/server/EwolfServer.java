@@ -20,6 +20,7 @@ import il.technion.ewolf.server.handlers.ProfileFetcher;
 import il.technion.ewolf.server.handlers.SendMessageHandler;
 import il.technion.ewolf.server.handlers.WolfpackMembersFetcher;
 import il.technion.ewolf.server.handlers.WolfpacksFetcher;
+import il.technion.ewolf.server.handlers.JarResourceHandler;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
@@ -53,8 +54,11 @@ public class EwolfServer {
 		//ewolf resources handlers register
 		JsonHandler serverJsonHandler = createJsonHandler(injector);
 		connector.register("/json*", serverJsonHandler );
-		connector.register("*", new HttpFileHandler("/",
-				new ServerResourceFactory(ServerResources.getFileTypeMap())));
+
+		//server resources handlers register
+		connector.register("*", new JarResourceHandler());
+//		connector.register("*", new HttpFileHandler("/",
+//				new ServerResourceFactory(ServerResources.getFileTypeMap())));
 	}
 
 
