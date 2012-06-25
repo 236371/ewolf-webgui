@@ -26,69 +26,104 @@ import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
 
 import java.io.IOException;
-import java.net.URI;
-import java.util.List;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 public class EwolfServer {
+	
+	EwolfConfigurations configurations;
+	ServerModule serverModule;
+	
+	Injector itsInjector;
+	
+	HttpConnector connector;
+	
+	public EwolfServer(EwolfConfigurations configurations,
+			ServerModule serverModule) {
+		if(configurations == null || serverModule == null) {
+			throw new IllegalArgumentException();
+		}
+		
+		this.configurations = configurations;
+		this.serverModule = serverModule;
+		
+		this.itsInjector = createInjector();		
+	}
 
 	public static void main(String[] args) throws Exception {
-		//TODO handle getConfigurations exceptions
-		EwolfConfigurations configurations = 
+//		//TODO handle getConfigurations exceptions
+//		EwolfConfigurations configurations = 
+//				ServerResources.getConfigurations();
+//		
+//		Injector injector = createInjector(configurations.username,
+//				configurations.password, configurations.name);
+//		
+//		//TODO handle initEwolf exceptions
+//		HttpConnector connector = initEwolf(configurations.kbrURIs, injector);
+//
+//		registerConnectorHandlers();
+//		
+//		System.out.println("server started");
+		
+		EwolfConfigurations myServerConfigurations = 
 				ServerResources.getConfigurations();
+		ServerModule myServerModule = new ServerModule("10000");
 		
-		Injector injector = createInjector(configurations.username,
-				configurations.password, configurations.name);
-		
-		//TODO handle initEwolf exceptions
-		HttpConnector connector = initEwolf(configurations.kbrURIs, injector);
+		EwolfServer server = new EwolfServer(myServerConfigurations, myServerModule);
+		server.initEwolf();
+	}
 
-		registerConnectorHandlers(injector, connector);
+	public void initEwolf() throws IOException, Exception {
+		KeybasedRouting kbr = itsInjector.getInstance(KeybasedRouting.class);
+		kbr.create();
+		
+		// bind the chunkeeper
+		ChunKeeper chnukeeper = itsInjector.getInstance(ChunKeeper.class);
+		chnukeeper.bind();
+		
+		connector = itsInjector.getInstance(HttpConnector.class);
+		connector.bind();
+		connector.start();
+		
+		EwolfAccountCreator accountCreator = 
+				itsInjector.getInstance(EwolfAccountCreator.class);
+		accountCreator.create();
+		
+		//FIXME port for testing
+		kbr.join(configurations.kbrURIs);
+		
+		registerConnectorHandlers();
 		
 		System.out.println("server started");
 	}
-
-	private static void registerConnectorHandlers(Injector injector, HttpConnector connector) {
+	
+	private void registerConnectorHandlers() {
 		//ewolf resources handlers register
-		JsonHandler serverJsonHandler = createJsonHandler(injector);
-		connector.register("/json*", serverJsonHandler );
+		connector.register("/json*", createJsonHandler() );
 
 		//server resources handlers register
 		connector.register("*", new JarResourceHandler());
 //		connector.register("*", new HttpFileHandler("/",
 //				new ServerResourceFactory(ServerResources.getFileTypeMap())));
 	}
-
-
-	private static HttpConnector initEwolf(List<URI> kbrURIs, Injector injector)
-			throws IOException, Exception {
-		KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
-		kbr.create();
-		
-		// bind the chunkeeper
-		ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
-		chnukeeper.bind();
-		
-		HttpConnector connector = injector.getInstance(HttpConnector.class);
-		connector.bind();
-		connector.start();
-		
-		EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
-		accountCreator.create();
-		
-		//FIXME port for testing
-		kbr.join(kbrURIs);
-		return connector;
+	
+	private JsonHandler createJsonHandler() {
+		return new JsonHandler()
+		.addHandler("profile", itsInjector.getInstance(ProfileFetcher.class))
+		.addHandler("wolfpacks", itsInjector.getInstance(WolfpacksFetcher.class))
+		.addHandler("wolfpackMembers", itsInjector.getInstance(WolfpackMembersFetcher.class))
+		.addHandler("inbox", itsInjector.getInstance(InboxFetcher.class))
+		.addHandler("newsFeed", itsInjector.getInstance(NewsFeedFetcher.class))
+		.addHandler("createWolfpack", itsInjector.getInstance(CreateWolfpackHandler.class))
+		.addHandler("addWolfpackMember", itsInjector.getInstance(AddWolfpackMemberHandler.class))
+		.addHandler("post", itsInjector.getInstance(PostToNewsFeedHandler.class))
+		.addHandler("sendMessage", itsInjector.getInstance(SendMessageHandler.class));
 	}
 
-
-	private static Injector createInjector(String username, String password,
-			String name) {		
-		ServerModule serverModule = new ServerModule();
+	private Injector createInjector() {	
 		
-		Injector injector = Guice.createInjector(
+		return Guice.createInjector(
 
 				new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "20")
@@ -106,9 +141,12 @@ public class EwolfServer {
 				new StashModule(),
 				
 				new SocialFSCreatorModule()
-					.setProperty("socialfs.user.username", username)
-					.setProperty("socialfs.user.password", password)
-					.setProperty("socialfs.user.name", name),
+					.setProperty("socialfs.user.username", 
+							configurations.username)
+					.setProperty("socialfs.user.password", 
+							configurations.password)
+					.setProperty("socialfs.user.name", 
+							configurations.name),
 
 				new SocialFSModule(),
 				
@@ -118,19 +156,5 @@ public class EwolfServer {
 
 					serverModule
 		);
-		return injector;
-	}
-	
-	private static JsonHandler createJsonHandler(Injector injector) {
-		return new JsonHandler()
-		.addHandler("profile", injector.getInstance(ProfileFetcher.class))
-		.addHandler("wolfpacks", injector.getInstance(WolfpacksFetcher.class))
-		.addHandler("wolfpackMembers", injector.getInstance(WolfpackMembersFetcher.class))
-		.addHandler("inbox", injector.getInstance(InboxFetcher.class))
-		.addHandler("newsFeed", injector.getInstance(NewsFeedFetcher.class))
-		.addHandler("createWolfpack", injector.getInstance(CreateWolfpackHandler.class))
-		.addHandler("addWolfpackMember", injector.getInstance(AddWolfpackMemberHandler.class))
-		.addHandler("post", injector.getInstance(PostToNewsFeedHandler.class))
-		.addHandler("sendMessage", injector.getInstance(SendMessageHandler.class));
 	}
 }
