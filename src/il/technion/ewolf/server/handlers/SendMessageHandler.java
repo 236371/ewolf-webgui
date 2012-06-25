@@ -31,6 +31,9 @@ public class SendMessageHandler implements JsonDataHandler {
 	@Override
 	public Object handleData(String... parameters) {
 		String strUid = parameters[0];
+		if(strUid.isEmpty()) {
+			return "Must specify a user id.";
+		}
 		UserID uid = userIDFactory.getFromBase64(strUid);
 		Profile profile;
 		try {
