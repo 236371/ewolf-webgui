@@ -54,21 +54,7 @@ public class EwolfServer {
 		this.itsInjector = createInjector();		
 	}
 
-	public static void main(String[] args) throws Exception {
-//		//TODO handle getConfigurations exceptions
-//		EwolfConfigurations configurations = 
-//				ServerResources.getConfigurations();
-//		
-//		Injector injector = createInjector(configurations.username,
-//				configurations.password, configurations.name);
-//		
-//		//TODO handle initEwolf exceptions
-//		HttpConnector connector = initEwolf(configurations.kbrURIs, injector);
-//
-//		registerConnectorHandlers();
-//		
-//		System.out.println("server started");
-		
+	public static void main(String[] args) throws Exception {		
 		EwolfConfigurations myServerConfigurations = 
 				ServerResources.getConfigurations(EWOLF_CONFIG);
 		ServerModule myServerModule = new ServerModule(SERVER_PORT);
