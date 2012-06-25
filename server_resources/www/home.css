@@ -112,6 +112,17 @@ input[type="text"]:focus::-webkit-input-placeholder {
 	cursor:pointer;
 }
 
+/*** APP *** APP *** APP *** APP *** APP *** Profile ***/
+
+.profileTitle {
+	padding-left:10px;
+	width:200px;
+	font-size:30px;
+	font-weight:bold;
+	color:#af9c7c;
+}
+
+
 /*** APP *** APP *** APP *** APP *** APP *** Messages ***/
 
 .inboxListTitle {
