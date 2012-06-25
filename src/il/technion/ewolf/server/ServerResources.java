@@ -14,7 +14,6 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
 public class ServerResources {	
-	private static final String EWOLF_CONFIG = "/ewolf.config.properties";
 	private static final String MIME_TYPES = "/mime.types";
 	
 	static class EwolfConfigurations {
@@ -28,11 +27,12 @@ public class ServerResources {
 		return ServerResources.class.getResource(name);
 	}
 	
-	public static EwolfConfigurations getConfigurations() throws ConfigurationException, URISyntaxException {
+	public static EwolfConfigurations getConfigurations(String configurationFile) 
+			throws ConfigurationException, URISyntaxException {
 		EwolfConfigurations configurations = new EwolfConfigurations();
 		
 		try {
-			URL configFile = getResource(EWOLF_CONFIG);
+			URL configFile = getResource(configurationFile);
 			PropertiesConfiguration config = new PropertiesConfiguration(configFile);
 			configurations.username = config.getString("username");
 			configurations.password = config.getString("password");

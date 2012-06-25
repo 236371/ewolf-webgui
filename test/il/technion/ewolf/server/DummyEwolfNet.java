@@ -10,6 +10,7 @@ import il.technion.ewolf.http.HttpConnector;
 import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
+import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
@@ -26,6 +27,12 @@ import com.google.inject.Injector;
 
 public class DummyEwolfNet {
 	private static final int BASE_PORT = 10100;
+	
+	private static final String EWOLF_CONFIG_1 = "/ewolf.config.properties";
+	private static final String SERVER_PORT_1 = "10000";
+	
+	private static final String EWOLF_CONFIG_2 = "/ewolf2.config.properties";
+	private static final String SERVER_PORT_2 = "10200";
 
 	public static void main(String[] args) throws Exception {
 		List<Injector> injectors = new LinkedList<Injector>();
@@ -96,5 +103,19 @@ public class DummyEwolfNet {
 		UserID uid1 = sfs1.getCredentials().getProfile().getUserId();
 		System.out.println("UserID = "+ uid1.toString());
 		System.out.println("Profile = "+ sfs1.getCredentials().getProfile().toString());
+		
+		EwolfConfigurations configurations1 = 
+				ServerResources.getConfigurations(EWOLF_CONFIG_1);
+		ServerModule serverModule1 = new ServerModule(SERVER_PORT_1);
+		
+		EwolfServer server1 = new EwolfServer(configurations1, serverModule1);
+		server1.initEwolf();
+		
+		EwolfConfigurations configurations2 = 
+				ServerResources.getConfigurations(EWOLF_CONFIG_2);
+		ServerModule serverModule2 = new ServerModule(SERVER_PORT_2);
+		
+		EwolfServer server2 = new EwolfServer(configurations2, serverModule2);
+		server2.initEwolf();
 	}
 }

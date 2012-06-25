@@ -32,6 +32,9 @@ import com.google.inject.Injector;
 
 public class EwolfServer {
 	
+	private static final String EWOLF_CONFIG = "/ewolf.config.properties";
+	private static final String SERVER_PORT = "10000";
+	
 	EwolfConfigurations configurations;
 	ServerModule serverModule;
 	
@@ -67,8 +70,8 @@ public class EwolfServer {
 //		System.out.println("server started");
 		
 		EwolfConfigurations myServerConfigurations = 
-				ServerResources.getConfigurations();
-		ServerModule myServerModule = new ServerModule("10000");
+				ServerResources.getConfigurations(EWOLF_CONFIG);
+		ServerModule myServerModule = new ServerModule(SERVER_PORT);
 		
 		EwolfServer server = new EwolfServer(myServerConfigurations, myServerModule);
 		server.initEwolf();
