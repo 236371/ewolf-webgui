@@ -64,6 +64,35 @@ input[type="text"]:focus::-webkit-input-placeholder {
 	color:#ccc;
 }
 
+textarea {
+	min-height:auto;
+	padding:10px 27px 6px 12px;
+	font-size:16px;
+	line-height:1;
+	color:#666;
+	background-color: /*#ccc*/ #ddd;
+	border:0;
+	-webkit-border-radius:13px;
+	-moz-border-radius:13px;
+	-webkit-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
+	-moz-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
+	-webkit-transition:all .2s ease-in-out;
+	-moz-transition:all .2s ease-in-out;
+	transition:all .2s ease-in-out;
+	border-radius:13px;	
+	box-shadow:inset 0 1px 2px rgba(0,0,0,.2);	
+	outline: none;
+}
+
+textarea:focus {
+	color:#444;
+	background-color:#fff;
+}
+
+textarea:focus::-webkit-input-placeholder {
+	color:#ccc;
+}
+
 .howling-back {
 	position:fixed;
 	left:-30px;
@@ -175,7 +204,7 @@ input[type="text"]:focus::-webkit-input-placeholder {
 }
 
 .timestampBox {
-	width:80px;
+	width:120px;
 	float:right;
 	font-size:12px;
 }

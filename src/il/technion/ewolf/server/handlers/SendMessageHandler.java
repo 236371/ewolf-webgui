@@ -30,10 +30,21 @@ public class SendMessageHandler implements JsonDataHandler {
 	 */
 	@Override
 	public Object handleData(String... parameters) {
+		if(parameters.length < 2) {
+			return "Must specify a user id and a message body.";
+		}
+		
 		String strUid = parameters[0];
+		String text = parameters[1];
+		
 		if(strUid.isEmpty()) {
 			return "Must specify a user id.";
 		}
+		
+		if(text.isEmpty()) {
+			return "Must specify a message body.";
+		}
+		
 		UserID uid = userIDFactory.getFromBase64(strUid);
 		Profile profile;
 		try {
@@ -42,7 +53,7 @@ public class SendMessageHandler implements JsonDataHandler {
 			e.printStackTrace();
 			return e.toString();
 		}
-		String text = parameters[1];
+		
 		ContentMessage msg = smail.createContentMessage().setMessage(text);
 		smail.send(msg, profile);
 		return "success";

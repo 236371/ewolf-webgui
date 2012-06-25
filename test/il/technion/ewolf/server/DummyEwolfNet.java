@@ -117,5 +117,7 @@ public class DummyEwolfNet {
 		
 		EwolfServer server2 = new EwolfServer(configurations2, serverModule2);
 		server2.initEwolf();
+		
+		System.out.println("Server test is resdy...");
 	}
 }
