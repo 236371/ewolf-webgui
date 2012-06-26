@@ -3,6 +3,9 @@ package il.technion.ewolf.server;
 import il.technion.ewolf.EwolfAccountCreator;
 import il.technion.ewolf.EwolfAccountCreatorModule;
 import il.technion.ewolf.EwolfModule;
+import il.technion.ewolf.SocialNetwork;
+import il.technion.ewolf.WolfPack;
+import il.technion.ewolf.WolfPackLeader;
 import il.technion.ewolf.chunkeeper.ChunKeeper;
 import il.technion.ewolf.chunkeeper.ChunKeeperModule;
 import il.technion.ewolf.dht.SimpleDHTModule;
@@ -10,11 +13,15 @@ import il.technion.ewolf.http.HttpConnector;
 import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
+import il.technion.ewolf.msg.ContentMessage;
+import il.technion.ewolf.msg.SocialMail;
+import il.technion.ewolf.posts.Post;
+import il.technion.ewolf.posts.TextPost;
 import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
+import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
-import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.stash.StashModule;
 
 import java.net.URI;
@@ -98,12 +105,6 @@ public class DummyEwolfNet {
 			System.out.println("done\n");
 		}
 
-		//FIXME for testing purposes only
-		SocialFS sfs1 = injectors.get(0).getInstance(SocialFS.class);
-		UserID uid1 = sfs1.getCredentials().getProfile().getUserId();
-		System.out.println("UserID = "+ uid1.toString());
-		System.out.println("Profile = "+ sfs1.getCredentials().getProfile().toString());
-		
 		EwolfConfigurations configurations1 = 
 				ServerResources.getConfigurations(EWOLF_CONFIG_1);
 		ServerModule serverModule1 = new ServerModule(SERVER_PORT_1);
@@ -118,6 +119,47 @@ public class DummyEwolfNet {
 		EwolfServer server2 = new EwolfServer(configurations2, serverModule2);
 		server2.initEwolf();
 		
-		System.out.println("Server test is resdy...");
+		//user2
+		Injector inj2 = server2.itsInjector;
+		SocialMail sm2 = inj2.getInstance(SocialMail.class);
+		SocialFS sfs2 = inj2.getInstance(SocialFS.class);
+		Profile profile2 = sfs2.getCredentials().getProfile();
+		String strUid2 = profile2.getUserId().toString();
+		WolfPackLeader sgm2 = inj2.getInstance(WolfPackLeader.class);
+		SocialNetwork sn2 = inj2.getInstance(SocialNetwork.class);
+		TextPost textPost2 = inj2.getInstance(TextPost.class);
+		
+		//user1
+		Injector inj1 = server1.itsInjector;
+		SocialFS sfs1 = inj1.getInstance(SocialFS.class);
+		Profile profile1 = sfs1.getCredentials().getProfile();
+		
+		//send messages from user2 to user1
+		ContentMessage[] messages = new ContentMessage[5];
+		for (int j=0; j<5; j++) {
+			messages[j] = sm2.createContentMessage().setMessage(strUid2 + ": msg " + j);
+			sm2.send(messages[j], profile1);
+		}
+		
+		//post messages to user1
+		WolfPack friends = sgm2.findOrCreateSocialGroup("friends").addMember(profile1);
+		//user1 SHOULDN't get posts to enemies 
+		WolfPack enemies = sgm2.findOrCreateSocialGroup("enemies");
+
+		sgm2.findSocialGroup("wall-readers").addMember(profile1);
+		
+		Post[] posts = new Post[5];
+		//send posts to friends
+		for (int j=0; j<5; j++) {				 
+			posts[j] = textPost2.setText("Post to friends: post " + j + "from " + strUid2);
+			sn2.getWall().publish(posts[j], friends);
+		}
+		//send posts to enemies (main user SHOULDN't get them)
+		for (int j=0; j<5; j++) {				 
+			posts[j] = textPost2.setText("Post to enemies: post " + j + "from " + strUid2);
+			sn2.getWall().publish(posts[j], enemies);
+		}
+		
+		System.out.println("Server test is ready...");
 	}
 }
