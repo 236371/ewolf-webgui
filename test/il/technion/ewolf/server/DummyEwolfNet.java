@@ -11,10 +11,8 @@ import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
-import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
 import il.technion.ewolf.socialfs.SocialFSModule;
-import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.stash.StashModule;
 
 import java.net.URI;
@@ -98,12 +96,6 @@ public class DummyEwolfNet {
 			System.out.println("done\n");
 		}
 
-		//FIXME for testing purposes only
-		SocialFS sfs1 = injectors.get(0).getInstance(SocialFS.class);
-		UserID uid1 = sfs1.getCredentials().getProfile().getUserId();
-		System.out.println("UserID = "+ uid1.toString());
-		System.out.println("Profile = "+ sfs1.getCredentials().getProfile().toString());
-		
 		EwolfConfigurations configurations1 = 
 				ServerResources.getConfigurations(EWOLF_CONFIG_1);
 		ServerModule serverModule1 = new ServerModule(SERVER_PORT_1);
@@ -118,6 +110,65 @@ public class DummyEwolfNet {
 		EwolfServer server2 = new EwolfServer(configurations2, serverModule2);
 		server2.initEwolf();
 		
-		System.out.println("Server test is resdy...");
+		System.out.println("Server test is ready...");
+
+//		List<SocialFS> sfsList = new ArrayList<SocialFS>();
+//		List<UserID> userIDList = new ArrayList<UserID>();
+//		List<String> strUidList = new ArrayList<String>();
+//		List<Profile> profileList = new ArrayList<Profile>();
+//		List<SocialMail> smailsList = new ArrayList<SocialMail>();
+//		List<WolfPackLeader> wolfpackLeadersList = new ArrayList<WolfPackLeader>();
+//		List<SocialNetwork> socNetsList = new ArrayList<SocialNetwork>();
+//		List<TextPost> textPostsList = new ArrayList<TextPost>();
+//		
+//		for (int i=0; i<injectors.size(); i++) {
+//			sfsList.add(i, injectors.get(i).getInstance(SocialFS.class));
+//			profileList.add(i, sfsList.get(i).getCredentials().getProfile());
+//			userIDList.add(i, profileList.get(i).getUserId());
+//			strUidList.add(i, userIDList.get(i).toString());
+//			smailsList.add(i, injectors.get(i).getInstance(SocialMail.class));
+//			wolfpackLeadersList.add(i, injectors.get(i).getInstance(WolfPackLeader.class));
+//			socNetsList.add(i, injectors.get(i).getInstance(SocialNetwork.class));
+//			textPostsList.add(i, injectors.get(i).getInstance(TextPost.class));
+//		}
+//		
+//		UserIDFactory userIDFactory = injectors.get(0).getInstance(UserIDFactory.class);
+//		UserID uid = userIDFactory.getFromBase64(EwolfServer.userID);
+//		Profile profile = sfsList.get(0).findProfile(uid);
+//		
+//		//send messages to main user
+//		ContentMessage[] messages = new ContentMessage[5];
+//		for (int i=0; i<injectors.size(); i++) {
+//			SocialMail sm = smailsList.get(i);
+//			String strUid = strUidList.get(i);
+//			for (int j=0; j<5; j++) {
+//				messages[i] = sm.createContentMessage().setMessage(strUid + ": msg " + j);
+//				sm.send(messages[i], profile);
+//			}
+//		}
+//		//post messages to main user
+//		for (int i=0; i<injectors.size(); i++) {
+//			WolfPackLeader sgm = wolfpackLeadersList.get(i);
+//			WolfPack friends = sgm.findOrCreateSocialGroup("friends").addMember(profile);
+//			//main user SHOULDN't get posts to enemies 
+//			WolfPack enemies = sgm.findOrCreateSocialGroup("enemies");
+//			sgm.findSocialGroup("wall-readers").addMember(profile);
+//			
+//			SocialNetwork sn = socNetsList.get(i);
+//			String strUid = strUidList.get(i);
+//			Post[] posts = new Post[5];
+//			//send posts to friends
+//			for (int j=0; j<5; j++) {				 
+//				posts[i] = textPostsList.get(i)
+//						.setText("Post to friends: post " + j + "from " + strUid);
+//				sn.getWall().publish(posts[i], friends);
+//			}
+//			//send posts to enemies (main user SHOULDN't get them)
+//			for (int j=0; j<5; j++) {				 
+//				posts[i] = textPostsList.get(i)
+//						.setText("Post to enemies: post " + j + "from " + strUid);
+//				sn.getWall().publish(posts[i], enemies);
+//			}
+//		}
 	}
 }
