@@ -36,10 +36,8 @@ public class DummyEwolfNet {
 	private static final int BASE_PORT = 10100;
 	
 	private static final String EWOLF_CONFIG_1 = "/ewolf.config.properties";
-	private static final String SERVER_PORT_1 = "10000";
 	
 	private static final String EWOLF_CONFIG_2 = "/ewolf2.config.properties";
-	private static final String SERVER_PORT_2 = "10200";
 
 	public static void main(String[] args) throws Exception {
 		List<Injector> injectors = new LinkedList<Injector>();
@@ -107,16 +105,14 @@ public class DummyEwolfNet {
 
 		EwolfConfigurations configurations1 = 
 				ServerResources.getConfigurations(EWOLF_CONFIG_1);
-		ServerModule serverModule1 = new ServerModule(SERVER_PORT_1);
 		
-		EwolfServer server1 = new EwolfServer(configurations1, serverModule1);
+		EwolfServer server1 = new EwolfServer(configurations1);
 		server1.initEwolf();
 		
 		EwolfConfigurations configurations2 = 
 				ServerResources.getConfigurations(EWOLF_CONFIG_2);
-		ServerModule serverModule2 = new ServerModule(SERVER_PORT_2);
 		
-		EwolfServer server2 = new EwolfServer(configurations2, serverModule2);
+		EwolfServer server2 = new EwolfServer(configurations2);
 		server2.initEwolf();
 		
 		//user2

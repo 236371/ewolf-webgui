@@ -21,6 +21,7 @@ public class ServerResources {
 		String password;
 		String name;
 		List<URI> kbrURIs = new ArrayList<URI>();
+		int port;
 	}
 	
 	public static URL getResource(String name) {
@@ -28,7 +29,7 @@ public class ServerResources {
 	}
 	
 	public static EwolfConfigurations getConfigurations(String configurationFile) 
-			throws ConfigurationException, URISyntaxException {
+			throws ConfigurationException {
 		EwolfConfigurations configurations = new EwolfConfigurations();
 		
 		try {
@@ -37,10 +38,12 @@ public class ServerResources {
 			configurations.username = config.getString("username");
 			configurations.password = config.getString("password");
 			configurations.name = config.getString("name");
-			
+			configurations.port = config.getInt("port", 10000);
+
 			for (Object o: config.getList("kbr.urls")) {
 				configurations.kbrURIs.add(new URI((String)o));
 			}
+
 			if (configurations.username == null) {
 				//TODO get username/password from user, store to EWOLF_CONFIG and continue
 			}
@@ -51,7 +54,7 @@ public class ServerResources {
 		} catch (URISyntaxException e) {
 			e.printStackTrace();
 			System.out.println("String from configuration file could not be parsed as a URI");
-			throw e;
+			throw new ConfigurationException(e);
 		}
 		
 		return configurations;

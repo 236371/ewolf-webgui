@@ -33,33 +33,28 @@ import com.google.inject.Injector;
 public class EwolfServer {
 	
 	private static final String EWOLF_CONFIG = "/ewolf.config.properties";
-	private static final String SERVER_PORT = "10000";
 	
 	EwolfConfigurations configurations;
-	ServerModule serverModule;
 	
 	Injector itsInjector;
 	
 	HttpConnector connector;
 	
-	public EwolfServer(EwolfConfigurations configurations,
-			ServerModule serverModule) {
-		if(configurations == null || serverModule == null) {
+	public EwolfServer(EwolfConfigurations configurations) {
+		if(configurations == null) {
 			throw new IllegalArgumentException();
 		}
 		
 		this.configurations = configurations;
-		this.serverModule = serverModule;
 		
-		this.itsInjector = createInjector();		
+		this.itsInjector = createInjector();
 	}
 
 	public static void main(String[] args) throws Exception {		
 		EwolfConfigurations myServerConfigurations = 
 				ServerResources.getConfigurations(EWOLF_CONFIG);
-		ServerModule myServerModule = new ServerModule(SERVER_PORT);
 		
-		EwolfServer server = new EwolfServer(myServerConfigurations, myServerModule);
+		EwolfServer server = new EwolfServer(myServerConfigurations);
 		server.initEwolf();
 	}
 
@@ -110,18 +105,19 @@ public class EwolfServer {
 		.addHandler("sendMessage", itsInjector.getInstance(SendMessageHandler.class));
 	}
 
-	private Injector createInjector() {	
+	private Injector createInjector() {
+		String port = String.valueOf(configurations.port);
 		
 		return Guice.createInjector(
 
 				new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "20")
 					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-					.setProperty("openkad.seed", serverModule.getPort())
-					.setProperty("openkad.net.udp.port", serverModule.getPort()),
+					.setProperty("openkad.seed", port)
+					.setProperty("openkad.net.udp.port", port),
 					
 				new HttpConnectorModule()
-					.setProperty("httpconnector.net.port", serverModule.getPort()),
+					.setProperty("httpconnector.net.port", port),
 
 				new SimpleDHTModule(),
 					
@@ -141,9 +137,7 @@ public class EwolfServer {
 				
 				new EwolfAccountCreatorModule(),
 
-				new EwolfModule(),
-
-					serverModule
+				new EwolfModule()
 		);
 	}
 }
