@@ -14,6 +14,7 @@ import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
 import il.technion.ewolf.server.handlers.AddWolfpackMemberHandler;
 import il.technion.ewolf.server.handlers.CreateWolfpackHandler;
 import il.technion.ewolf.server.handlers.InboxFetcher;
+import il.technion.ewolf.server.handlers.JsonHandlerTest;
 import il.technion.ewolf.server.handlers.NewsFeedFetcher;
 import il.technion.ewolf.server.handlers.PostToNewsFeedHandler;
 import il.technion.ewolf.server.handlers.ProfileFetcher;
@@ -84,7 +85,8 @@ public class EwolfServer {
 	
 	private void registerConnectorHandlers() {
 		//ewolf resources handlers register
-		connector.register("/json*", createJsonHandler() );
+//		connector.register("/json*", createJsonHandler() );
+		connector.register("/json*", createJsonHandlerNew());
 
 		//server resources handlers register
 		connector.register("*", new JarResourceHandler());
@@ -92,6 +94,12 @@ public class EwolfServer {
 //				new ServerResourceFactory(ServerResources.getFileTypeMap())));
 	}
 	
+	private JsonHandlerNew createJsonHandlerNew() {
+		return new JsonHandlerNew()
+		.addHandler("test1", new JsonHandlerTest());
+		//.addHandler("inbox", handler)
+	}
+
 	private JsonHandler createJsonHandler() {
 		return new JsonHandler()
 		.addHandler("profile", itsInjector.getInstance(ProfileFetcher.class))
