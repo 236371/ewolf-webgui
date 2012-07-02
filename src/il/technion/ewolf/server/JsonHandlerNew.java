@@ -4,10 +4,8 @@ import il.technion.ewolf.server.handlers.JsonDataHandler;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
@@ -43,21 +41,19 @@ public class JsonHandlerNew implements HttpRequestHandler {
 		String jsonReqAsString = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 		JsonParser parser = new JsonParser();
         JsonObject jsonReq = parser.parse(jsonReqAsString).getAsJsonObject();
-        Set<Entry<String, JsonElement>> jsonReqAsSet = jsonReq.entrySet();
-        Iterator<Entry<String, JsonElement>> it = jsonReqAsSet.iterator();
-
+        
         JsonObject jsonRes = new JsonObject();
-        while (it.hasNext()) {
-        	Entry<String, JsonElement> jsonObject = it.next();
-        	String key = jsonObject.getKey();
+        for (Entry<String, JsonElement> obj : jsonReq.entrySet()) {
+        	String key = obj.getKey();
         	JsonDataHandler handler = handlers.get(key);
-        	if (handler == null) {
+        	if (handler != null) {
+        		JsonElement jsonElem = handler.handleData(obj.getValue());
+            	jsonRes.add(key, jsonElem);
+        	} else {
         		System.out.println("No handlers are registered to handle request with keyword " + key);
         		//TODO send response with Bad Request status
-        	}
-        	JsonElement jsonElem = handler.handleData(jsonObject.getValue());
-        	jsonRes.add(key, jsonElem);
-        }
+        	}        	
+		}
         
         Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
         String json = gson.toJson(jsonRes);
