@@ -96,7 +96,8 @@ public class EwolfServer {
 	
 	private JsonHandlerNew createJsonHandlerNew() {
 		return new JsonHandlerNew()
-		.addHandler("test1", new JsonHandlerTest());
+		.addHandler("test1", new JsonHandlerTest())
+		.addHandler("inbox", itsInjector.getInstance(InboxFetcher.class));
 		//.addHandler("inbox", handler)
 	}
 

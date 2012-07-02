@@ -13,6 +13,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 public class InboxFetcher implements JsonDataHandler {
@@ -22,13 +25,23 @@ public class InboxFetcher implements JsonDataHandler {
 	public InboxFetcher(SocialMail smail) {
 		this.smail = smail;
 	}
-	
-	class InboxMessage implements Comparable<InboxMessage>{
-		String senderID;
-		String senderName;
-		Long timestamp;
-		String message;
-		String className; //TODO field for tests, delete at the end
+	private class JsonReqInboxParams {
+		//The max amount of messages to retrieve.
+		Integer maxMessages;
+		//Time in milliseconds since 1970, to retrieve messages older than this date.
+		Long olderThan;
+		//Time in milliseconds since 1970, to retrieve messages newer than this date.
+		Long newerThan;
+		//User ID, to retrieve messages from a specific sender.
+		String fromSender;
+	}
+
+	@SuppressWarnings("unused")
+	private class InboxMessage implements Comparable<InboxMessage>{
+		private String senderID;
+		private String senderName;
+		private Long timestamp;
+		private String message;
 		
 		private InboxMessage(String senderID, String senderName, Long timestamp,
 				String message, String className) {
@@ -36,7 +49,6 @@ public class InboxFetcher implements JsonDataHandler {
 			this.senderName = senderName;
 			this.timestamp = timestamp;
 			this.message = message;
-			this.className = className;
 		}
 
 		@Override
@@ -46,27 +58,18 @@ public class InboxFetcher implements JsonDataHandler {
 	}
 
 	/**
-	 * @param	parameters	The method gets exactly 4 parameters for filtering inbox.
-	 * 			[0]:		The amount of messages to retrieve.
-	 * 			[1]:		Time in milliseconds since 1970, to retrieve messages older than this date.
-	 * 			[2]:		Time in milliseconds since 1970, to retrieve messages newer than this date.
-	 * 			[3]:		User ID, to retrieve messages from a specific sender.
-	 * @return	inbox list, each element contains sender ID, sender name, timestamp and message text,
-	 * sorted from newer date to older
+	 * @param	jsonReq serialized object of JsonReqInboxParams class
+	 * @return	array of JsonElements, each one is serialized object of InboxMessage class
 	 */
 	@Override
-	public Object handleData(String... parameters) {
-		if(parameters.length != 4) {
-			return null;
-		}
-
-		Integer filterNumOfMessages = (parameters[0].equals("null"))?null:Integer.valueOf(parameters[0]);
-		Long filterToDate = (parameters[1].equals("null"))?null:Long.valueOf(parameters[1]);
-		Long filterFromDate = (parameters[2].equals("null"))?null:Long.valueOf(parameters[2]);
-		String filterByUserId = parameters[3].equals("null")?null:parameters[3];
+	public JsonElement handleData(JsonElement jsonReq) {
+		Gson gson = new Gson();
+		//TODO handle JsonSyntaxException
+		JsonReqInboxParams jsonReqParams = gson.fromJson(jsonReq, JsonReqInboxParams.class);
 		
-		List<SocialMessage> messages = smail.readInbox();
 		List<InboxMessage> lst = new ArrayList<InboxMessage>();
+
+		List<SocialMessage> messages = smail.readInbox();
 		for (SocialMessage m : messages) {
 			//TODO make separate thread that accepts PokeMessages
 			Class<? extends SocialMessage> messageClass = m.getClass();
@@ -78,18 +81,20 @@ public class InboxFetcher implements JsonDataHandler {
 			Profile sender;
 			String senderID = null;
 			String senderName = null;
+
 			try {
 				sender = m.getSender();
 				senderID = sender.getUserId().toString();
 				senderName = sender.getName();
 			} catch (ProfileNotFoundException e) {
-				System.out.println("Sender of social message " + m.toString() + "not found");
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+
 			Long timestamp = m.getTimestamp();
-			if (filterByUserId==null || filterByUserId.equals(senderID)) {
-				if (filterFromDate==null || filterFromDate<=timestamp) {
-					if (filterToDate==null || filterToDate>=timestamp) {
+			if (jsonReqParams.fromSender==null || jsonReqParams.fromSender.equals(senderID)) {
+				if (jsonReqParams.newerThan==null || jsonReqParams.newerThan<=timestamp) {
+					if (jsonReqParams.olderThan==null || jsonReqParams.olderThan>=timestamp) {
 						lst.add(new InboxMessage(senderID, senderName, timestamp,
 								((ContentMessage)m).getMessage(), messageClass.getCanonicalName()));
 					}
@@ -99,11 +104,20 @@ public class InboxFetcher implements JsonDataHandler {
 		//sort by timestamp
 		Collections.sort(lst);
 		
-		if (filterNumOfMessages==null) {
-			return lst;
-		} else {
-			return (filterNumOfMessages<lst.size())?getFirstNElements(filterNumOfMessages, lst):lst;
+		List<InboxMessage> finalList = lst;
+		if (jsonReqParams.maxMessages!=null && jsonReqParams.maxMessages<lst.size()) {
+			finalList = getFirstNElements(jsonReqParams.maxMessages, lst);
 		}
+		return listToJsonArray(finalList);
+	}
+
+	private JsonArray listToJsonArray(List<InboxMessage> lst) {
+		JsonArray jsonArray = new JsonArray();
+		Gson gson = new Gson();
+		for (InboxMessage m: lst) {
+			jsonArray.add(gson.toJsonTree(m));
+		}
+		return jsonArray;
 	}
 	
 	private <T> List<T> getFirstNElements(int n, List<T> list) {

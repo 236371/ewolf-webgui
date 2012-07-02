@@ -29,10 +29,6 @@ import com.google.gson.JsonParser;
 public class JsonHandlerNew implements HttpRequestHandler {
 	private Map<String,JsonDataHandler> handlers = new HashMap<String,JsonDataHandler>();
 
-	public JsonHandlerNew() {
-		// TODO Auto-generated constructor stub
-	}
-
 	public JsonHandlerNew addHandler(String key, JsonDataHandler handler) {
 		handlers.put(key, handler);
 		return this;
