@@ -30,6 +30,9 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 		JsonReqCreateWolfpackParams jsonReqParams =
 				gson.fromJson(jsonReq, JsonReqCreateWolfpackParams.class);
 
+		if (jsonReqParams.wolfpackName == null) {
+			return "Must specify wolfpack name.";
+		}
 		if (socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName) != null) {
 			return "wolfpack already exists";
 		}

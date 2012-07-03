@@ -46,6 +46,10 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		//TODO handle JsonSyntaxException
 		JsonReqPostToNewsFeedParams jsonReqParams =
 				gson.fromJson(jsonReq, JsonReqPostToNewsFeedParams.class);
+		if (jsonReqParams.wolfpackName == null || jsonReqParams.post == null) {
+			return "Must specify both wolfpack name and post text";
+		}
+
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
 			return WOLFPACK_NOT_FOUND_MESSAGE;

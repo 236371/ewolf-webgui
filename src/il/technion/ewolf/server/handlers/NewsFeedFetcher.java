@@ -17,6 +17,7 @@ import il.technion.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
+import il.technion.ewolf.server.exceptions.BadRequestException;
 import il.technion.ewolf.server.exceptions.InternalEwolfErrorException;
 import il.technion.ewolf.server.exceptions.NotFoundException;
 import il.technion.ewolf.socialfs.Profile;
@@ -93,14 +94,18 @@ public class NewsFeedFetcher implements JsonDataHandler {
 	 * @return	list of posts, each contains post ID, sender ID, sender name, timestamp and post text
 	 * @throws InternalEwolfErrorException 
 	 * @throws NotFoundException 
+	 * @throws BadRequestException 
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) throws InternalEwolfErrorException, NotFoundException {
+	public Object handleData(JsonElement jsonReq) throws InternalEwolfErrorException, NotFoundException, BadRequestException {
 		Gson gson = new Gson();
 		//TODO handle JsonSyntaxException
 		JsonReqNewsFeedParams jsonReqParams = gson.fromJson(jsonReq, JsonReqNewsFeedParams.class);
 		
 		List<Post> posts = null;
+		if (jsonReqParams.newsOf == null) {
+			throw new BadRequestException("Must specify whose news feed to fetch.");
+		}
 		if (jsonReqParams.newsOf.equals("user")) {
 			posts = fetchPostsForUser(jsonReqParams.userID);
 		} else if (jsonReqParams.newsOf.equals("wolfpack")) {
