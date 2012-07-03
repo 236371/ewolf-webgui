@@ -42,7 +42,7 @@ public class DummyEwolfNet {
 	public static void main(String[] args) throws Exception {
 		List<Injector> injectors = new LinkedList<Injector>();
 
-		for (int i=0; i < 5; ++i) {
+		for (int i=0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
 						.setProperty("openkad.keyfactory.keysize", "20")
