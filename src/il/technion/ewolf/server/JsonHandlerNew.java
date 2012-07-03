@@ -1,5 +1,6 @@
 package il.technion.ewolf.server;
 
+import il.technion.ewolf.server.exceptions.BadRequestException;
 import il.technion.ewolf.server.exceptions.HandlerException;
 import il.technion.ewolf.server.exceptions.InternalEwolfErrorException;
 import il.technion.ewolf.server.exceptions.NotFoundException;
@@ -63,10 +64,13 @@ public class JsonHandlerNew implements HttpRequestHandler {
         		} catch (InternalEwolfErrorException e) {
         			// TODO Auto-generated catch block
         			e.printStackTrace();
+        		} catch (BadRequestException e) {
+        			// TODO Auto-generated catch block
+        			e.printStackTrace();
         		} catch (HandlerException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+        			// TODO Auto-generated catch block
+        			e.printStackTrace();
+        		}
         	} else {
         		System.out.println("No handlers are registered to handle request " +
         				"with keyword " + key);
