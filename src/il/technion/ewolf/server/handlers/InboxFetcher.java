@@ -103,16 +103,5 @@ public class InboxFetcher implements JsonDataHandler {
 		}
 		
 		return lst;
-		//return listToJsonArray(lst);
 	}
-
-//	private JsonArray listToJsonArray(List<InboxMessage> lst) {
-//		JsonArray jsonArray = new JsonArray();
-//		Gson gson = new Gson();
-//
-//		for (InboxMessage m: lst) {
-//			jsonArray.add(gson.toJsonTree(m));
-//		}
-//		return jsonArray;
-//	}
 }
