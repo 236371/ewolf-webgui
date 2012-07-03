@@ -102,18 +102,6 @@ public class EwolfServer {
 		.addHandler("newsFeed", itsInjector.getInstance(NewsFeedFetcher.class))
 		.addHandler("createWolfpack", itsInjector.getInstance(CreateWolfpackHandler.class))
 		.addHandler("addWolfpackMember", itsInjector.getInstance(AddWolfpackMemberHandler.class))
-		.addHandler("post", itsInjector.getInstance(PostToNewsFeedHandler.class));
-	}
-
-	private JsonHandler createJsonHandler() {
-		return new JsonHandler()
-		.addHandler("profile", itsInjector.getInstance(ProfileFetcher.class))
-		.addHandler("wolfpacks", itsInjector.getInstance(WolfpacksFetcher.class))
-		.addHandler("wolfpackMembers", itsInjector.getInstance(WolfpackMembersFetcher.class))
-		.addHandler("inbox", itsInjector.getInstance(InboxFetcher.class))
-		.addHandler("newsFeed", itsInjector.getInstance(NewsFeedFetcher.class))
-		.addHandler("createWolfpack", itsInjector.getInstance(CreateWolfpackHandler.class))
-		.addHandler("addWolfpackMember", itsInjector.getInstance(AddWolfpackMemberHandler.class))
 		.addHandler("post", itsInjector.getInstance(PostToNewsFeedHandler.class))
 		.addHandler("sendMessage", itsInjector.getInstance(SendMessageHandler.class));
 	}

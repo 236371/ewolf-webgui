@@ -8,6 +8,8 @@ import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 public class SendMessageHandler implements JsonDataHandler {
@@ -22,39 +24,40 @@ public class SendMessageHandler implements JsonDataHandler {
 		this.userIDFactory = userIDFactory;
 	}
 
+	private class JsonReqSendMessageParams {
+		String userID;
+		//message text
+		String message;
+	}
+
+	//response error messages
+	private static final String PROFILE_NOT_FOUND_MESSAGE = "user not found";
+
 	/**
-	 * @param	parameters	The method gets exactly 2 parameters.
-	 * 						[0]:		user ID
-	 * 						[1]:		post text
+	 * @param	jsonReq	serialized object of JsonReqSendMessageParams class
 	 * @return	"success" or error message
 	 */
 	@Override
-	public Object handleData(String... parameters) {
-		if(parameters.length < 2) {
-			return "Must specify a user id and a message body.";
+	public Object handleData(JsonElement jsonReq) {
+		Gson gson = new Gson();
+		//TODO handle JsonSyntaxException
+		JsonReqSendMessageParams jsonReqParams =
+				gson.fromJson(jsonReq, JsonReqSendMessageParams.class);
+
+		if (jsonReqParams.message == null || jsonReqParams.userID == null) {
+			return "Must specify both user ID and message body.";
 		}
-		
-		String strUid = parameters[0];
-		String text = parameters[1];
-		
-		if(strUid.isEmpty()) {
-			return "Must specify a user id.";
-		}
-		
-		if(text.isEmpty()) {
-			return "Must specify a message body.";
-		}
-		
-		UserID uid = userIDFactory.getFromBase64(strUid);
+
+		UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
 		Profile profile;
 		try {
 			profile = socialFS.findProfile(uid);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
-			return e.toString();
+			return PROFILE_NOT_FOUND_MESSAGE;
 		}
 		
-		ContentMessage msg = smail.createContentMessage().setMessage(text);
+		ContentMessage msg = smail.createContentMessage().setMessage(jsonReqParams.message);
 		smail.send(msg, profile);
 		return "success";
 	}
