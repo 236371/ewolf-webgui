@@ -3,7 +3,7 @@ package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.WolfPack;
 import il.technion.ewolf.WolfPackLeader;
-import il.technion.ewolf.server.exceptions.NotFound;
+import il.technion.ewolf.server.exceptions.NotFoundException;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -37,10 +37,10 @@ public class WolfpacksFetcher implements JsonDataHandler {
 	/**
 	 * @param	jsonReq	serialized object of JsonReqWolfpacksParams class
 	 * @return	list of all social groups (wolfpacks) names, the user has access to them
-	 * @throws NotFound 
+	 * @throws NotFoundException 
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) throws NotFound {
+	public Object handleData(JsonElement jsonReq) throws NotFoundException {
 		Gson gson = new Gson();
 		//TODO handle JsonSyntaxException
 		JsonReqWolfpacksParams jsonReqParams = gson.fromJson(jsonReq, JsonReqWolfpacksParams.class);
@@ -62,7 +62,7 @@ public class WolfpacksFetcher implements JsonDataHandler {
 					}
 				}
 			} catch (ProfileNotFoundException e) {
-				throw new NotFound(e);
+				throw new NotFoundException(e);
 			}
 		}
 		return groups;
