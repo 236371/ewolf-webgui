@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.List;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
@@ -34,22 +33,20 @@ public class InboxFetcher implements JsonDataHandler {
 		Long newerThan;
 		//User ID, to retrieve messages from a specific sender.
 		String fromSender;
+		
+		public boolean isMatchCriteria(InboxMessage msg) {
+			return 	(fromSender == null || fromSender.equals(msg.senderID)) &&
+					(newerThan == null || newerThan <= msg.timestamp) &&
+					(olderThan == null || olderThan >= msg.timestamp);
+		}
 	}
 
 	@SuppressWarnings("unused")
 	private class InboxMessage implements Comparable<InboxMessage>{
-		private String senderID;
-		private String senderName;
-		private Long timestamp;
-		private String message;
-		
-		private InboxMessage(String senderID, String senderName, Long timestamp,
-				String message, String className) {
-			this.senderID = senderID;
-			this.senderName = senderName;
-			this.timestamp = timestamp;
-			this.message = message;
-		}
+		public String senderID;
+		public String senderName;
+		public Long timestamp;
+		public String message;
 
 		@Override
 		public int compareTo(InboxMessage o) {
@@ -66,8 +63,8 @@ public class InboxFetcher implements JsonDataHandler {
 		Gson gson = new Gson();
 		//TODO handle JsonSyntaxException
 		JsonReqInboxParams jsonReqParams = gson.fromJson(jsonReq, JsonReqInboxParams.class);
-		
-		List<InboxMessage> lst = new ArrayList<InboxMessage>();
+				
+		List<InboxMessage> lst = new ArrayList<InboxMessage>();			
 
 		List<SocialMessage> messages = smail.readInbox();
 		for (SocialMessage m : messages) {
@@ -77,54 +74,45 @@ public class InboxFetcher implements JsonDataHandler {
 				((PokeMessage)m).accept();
 				continue;
 			}
-			
-			Profile sender;
-			String senderID = null;
-			String senderName = null;
+				
+			InboxMessage msg = new InboxMessage();
 
 			try {
-				sender = m.getSender();
-				senderID = sender.getUserId().toString();
-				senderName = sender.getName();
+				Profile sender = m.getSender();
+				msg.senderID = sender.getUserId().toString();
+				msg.senderName = sender.getName();
 			} catch (ProfileNotFoundException e) {
-				// TODO Auto-generated catch block
+				// TODO What should we do here?
+				// XXX Why should this happen anyway?
 				e.printStackTrace();
 			}
 
-			Long timestamp = m.getTimestamp();
-			if (jsonReqParams.fromSender==null || jsonReqParams.fromSender.equals(senderID)) {
-				if (jsonReqParams.newerThan==null || jsonReqParams.newerThan<=timestamp) {
-					if (jsonReqParams.olderThan==null || jsonReqParams.olderThan>=timestamp) {
-						lst.add(new InboxMessage(senderID, senderName, timestamp,
-								((ContentMessage)m).getMessage(), messageClass.getCanonicalName()));
-					}
-				}
+			msg.timestamp = m.getTimestamp();
+			
+			if(jsonReqParams.isMatchCriteria(msg)) {
+				msg.message = ((ContentMessage)m).getMessage();
+				// msg.className = messageClass.getCanonicalName();
+				lst.add(msg);
 			}
 		}
 		//sort by timestamp
-		Collections.sort(lst);
+		Collections.sort(lst);	
 		
-		List<InboxMessage> finalList = lst;
-		if (jsonReqParams.maxMessages!=null && jsonReqParams.maxMessages<lst.size()) {
-			finalList = getFirstNElements(jsonReqParams.maxMessages, lst);
+		if (jsonReqParams.maxMessages != null) {
+			lst = lst.subList(0, jsonReqParams.maxMessages);
 		}
-		return listToJsonArray(finalList);
+		
+		return	new Gson().toJsonTree(lst); // Exactly the same as below
+		//return listToJsonArray(lst);
 	}
 
-	private JsonArray listToJsonArray(List<InboxMessage> lst) {
-		JsonArray jsonArray = new JsonArray();
-		Gson gson = new Gson();
-		for (InboxMessage m: lst) {
-			jsonArray.add(gson.toJsonTree(m));
-		}
-		return jsonArray;
-	}
-	
-	private <T> List<T> getFirstNElements(int n, List<T> list) {
-		List<T> newList = new ArrayList<T>();
-		for (int i=0; i<n; i++) {
-			newList.add(list.get(i));
-		}
-		return newList;		
-	}
+//	private JsonArray listToJsonArray(List<InboxMessage> lst) {
+//		JsonArray jsonArray = new JsonArray();
+//		Gson gson = new Gson();
+//
+//		for (InboxMessage m: lst) {
+//			jsonArray.add(gson.toJsonTree(m));
+//		}
+//		return jsonArray;
+//	}
 }
