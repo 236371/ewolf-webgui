@@ -29,10 +29,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-public class JsonHandlerNew implements HttpRequestHandler {
+public class JsonHandler implements HttpRequestHandler {
 	private Map<String,JsonDataHandler> handlers = new HashMap<String,JsonDataHandler>();
 
-	public JsonHandlerNew addHandler(String key, JsonDataHandler handler) {
+	public JsonHandler addHandler(String key, JsonDataHandler handler) {
 		handlers.put(key, handler);
 		return this;
 	}

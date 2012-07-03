@@ -92,8 +92,8 @@ public class EwolfServer {
 //				new ServerResourceFactory(ServerResources.getFileTypeMap())));
 	}
 	
-	private JsonHandlerNew createJsonHandlerNew() {
-		return new JsonHandlerNew()
+	private JsonHandler createJsonHandlerNew() {
+		return new JsonHandler()
 		.addHandler("inbox", itsInjector.getInstance(InboxFetcher.class))
 		.addHandler("wolfpacks", itsInjector.getInstance(WolfpacksFetcher.class))
 		.addHandler("profile", itsInjector.getInstance(ProfileFetcher.class))
