@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 import il.technion.ewolf.SocialNetwork;
@@ -15,6 +17,8 @@ import il.technion.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
+import il.technion.ewolf.server.exceptions.InternalEwolfErrorException;
+import il.technion.ewolf.server.exceptions.NotFoundException;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -34,20 +38,48 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		this.userIDFactory = userIDFactory;
 		this.snet = snet;
 	}
-	
+
+	private class JsonReqNewsFeedParams {
+		//Request type: "user" or "wolfpack"
+		String newsOf;
+		/* The wolfpackName field will be ignored if "newsOf == user",
+		 * otherwise
+		 * 		if "wolfpackName" field is present then the response will contain
+		 * 			all posts made by all the members of the given wolfpack,
+		 * 		else ("wolfpackName" field isn't present) the response will contain
+		 * 			all the posts readable for the "logged in" user (made by all
+		 * 			members from all the “logged in” user wolfpacks).
+		 */
+		String wolfpackName;
+		/* The userID field will be ignored if "newsOf == wolfpack",
+		 * otherwise
+		 * 		if "userID" field is present then the response will contain
+		 * 			all the posts of the given user,
+		 * 		else ("userID" field isn't present) the response will contain
+		 * 			all the posts made by the “logged in” user.
+		 */
+		String userID;
+		//The max amount of posts to retrieve.
+		Integer maxMessages;
+		//Time in milliseconds since 1970, to retrieve posts older than this date.
+		Long olderThan;
+		//Time in milliseconds since 1970, to retrieve posts newer than this date.
+		Long newerThan;
+	}
+
 	class PostData implements Comparable<PostData>{
 		String postID;
 		String senderID;
 		String senderName;
 		Long timestamp;
-		String text;
+		String post;
 		
-		PostData(String postID, String senderID, String senderName, Long timestamp, String text) {
+		PostData(String postID, String senderID, String senderName, Long timestamp, String post) {
 			this.postID = postID;
 			this.senderID = senderID;
 			this.senderName = senderName;
 			this.timestamp = timestamp;
-			this.text = text;
+			this.post = post;
 		}
 
 		@Override
@@ -56,48 +88,43 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		}
 	}
 
-	//FIXME wolfpack name can be "all"!!!
 	/**
-	 * @param	parameters	The method gets exactly 5 parameters for filtering news-feed.
-	 * 			[0]:		Request type: "userID" or "wolfpack".
-	 * 			[1]:		For request type "userID": user ID or "my" 
-	 * 							(to retrieve posts from a specific user), 
-	 * 						for request type "wolfpack": wolfpack name or "all" 
-	 * 							(to retrieve posts from specific wolfpack or from all wolfpacks).
-	 * 			[2]:		The amount of posts to retrieve.
-	 * 			[3]:		Time in milliseconds since 1970, to retrieve posts older than this date.
-	 * 			[4]:		Time in milliseconds since 1970, to retrieve posts newer than this date.  
+	 * @param	jsonReq	serialized object of JsonReqNewsFeedParams class  
 	 * @return	list of posts, each contains post ID, sender ID, sender name, timestamp and post text
+	 * @throws InternalEwolfErrorException 
+	 * @throws NotFoundException 
 	 */
 	@Override
-	public Object handleData(String... parameters) throws ProfileNotFoundException, FileNotFoundException, WallNotFound {
-		if(parameters.length != 5) {
-			return null;
+	public Object handleData(JsonElement jsonReq) throws InternalEwolfErrorException, NotFoundException {
+		Gson gson = new Gson();
+		//TODO handle JsonSyntaxException
+		JsonReqNewsFeedParams jsonReqParams = gson.fromJson(jsonReq, JsonReqNewsFeedParams.class);
+		
+		List<Post> posts = null;
+		if (jsonReqParams.newsOf.equals("user")) {
+			posts = fetchPostsForUser(jsonReqParams.userID);
+		} else if (jsonReqParams.newsOf.equals("wolfpack")) {
+			posts = fetchPostsForWolfpack(jsonReqParams.wolfpackName);
+		} else {
+			//TODO throw Bad Request?
+//			throw new IllegalArgumentException(NewsFeedFetcher.class.getCanonicalName() + 
+//					": request type should be either \"userID\" or \"wolfpack\"");
 		}
 
-		Integer filterNumOfPosts = (parameters[2].equals("null"))?null:Integer.valueOf(parameters[0]);
-		Long filterToDate = (parameters[3].equals("null"))?null:Long.valueOf(parameters[1]);
-		Long filterFromDate = (parameters[4].equals("null"))?null:Long.valueOf(parameters[2]);
-		String requestInfo = parameters[1];		
-		String requestType = parameters[0];
-		
-		List<Post> posts;
-		if (requestType.equals("userID")) {
-			posts = fetchPostsForUser(requestInfo);
-		} else if (requestType.equals("wolfpack")) {
-			posts = fetchPostsForWolfpack(requestInfo);
-		} else {
-			throw new IllegalArgumentException(NewsFeedFetcher.class.getCanonicalName() + 
-					": request type should be either \"userID\" or \"wolfpack\"");
-		}
-		return filterPosts(posts, filterNumOfPosts, filterFromDate, filterToDate);
+		return filterPosts(posts, jsonReqParams.maxMessages, jsonReqParams.newerThan,
+				jsonReqParams.olderThan);
 	}
 
 	private Object filterPosts(List<Post> posts, Integer filterNumOfPosts,
-			Long filterFromDate, Long filterToDate) throws ProfileNotFoundException {
+			Long filterFromDate, Long filterToDate) {
 		List<PostData> lst = new ArrayList<PostData>();
 		for (Post post: posts) {
-			Profile postOwner = post.getOwner();
+			Profile postOwner;
+			try {
+				postOwner = post.getOwner();
+			} catch (ProfileNotFoundException e) {
+				postOwner = null;
+			}
 			Long timestamp = post.getTimestamp();
 			if (filterFromDate==null || filterFromDate<=timestamp) {
 				if (filterToDate==null || filterToDate>=timestamp) {
@@ -109,24 +136,15 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		//sort by timestamp
 		Collections.sort(lst);
 		
-		if (filterNumOfPosts==null) {
-			return lst;
-		} else {
-			return (filterNumOfPosts<lst.size())?getFirstNElements(filterNumOfPosts, lst):lst;
+		if (filterNumOfPosts != null && lst.size() > filterNumOfPosts) {
+			lst = lst.subList(0, filterNumOfPosts);
 		}
-	}
-	
-	private <T> List<T> getFirstNElements(int n, List<T> list) {
-		List<T> newList = new ArrayList<T>();
-		for (int i=0; i<n; i++) {
-			newList.add(list.get(i));
-		}
-		return newList;		
+		return lst;
 	}
 
-	private List<Post> fetchPostsForWolfpack(String socialGroupName) throws FileNotFoundException, WallNotFound, ProfileNotFoundException {
+	private List<Post> fetchPostsForWolfpack(String socialGroupName) throws InternalEwolfErrorException {
 		List<WolfPack> wolfpacks = new ArrayList<WolfPack>();
-		if (socialGroupName.equals("all")) {
+		if (socialGroupName==null) {
 			wolfpacks = socialGroupsManager.getAllSocialGroups();
 		} else {
 			wolfpacks.add(socialGroupsManager.findSocialGroup(socialGroupName));
@@ -140,13 +158,17 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return fetchPostsForProfiles(profiles);
 	}
 
-	private List<Post> fetchPostsForUser(String strUid) throws ProfileNotFoundException, FileNotFoundException, WallNotFound {
+	private List<Post> fetchPostsForUser(String strUid) throws InternalEwolfErrorException, NotFoundException {
 		Profile profile;
-		if (strUid.equals("my")) {
+		if (strUid==null) {
 			profile = socialFS.getCredentials().getProfile();
 		} else {
 			UserID uid = userIDFactory.getFromBase64(strUid);
-			profile = socialFS.findProfile(uid);			
+			try {
+				profile = socialFS.findProfile(uid);
+			} catch (ProfileNotFoundException e) {
+				throw new NotFoundException(e);
+			}			
 		}
 
 		Set<Profile> profiles = new HashSet<Profile>();
@@ -154,10 +176,16 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return fetchPostsForProfiles(profiles);
 	}
 
-	private List<Post> fetchPostsForProfiles(Set<Profile> profiles) throws FileNotFoundException, WallNotFound, ProfileNotFoundException {
+	private List<Post> fetchPostsForProfiles(Set<Profile> profiles) throws InternalEwolfErrorException {
 		List<Post> posts = new ArrayList<Post>();
 		for (Profile profile: profiles) {
-			posts.addAll(snet.getWall(profile).getAllPosts());
+			try {
+				posts.addAll(snet.getWall(profile).getAllPosts());
+			} catch (FileNotFoundException e) {
+				throw new InternalEwolfErrorException(e);
+			} catch (WallNotFound e) {
+				throw new InternalEwolfErrorException(e);
+			}
 		}		
 		return posts;
 	}

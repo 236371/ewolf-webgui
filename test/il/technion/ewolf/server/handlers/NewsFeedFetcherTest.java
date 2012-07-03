@@ -169,7 +169,7 @@ public class NewsFeedFetcherTest {
 		for (int i=0; i<10; i++) {
 			PostData post = lst.get(i);
 			Assert.assertEquals(uid1.toString(), post.senderID);
-			Assert.assertEquals("post " + (9-i), post.text);
+			Assert.assertEquals("post " + (9-i), post.post);
 		}
 
 	}
