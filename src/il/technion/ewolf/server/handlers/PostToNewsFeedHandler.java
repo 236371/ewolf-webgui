@@ -31,9 +31,10 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		//post text
 		String post;
 	}
-	
+
+	//response error messages
 	private static final String INTERNAL_ERROR_MESSAGE = "internal error";
-	private static final String WOLFPACK_NOT_FOUND = "wolfpack not found";
+	private static final String WOLFPACK_NOT_FOUND_MESSAGE = "wolfpack not found";
 
 	/**
 	 * @param	jsonReq	serialized object of JsonReqCreateWolfpackParams class
@@ -47,7 +48,7 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 				gson.fromJson(jsonReq, JsonReqPostToNewsFeedParams.class);
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
-			return WOLFPACK_NOT_FOUND;
+			return WOLFPACK_NOT_FOUND_MESSAGE;
 		}
 
 		try {
@@ -55,7 +56,7 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		} catch (GroupNotFoundException e) {
 			System.out.println("Wolfpack " + socialGroup + " not found");
 			e.printStackTrace();
-			return WOLFPACK_NOT_FOUND;
+			return WOLFPACK_NOT_FOUND_MESSAGE;
 		} catch (WallNotFound e) {
 			System.out.println("Wall not found");
 			e.printStackTrace();

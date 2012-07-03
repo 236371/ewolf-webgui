@@ -9,6 +9,8 @@ import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 
@@ -25,37 +27,46 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 		this.userIDFactory = userIDFactory;
 	}
 
+	private class JsonReqAddWolfpackMemberParams {
+		String wolfpackName;
+		String userID;
+	}
+
+	//response error messages
+	private static final String PROFILE_NOT_FOUND_MESSAGE = "user not found";
+	private static final String INTERNAL_ERROR_MESSAGE = "internal error";
+	private static final String WOLFPACK_NOT_FOUND_MESSAGE = "wolfpack not found";
+
 	/**
-	 * @param	parameters	The method gets exactly 2 parameters.
-	 * 						[0]:		wolfpack name
-	 * 						[1]:		user ID
+	 * @param	jsonReq	serialized object of JsonReqAddWolfpackMemberParams class
 	 * @return	"success" or error message
 	 */
 	@Override
-	public Object handleData(String... parameters) {
-		if(parameters.length != 2) {
-			return null;
-		}
+	public Object handleData(JsonElement jsonReq) {
+		Gson gson = new Gson();
+		//TODO handle JsonSyntaxException
+		JsonReqAddWolfpackMemberParams jsonReqParams =
+				gson.fromJson(jsonReq, JsonReqAddWolfpackMemberParams.class);
 		
-		String strUid = parameters[1];
-		UserID uid = userIDFactory.getFromBase64(strUid);
+		UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
 		Profile profile;
 		try {
 			profile = socialFS.findProfile(uid);
 		} catch (ProfileNotFoundException e) {
+			System.out.println("");
 			e.printStackTrace();
-			return e.toString();
+			return PROFILE_NOT_FOUND_MESSAGE;
 		}
-		String groupName = parameters[0];
-		WolfPack socialGroup = socialGroupsManager.findSocialGroup(groupName);
+
+		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
-			return "wolfpack not found";
+			return WOLFPACK_NOT_FOUND_MESSAGE;
 		}
 		try {
 			socialGroup.addMember(profile);
 		} catch (GroupNotFoundException e) {
 			e.printStackTrace();
-			return e.toString();
+			return INTERNAL_ERROR_MESSAGE;
 		}
 		
 		return "success";
