@@ -24,6 +24,7 @@ public class InboxFetcher implements JsonDataHandler {
 	public InboxFetcher(SocialMail smail) {
 		this.smail = smail;
 	}
+
 	private class JsonReqInboxParams {
 		//The max amount of messages to retrieve.
 		Integer maxMessages;
@@ -56,7 +57,8 @@ public class InboxFetcher implements JsonDataHandler {
 
 	/**
 	 * @param	jsonReq serialized object of JsonReqInboxParams class
-	 * @return	array of JsonElements, each one is serialized object of InboxMessage class
+	 * @return	inbox list, each element contains sender ID, sender name,
+	 * 			timestamp and message text, sorted from newer date to older
 	 */
 	@Override
 	public Object handleData(JsonElement jsonReq) {
@@ -76,22 +78,19 @@ public class InboxFetcher implements JsonDataHandler {
 			}
 				
 			InboxMessage msg = new InboxMessage();
-
 			try {
 				Profile sender = m.getSender();
 				msg.senderID = sender.getUserId().toString();
 				msg.senderName = sender.getName();
 			} catch (ProfileNotFoundException e) {
-				// TODO What should we do here?
-				// XXX Why should this happen anyway?
+				msg.senderID = null;
+				msg.senderName = null;
 				e.printStackTrace();
 			}
-
 			msg.timestamp = m.getTimestamp();
 			
 			if(jsonReqParams.isMatchCriteria(msg)) {
 				msg.message = ((ContentMessage)m).getMessage();
-				// msg.className = messageClass.getCanonicalName();
 				lst.add(msg);
 			}
 		}
