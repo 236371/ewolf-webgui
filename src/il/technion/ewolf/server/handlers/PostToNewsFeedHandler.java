@@ -9,6 +9,8 @@ import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
 import java.io.FileNotFoundException;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 public class PostToNewsFeedHandler implements JsonDataHandler {
@@ -23,39 +25,45 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		this.socialGroupsManager = socialGroupsManager;
 		this.textPost = textPost;
 	}
+	
+	private class JsonReqPostToNewsFeedParams {
+		String wolfpackName;
+		//post text
+		String post;
+	}
+	
+	private static final String INTERNAL_ERROR_MESSAGE = "internal error";
+	private static final String WOLFPACK_NOT_FOUND = "wolfpack not found";
 
 	/**
-	 * @param	parameters	The method gets exactly 2 parameters.
-	 * 						[0]:		wolfpack name
-	 * 						[1]:		post text
+	 * @param	jsonReq	serialized object of JsonReqCreateWolfpackParams class
 	 * @return	"success" or error message
 	 */
 	@Override
-	public Object handleData(String... parameters) {
-		if(parameters.length != 2) {
-			return null;
-		}
-		
-		WolfPack socialGroup = socialGroupsManager.findSocialGroup(parameters[0]);
+	public Object handleData(JsonElement jsonReq) {
+		Gson gson = new Gson();
+		//TODO handle JsonSyntaxException
+		JsonReqPostToNewsFeedParams jsonReqParams =
+				gson.fromJson(jsonReq, JsonReqPostToNewsFeedParams.class);
+		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
-			return "wolfpack not found";
+			return WOLFPACK_NOT_FOUND;
 		}
-		
-		String text = parameters[1];
+
 		try {
-			snet.getWall().publish(textPost.setText(text), socialGroup);
+			snet.getWall().publish(textPost.setText(jsonReqParams.post), socialGroup);
 		} catch (GroupNotFoundException e) {
-			System.out.println("Wolfpack" + socialGroup + "not found");
+			System.out.println("Wolfpack " + socialGroup + " not found");
 			e.printStackTrace();
-			return "wolfpack not found";
+			return WOLFPACK_NOT_FOUND;
 		} catch (WallNotFound e) {
 			System.out.println("Wall not found");
 			e.printStackTrace();
-			return "wall not found";
+			return INTERNAL_ERROR_MESSAGE;
 		} catch (FileNotFoundException e) {
 			System.out.println("File /wall/posts/ not found");
 			e.printStackTrace();
-			return "file system error";
+			return INTERNAL_ERROR_MESSAGE;
 		}
 		return "success";
 	}
