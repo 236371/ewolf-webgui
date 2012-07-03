@@ -1,7 +1,10 @@
 package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.WolfPackLeader;
+import il.technion.ewolf.server.exceptions.InternalEwolfErrorException;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 public class CreateWolfpackHandler implements JsonDataHandler {
@@ -11,21 +14,29 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 	public CreateWolfpackHandler(WolfPackLeader socialGroupsManager) {
 		this.socialGroupsManager = socialGroupsManager;
 	}
+	
+	private class JsonReqCreateWolfpackParams {
+		String wolfpackName;
+	}
 
 	/**
-	 * @param	parameters	wolfpack name in parameters[0]
+	 * @param	jsonReq	serialized object of JsonReqCreateWolfpackParams class
 	 * @return	"success" or error message
 	 */
 	@Override
-	public Object handleData(String... parameters) {
-		if(parameters.length != 1) {
-			return null;
+	public Object handleData(JsonElement jsonReq) {
+		Gson gson = new Gson();
+		//TODO handle JsonSyntaxException
+		JsonReqCreateWolfpackParams jsonReqParams =
+				gson.fromJson(jsonReq, JsonReqCreateWolfpackParams.class);
+
+		if (socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName) != null) {
+			return "wolfpack already exists";
 		}
-		String groupName = parameters[0];
 		try {
-			socialGroupsManager.findOrCreateSocialGroup(groupName);
+			socialGroupsManager.findOrCreateSocialGroup(jsonReqParams.wolfpackName);
 		} catch (Exception e) {
-			return e.toString();
+			return new InternalEwolfErrorException(e);
 		}
 		return "success";
 	}
