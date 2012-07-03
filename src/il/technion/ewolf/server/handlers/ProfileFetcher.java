@@ -1,7 +1,10 @@
 package il.technion.ewolf.server.handlers;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
+import il.technion.ewolf.server.exceptions.NotFoundException;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -29,26 +32,35 @@ public class ProfileFetcher implements JsonDataHandler {
 		}
 	}
 
+	private class JsonReqProfileParams {
+//		If userID field wasn't sent with the request then
+//			the response will be for "logged in" user
+		String userID;
+	}
+
 	/**
-	 * @param	parameters	user ID or "my" in parameters[0]  
+	 * @param	jsonReq	serialized object of JsonReqProfileParams class
 	 * @return	ProfileData object that contains user's name and ID
+	 * @throws NotFoundException
 	 */
 	@Override
-	public Object handleData(String... parameters)
-			throws ProfileNotFoundException {
-		if(parameters.length != 1) {
-			return null;
-		}
+	public Object handleData(JsonElement jsonReq) throws NotFoundException {
+		Gson gson = new Gson();
+		//TODO handle JsonSyntaxException
+		JsonReqProfileParams jsonReqParams = gson.fromJson(jsonReq, JsonReqProfileParams.class);
 		
-		String strUid = parameters[0];
 		Profile profile;
-		if (strUid.equals("my")) {
+		if (jsonReqParams.userID==null) {
 			profile = socialFS.getCredentials().getProfile();
-			strUid = profile.getUserId().toString();
+			jsonReqParams.userID = profile.getUserId().toString();
 		} else {
-			UserID uid = userIDFactory.getFromBase64(strUid);
-			profile = socialFS.findProfile(uid);			
+			UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
+			try {
+				profile = socialFS.findProfile(uid);
+			} catch (ProfileNotFoundException e) {
+				throw new NotFoundException(e);
+			}
 		}
-		return new ProfileData(profile.getName(), strUid);
+		return new ProfileData(profile.getName(), jsonReqParams.userID);
 	}
 }
