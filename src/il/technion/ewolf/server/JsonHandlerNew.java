@@ -1,11 +1,13 @@
 package il.technion.ewolf.server;
 
+import il.technion.ewolf.server.exceptions.HandlerException;
 import il.technion.ewolf.server.handlers.JsonDataHandler;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
@@ -45,20 +47,23 @@ public class JsonHandlerNew implements HttpRequestHandler {
         JsonObject jsonRes = new JsonObject();
         Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
         
-        for (Entry<String, JsonElement> obj : jsonReq.entrySet()) {
+        Set<Entry<String, JsonElement>> jsonReqAsSet = jsonReq.entrySet();
+        for (Entry<String, JsonElement> obj : jsonReqAsSet) {
         	String key = obj.getKey();
         	JsonDataHandler handler = handlers.get(key);
         	if (handler != null) {
-        		Object handlerRes = handler.handleData(obj.getValue());
-        		if(handlerRes != null) {
+        		try {
+        			Object handlerRes = handler.handleData(obj.getValue());
         			jsonRes.add(key, gson.toJsonTree(handlerRes));
-        		} else {
-        			// TODO What should we do?!
-        		}            	
+        		} catch (HandlerException e) {
+        			// TODO Auto-generated catch block
+        			e.printStackTrace();
+        		}
         	} else {
-        		System.out.println("No handlers are registered to handle request with keyword " + key);
-        		//TODO send response with Bad Request status
-        	}        	
+        		System.out.println("No handlers are registered to handle request " +
+        				"with keyword " + key);
+        		//TODO send response with 400 Bad Request status
+        	}     	
 		}
         
         String json = gson.toJson(jsonRes);
