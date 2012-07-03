@@ -84,7 +84,6 @@ public class EwolfServer {
 	
 	private void registerConnectorHandlers() {
 		//ewolf resources handlers register
-//		connector.register("/json*", createJsonHandler() );
 		connector.register("/json*", createJsonHandlerNew());
 
 		//server resources handlers register
