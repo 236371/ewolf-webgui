@@ -5,7 +5,7 @@ import com.google.gson.JsonElement;
 public class JsonHandlerTest implements JsonDataHandler{
 
 	@Override
-	public JsonElement handleData(JsonElement jsonElement) {
+	public Object handleData(JsonElement jsonElement) {
 		return jsonElement;
 	}
 

@@ -43,21 +43,25 @@ public class JsonHandlerNew implements HttpRequestHandler {
         JsonObject jsonReq = parser.parse(jsonReqAsString).getAsJsonObject();
         
         JsonObject jsonRes = new JsonObject();
+        Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
+        
         for (Entry<String, JsonElement> obj : jsonReq.entrySet()) {
         	String key = obj.getKey();
         	JsonDataHandler handler = handlers.get(key);
         	if (handler != null) {
-        		JsonElement jsonElem = handler.handleData(obj.getValue());
-            	jsonRes.add(key, jsonElem);
+        		Object handlerRes = handler.handleData(obj.getValue());
+        		if(handlerRes != null) {
+        			jsonRes.add(key, gson.toJsonTree(handlerRes));
+        		} else {
+        			// TODO What should we do?!
+        		}            	
         	} else {
         		System.out.println("No handlers are registered to handle request with keyword " + key);
         		//TODO send response with Bad Request status
         	}        	
 		}
         
-        Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
         String json = gson.toJson(jsonRes);
         res.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
 	}
-
 }

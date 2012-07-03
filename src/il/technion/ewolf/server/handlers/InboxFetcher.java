@@ -59,7 +59,7 @@ public class InboxFetcher implements JsonDataHandler {
 	 * @return	array of JsonElements, each one is serialized object of InboxMessage class
 	 */
 	@Override
-	public JsonElement handleData(JsonElement jsonReq) {
+	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
 		//TODO handle JsonSyntaxException
 		JsonReqInboxParams jsonReqParams = gson.fromJson(jsonReq, JsonReqInboxParams.class);
@@ -98,11 +98,11 @@ public class InboxFetcher implements JsonDataHandler {
 		//sort by timestamp
 		Collections.sort(lst);	
 		
-		if (jsonReqParams.maxMessages != null) {
+		if (jsonReqParams.maxMessages != null && lst.size() > jsonReqParams.maxMessages) {
 			lst = lst.subList(0, jsonReqParams.maxMessages);
 		}
 		
-		return	new Gson().toJsonTree(lst); // Exactly the same as below
+		return lst;
 		//return listToJsonArray(lst);
 	}
 
