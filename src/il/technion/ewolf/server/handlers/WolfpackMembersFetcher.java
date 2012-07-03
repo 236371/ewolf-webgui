@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 import il.technion.ewolf.WolfPack;
@@ -29,22 +31,30 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		}
 	}
 
+	private class JsonReqWolfpackMembersParams {
+//		If wolfpackName field wasn't sent with the request then
+//		the response list will contain all the members of all the "logged in" user wolfpacks
+		String wolfpackName;
+	}
+
 	/**
-	 * @param	parameters	group name or "all" in parameters[0]  
+	 * @param	jsonReq	serialized object of JsonReqWolfpackMembersParams class
 	 * @return	list of ProfileData objects. Each object contains name and user ID.
 	 */
 	@Override
-	public Object handleData(String... parameters) {
-		if(parameters.length != 1) {
-			return null;
-		}
-		List<ProfileData> lst = new ArrayList<ProfileData>();
-		String socialGroupName = parameters[0];
+	public Object handleData(JsonElement jsonReq) {
+		Gson gson = new Gson();
+		//TODO handle JsonSyntaxException
+		JsonReqWolfpackMembersParams jsonReqParams =
+				gson.fromJson(jsonReq, JsonReqWolfpackMembersParams.class);
+
+		List<ProfileData> resList = new ArrayList<ProfileData>();
 		List<WolfPack> wolfpacks = new ArrayList<WolfPack>();
-		if (socialGroupName.equals("all")) {
+
+		if (jsonReqParams.wolfpackName == null) {
 			wolfpacks = socialGroupsManager.getAllSocialGroups();
 		} else {
-			wolfpacks.add(socialGroupsManager.findSocialGroup(socialGroupName));
+			wolfpacks.add(socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName));
 		}
 		
 		Set<Profile> profiles = new HashSet<Profile>();
@@ -53,9 +63,9 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		}
 		
 		for (Profile profile: profiles) {
-			lst.add(new ProfileData(profile.getName(), profile.getUserId().toString()));
+			resList.add(new ProfileData(profile.getName(), profile.getUserId().toString()));
 		}
-		return lst;
+		return resList;
 	}
 
 }
