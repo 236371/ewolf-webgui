@@ -128,6 +128,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			try {
 				postOwner = post.getOwner();
 			} catch (ProfileNotFoundException e) {
+				//FIXME
 				postOwner = null;
 			}
 			Long timestamp = post.getTimestamp();
@@ -152,6 +153,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		if (socialGroupName==null) {
 			wolfpacks = socialGroupsManager.getAllSocialGroups();
 		} else {
+			//FIXME
 			wolfpacks.add(socialGroupsManager.findSocialGroup(socialGroupName));
 		}
 		

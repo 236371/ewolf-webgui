@@ -54,6 +54,7 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		if (jsonReqParams.wolfpackName == null) {
 			wolfpacks = socialGroupsManager.getAllSocialGroups();
 		} else {
+			//TODO shouldn't add null
 			wolfpacks.add(socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName));
 		}
 		

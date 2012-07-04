@@ -64,7 +64,7 @@ public class InboxFetcher implements JsonDataHandler {
 		Gson gson = new Gson();
 		//TODO handle JsonSyntaxException
 		JsonReqInboxParams jsonReqParams = gson.fromJson(jsonReq, JsonReqInboxParams.class);
-				
+		
 		List<InboxMessage> lst = new ArrayList<InboxMessage>();			
 
 		List<SocialMessage> messages = smail.readInbox();

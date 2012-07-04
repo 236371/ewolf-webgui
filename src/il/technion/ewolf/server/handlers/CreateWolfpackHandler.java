@@ -41,6 +41,7 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 		} catch (Exception e) {
 			return new InternalEwolfErrorException(e);
 		}
+		//FIXME
 		return "success";
 	}
 
