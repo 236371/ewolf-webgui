@@ -42,12 +42,11 @@ public class InboxFetcher implements JsonDataHandler {
 		}
 	}
 
-	@SuppressWarnings("unused")
-	private class InboxMessage implements Comparable<InboxMessage>{
-		public String senderID;
-		public String senderName;
-		public Long timestamp;
-		public String message;
+	class InboxMessage implements Comparable<InboxMessage>{
+		String senderID;
+		String senderName;
+		Long timestamp;
+		String message;
 
 		@Override
 		public int compareTo(InboxMessage o) {

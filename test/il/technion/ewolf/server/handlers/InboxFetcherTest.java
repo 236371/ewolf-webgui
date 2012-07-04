@@ -32,6 +32,9 @@ import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Test;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
@@ -39,6 +42,17 @@ import com.google.inject.Injector;
 public class InboxFetcherTest {
 	private static final int BASE_PORT = 10000;
 	private List<Injector> injectors = new LinkedList<Injector>();
+
+	class JsonReqInboxParams {
+		//The max amount of messages to retrieve.
+		Integer maxMessages;
+		//Time in milliseconds since 1970, to retrieve messages older than this date.
+		Long olderThan;
+		//Time in milliseconds since 1970, to retrieve messages newer than this date.
+		Long newerThan;
+		//User ID, to retrieve messages from a specific sender.
+		String fromSender;
+	}
 	
 	@After
 	public void cleanup() {
@@ -146,19 +160,33 @@ public class InboxFetcherTest {
 			messages[i] = sm3.createContentMessage().setMessage("msg " + i + " from user3");
 			sm3.send(messages[i], profile2);
 		}
-		
-		
+
 		Thread.sleep(1000);
 		
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData("null", "null", "null", "null"));
+
+		JsonElement params = setInboxParams(null, null, null, null);
+		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
 		for (int i=0; i<10; i++) {
 			InboxMessage im = lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user3");
 			Assert.assertEquals(im.senderID, uid3.toString());
 		}
 		
+	}
+
+	private JsonElement setInboxParams(Integer maxMessages, Long olderThan,
+			Long newerThan, String fromSender) {
+
+		JsonReqInboxParams params = new JsonReqInboxParams();
+		params.fromSender = fromSender;
+		params.maxMessages = maxMessages;
+		params.newerThan = newerThan;
+		params.olderThan = olderThan;
+		Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
+		JsonElement jElem = gson.toJsonTree(params);
+		return jElem;
 	}
 
 	@Test
@@ -263,7 +291,8 @@ public class InboxFetcherTest {
 		
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData("null", "null", "null", uid1.toString()));
+		JsonElement params = setInboxParams(null, null, null, uid1.toString());
+		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
 		for (int i=0; i<10; i++) {
 			InboxMessage im = lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user1");
@@ -380,8 +409,9 @@ public class InboxFetcherTest {
 		
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
+		JsonElement params = setInboxParams(null, timestamps[20], timestamps[0], null);
 		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class)
-				.handleData("null", String.valueOf(timestamps[20]), String.valueOf(timestamps[0]), "null"));
+				.handleData(params));
 		for (int i=0; i<10; i++) {
 			InboxMessage im = lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user3");
@@ -497,7 +527,8 @@ public class InboxFetcherTest {
 		
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData("5", "null", "null", uid1.toString()));
+		JsonElement params = setInboxParams(5, null, null, uid1.toString());
+		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
 		Assert.assertEquals(lst.size(), 5);
 		for (int i=0; i<5; i++) {
 			InboxMessage im = lst.get(i);
@@ -613,8 +644,9 @@ public class InboxFetcherTest {
 		
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
+		JsonElement params = setInboxParams(5, timestamps[20], timestamps[18], null);
 		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class)
-				.handleData("5", String.valueOf(timestamps[20]), String.valueOf(timestamps[18]), "null"));
+				.handleData(params));
 		Assert.assertEquals(lst.size(), 2);
 		for (int i=0; i<2; i++) {
 			InboxMessage im = lst.get(i);

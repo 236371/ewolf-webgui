@@ -37,12 +37,24 @@ import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Test;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 public class NewsFeedFetcherTest {
 	private static final int BASE_PORT = 10000;
 	private List<Injector> injectors = new LinkedList<Injector>();
+	
+	class JsonReqNewsFeedParams {
+		String newsOf;
+		String wolfpackName;
+		String userID;
+		Integer maxMessages;
+		Long olderThan;
+		Long newerThan;
+	}
 	
 	@After
 	public void cleanup() {
@@ -51,6 +63,21 @@ public class NewsFeedFetcherTest {
 			inj.getInstance(HttpConnector.class).shutdown();
 		}
 		injectors.clear();
+	}
+	
+	private JsonElement setNewsFeedParams(String newsOf, String wolfpackName, String userID,
+			Integer maxMessages, Long olderThan, Long newerThan) {
+
+		JsonReqNewsFeedParams params = new JsonReqNewsFeedParams();
+		params.newsOf = newsOf;
+		params.wolfpackName = wolfpackName;
+		params.userID = userID;
+		params.maxMessages = maxMessages;
+		params.olderThan = olderThan;
+		params.newerThan = newerThan;
+		Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
+		JsonElement jElem = gson.toJsonTree(params);
+		return jElem;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -164,7 +191,8 @@ public class NewsFeedFetcherTest {
 		}
 		Thread.sleep(1000);
 		
-		List<PostData> lst = ((List<PostData>)injectors.get(1).getInstance(NewsFeedFetcher.class).handleData("userID", uid1.toString(), "null", "null", "null"));
+		JsonElement params = setNewsFeedParams("user", null, uid1.toString(), null, null, null);
+		List<PostData> lst = ((List<PostData>)injectors.get(1).getInstance(NewsFeedFetcher.class).handleData(params));
 		Assert.assertEquals(lst.size(), 10);
 		for (int i=0; i<10; i++) {
 			PostData post = lst.get(i);

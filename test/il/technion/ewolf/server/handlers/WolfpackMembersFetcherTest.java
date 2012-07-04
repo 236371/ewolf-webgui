@@ -36,13 +36,22 @@ import org.apache.commons.collections.CollectionUtils;
 import org.junit.After;
 import org.junit.Test;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 public class WolfpackMembersFetcherTest {
 	private static final int BASE_PORT = 10000;
 	private List<Injector> injectors = new LinkedList<Injector>();
-	
+
+	@SuppressWarnings("unused")
+	private class JsonReqWolfpackMembersParams {
+//		If wolfpackName field wasn't sent with the request then
+//		the response list will contain all the members of all the "logged in" user wolfpacks
+		String wolfpackName;
+	}
 	@After
 	public void cleanup() {
 		for (Injector inj: injectors) {
@@ -51,7 +60,16 @@ public class WolfpackMembersFetcherTest {
 		}
 		injectors.clear();
 	}
-	
+
+	private JsonElement setWolfpackMembersParams(String wolfpackName) {
+
+		JsonReqWolfpackMembersParams params = new JsonReqWolfpackMembersParams();
+		params.wolfpackName = wolfpackName;
+		Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
+		JsonElement jElem = gson.toJsonTree(params);
+		return jElem;
+	}
+
 	@SuppressWarnings("unchecked")
 	@Test
 	public void getAllMembers() throws Exception {
@@ -159,8 +177,9 @@ public class WolfpackMembersFetcherTest {
 			((PokeMessage)inbox.get(0)).accept();
 			((PokeMessage)inbox.get(1)).accept();
 		}
-		
-		List<ProfileData> lst = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData("all"));
+
+		JsonElement params = setWolfpackMembersParams(null);
+		List<ProfileData> lst = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
 		List<String> strUidListAfter = new ArrayList<String>();
 		for (int i=0; i<lst.size(); i++) {
 			strUidListAfter.add(lst.get(i).id);
@@ -287,8 +306,9 @@ public class WolfpackMembersFetcherTest {
 			Assert.assertEquals(PokeMessage.class, inbox.get(0).getClass());
 			((PokeMessage)inbox.get(0)).accept();
 		}
-		
-		List<ProfileData> lst1 = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData("wall-readers"));
+
+		JsonElement params = setWolfpackMembersParams("wall-readers");
+		List<ProfileData> lst1 = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
 		List<String> strUidListAfter = new ArrayList<String>();
 		for (int i=0; i<lst1.size(); i++) {
 			strUidListAfter.add(lst1.get(i).id);
@@ -296,7 +316,8 @@ public class WolfpackMembersFetcherTest {
 		strUidListAfter.add(userIDList.get(0).toString());
 		Assert.assertTrue(CollectionUtils.isEqualCollection(strUidListBefore, strUidListAfter));
 		
-		List<ProfileData> lst2 = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData("friends"));
+		params = setWolfpackMembersParams("friends");
+		List<ProfileData> lst2 = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
 		List<String> strUidList2After = new ArrayList<String>();
 		for (int i=0; i<lst2.size(); i++) {
 			strUidList2After.add(lst2.get(i).id);
