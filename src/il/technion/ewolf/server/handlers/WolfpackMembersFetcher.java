@@ -9,8 +9,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-import il.technion.ewolf.WolfPack;
-import il.technion.ewolf.WolfPackLeader;
+import il.technion.ewolf.ewolf.WolfPack;
+import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.socialfs.Profile;
 
 public class WolfpackMembersFetcher implements JsonDataHandler {

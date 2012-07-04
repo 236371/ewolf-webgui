@@ -1,7 +1,7 @@
 package il.technion.ewolf.server.handlers;
 
-import il.technion.ewolf.WolfPack;
-import il.technion.ewolf.WolfPackLeader;
+import il.technion.ewolf.ewolf.WolfPack;
+import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;

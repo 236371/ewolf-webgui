@@ -1,4 +1,4 @@
-package il.technion.ewolf;
+package il.technion.ewolf.ewolf;
 
 import il.technion.ewolf.kbr.Key;
 import il.technion.ewolf.socialfs.UserID;

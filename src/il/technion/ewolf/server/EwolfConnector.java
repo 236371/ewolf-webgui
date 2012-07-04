@@ -8,9 +8,9 @@ import java.util.List;
 
 import com.google.inject.Inject;
 
-import il.technion.ewolf.SocialNetwork;
-import il.technion.ewolf.WolfPack;
-import il.technion.ewolf.WolfPackLeader;
+import il.technion.ewolf.ewolf.SocialNetwork;
+import il.technion.ewolf.ewolf.WolfPack;
+import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.msg.PokeMessage;
 import il.technion.ewolf.msg.SocialMail;

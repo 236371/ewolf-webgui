@@ -1,4 +1,4 @@
-package il.technion.ewolf;
+package il.technion.ewolf.ewolf;
 
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.socialfs.Profile;

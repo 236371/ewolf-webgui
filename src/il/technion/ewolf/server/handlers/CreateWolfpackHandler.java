@@ -1,6 +1,6 @@
 package il.technion.ewolf.server.handlers;
 
-import il.technion.ewolf.WolfPackLeader;
+import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.server.exceptions.InternalEwolfErrorException;
 
 import com.google.gson.Gson;

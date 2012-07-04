@@ -1,6 +1,6 @@
 package il.technion.ewolf.posts;
 
-import il.technion.ewolf.PostID;
+import il.technion.ewolf.ewolf.PostID;
 import il.technion.ewolf.socialfs.SocialFS;
 
 import com.google.gson.annotations.Expose;

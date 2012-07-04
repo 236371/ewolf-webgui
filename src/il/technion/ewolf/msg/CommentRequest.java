@@ -1,6 +1,6 @@
 package il.technion.ewolf.msg;
 
-import il.technion.ewolf.PostID;
+import il.technion.ewolf.ewolf.PostID;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;

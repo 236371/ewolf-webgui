@@ -1,6 +1,6 @@
 package il.technion.ewolf.posts;
 
-import il.technion.ewolf.PostID;
+import il.technion.ewolf.ewolf.PostID;
 import il.technion.ewolf.exceptions.ForgeryException;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.socialfs.Profile;

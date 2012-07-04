@@ -1,4 +1,4 @@
-package il.technion.ewolf;
+package il.technion.ewolf.ewolf;
 
 import il.technion.ewolf.dht.DHT;
 import il.technion.ewolf.dht.storage.AgeLimitedDHTStorage;

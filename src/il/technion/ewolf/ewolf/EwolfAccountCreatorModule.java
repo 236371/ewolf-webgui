@@ -1,4 +1,4 @@
-package il.technion.ewolf;
+package il.technion.ewolf.ewolf;
 
 import java.util.Properties;
 
