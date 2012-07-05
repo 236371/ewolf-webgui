@@ -18,6 +18,7 @@ import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 public class InboxFetcher implements JsonDataHandler {
+	private static final String SENDER_NOT_FOUND_MESSAGE = "Not found";
 	private final SocialMail smail;
 
 	@Inject
@@ -54,6 +55,16 @@ public class InboxFetcher implements JsonDataHandler {
 		}
 	}
 
+	@SuppressWarnings("unused")
+	class InboxResponse {
+		private List<InboxMessage> lst;
+		private String result;
+		public InboxResponse(List<InboxMessage> lst, String result) {
+			this.lst = lst;
+			this.result = result;
+		}
+	}
+
 	/**
 	 * @param	jsonReq serialized object of JsonReqInboxParams class
 	 * @return	inbox list, each element contains sender ID, sender name,
@@ -62,9 +73,12 @@ public class InboxFetcher implements JsonDataHandler {
 	@Override
 	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
-		//TODO handle JsonSyntaxException
-		JsonReqInboxParams jsonReqParams = gson.fromJson(jsonReq, JsonReqInboxParams.class);
-		
+		JsonReqInboxParams jsonReqParams;
+		try {
+			jsonReqParams = gson.fromJson(jsonReq, JsonReqInboxParams.class);
+		} catch (Exception e) {
+			return new InboxResponse(null, RES_BAD_REQUEST);
+		}
 		List<InboxMessage> lst = new ArrayList<InboxMessage>();			
 
 		List<SocialMessage> messages = smail.readInbox();
@@ -82,8 +96,8 @@ public class InboxFetcher implements JsonDataHandler {
 				msg.senderID = sender.getUserId().toString();
 				msg.senderName = sender.getName();
 			} catch (ProfileNotFoundException e) {
-				msg.senderID = null;
-				msg.senderName = null;
+				msg.senderID = SENDER_NOT_FOUND_MESSAGE;
+				msg.senderName = SENDER_NOT_FOUND_MESSAGE;
 				e.printStackTrace();
 			}
 			msg.timestamp = m.getTimestamp();
@@ -100,6 +114,6 @@ public class InboxFetcher implements JsonDataHandler {
 			lst = lst.subList(0, jsonReqParams.maxMessages);
 		}
 		
-		return lst;
+		return new InboxResponse(lst, RES_SUCCESS);
 	}
 }

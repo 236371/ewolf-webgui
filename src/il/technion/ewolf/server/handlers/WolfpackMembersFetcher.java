@@ -20,14 +20,25 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 	public WolfpackMembersFetcher(WolfPackLeader socialGroupsManager) {
 		this.socialGroupsManager = socialGroupsManager;
 	}
-	
+
+	@SuppressWarnings("unused")
 	class ProfileData {
-		String name;
-		String id;
+		private String name;
+		private String id;
 	
 		ProfileData(String name, String id) {
 			this.name = name;
 			this.id = id;
+		}
+	}
+
+	@SuppressWarnings("unused")
+	class WolfpackMembersResponse {
+		private List<ProfileData> lst;
+		private String result;
+		public WolfpackMembersResponse(List<ProfileData> lst, String result) {
+			this.lst = lst;
+			this.result = result;
 		}
 	}
 
@@ -45,8 +56,13 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
 		//TODO handle JsonSyntaxException
-		JsonReqWolfpackMembersParams jsonReqParams =
-				gson.fromJson(jsonReq, JsonReqWolfpackMembersParams.class);
+		JsonReqWolfpackMembersParams jsonReqParams;
+		try {
+			jsonReqParams = gson.fromJson(jsonReq, JsonReqWolfpackMembersParams.class);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new WolfpackMembersResponse(null, RES_BAD_REQUEST);
+		}
 
 		List<ProfileData> resList = new ArrayList<ProfileData>();
 		List<WolfPack> wolfpacks = new ArrayList<WolfPack>();
@@ -54,8 +70,12 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		if (jsonReqParams.wolfpackName == null) {
 			wolfpacks = socialGroupsManager.getAllSocialGroups();
 		} else {
-			//TODO shouldn't add null
-			wolfpacks.add(socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName));
+			WolfPack wp = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
+			if (wp == null) {
+				return new WolfpackMembersResponse(null, RES_NOT_FOUND);
+			} else {
+				wolfpacks.add(wp);
+			}
 		}
 		
 		Set<Profile> profiles = new HashSet<Profile>();
@@ -66,7 +86,7 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		for (Profile profile: profiles) {
 			resList.add(new ProfileData(profile.getName(), profile.getUserId().toString()));
 		}
-		return resList;
+		return new WolfpackMembersResponse(resList, RES_SUCCESS);
 	}
 
 }

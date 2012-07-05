@@ -3,7 +3,6 @@ package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
-import il.technion.ewolf.server.exceptions.NotFoundException;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -30,20 +29,33 @@ public class WolfpacksFetcher implements JsonDataHandler {
 	}
 
 	private class JsonReqWolfpacksParams {
-//		If userID field wasn't sent with the request then
-//			the response list will be for "logged in" user
+//		If userID field wasn't sent with the request then the response
+//			list of wolfpack names will be for "logged in" user
 		String userID;
+	}
+
+	@SuppressWarnings("unused")
+	class WolfpacksResponse {
+		private List<String> lst;
+		private String result;
+		public WolfpacksResponse(List<String> lst, String result) {
+			this.lst = lst;
+			this.result = result;
+		}
 	}
 	/**
 	 * @param	jsonReq	serialized object of JsonReqWolfpacksParams class
 	 * @return	list of all social groups (wolfpacks) names, the user has access to them
-	 * @throws NotFoundException 
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) throws NotFoundException {
+	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
-		//TODO handle JsonSyntaxException
-		JsonReqWolfpacksParams jsonReqParams = gson.fromJson(jsonReq, JsonReqWolfpacksParams.class);
+		JsonReqWolfpacksParams jsonReqParams;
+		try {
+			jsonReqParams = gson.fromJson(jsonReq, JsonReqWolfpacksParams.class);
+		} catch (Exception e) {
+			return new WolfpacksResponse(null, RES_BAD_REQUEST);
+		}
 		
 		List<WolfPack> wgroups = socialGroupsManager.getAllSocialGroups();
 		List<String> groups = new ArrayList<String>();
@@ -53,8 +65,8 @@ public class WolfpacksFetcher implements JsonDataHandler {
 				groups.add(w.getName());
 			}
 		} else {
-			UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
 			try {
+				UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
 				Profile profile = socialFS.findProfile(uid);
 				for (WolfPack w : wgroups) {
 					if (w.getMembers().contains(profile)) {
@@ -62,9 +74,13 @@ public class WolfpacksFetcher implements JsonDataHandler {
 					}
 				}
 			} catch (ProfileNotFoundException e) {
-				throw new NotFoundException(e);
+				e.printStackTrace();
+				return new WolfpacksResponse(null, RES_NOT_FOUND);
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+				return new WolfpacksResponse(null, RES_BAD_REQUEST);
 			}
 		}
-		return groups;
+		return new WolfpacksResponse(groups, "success");
 	}
 }

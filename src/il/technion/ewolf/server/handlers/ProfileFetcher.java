@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-import il.technion.ewolf.server.exceptions.NotFoundException;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -22,13 +21,15 @@ public class ProfileFetcher implements JsonDataHandler {
 	}
 	
 	@SuppressWarnings("unused")
-	private class ProfileData {
+	private class ProfileResponse {
 		private String name;
 		private String id;
+		private String result;
 	
-		private ProfileData(String name, String id) {
+		private ProfileResponse(String name, String id, String result) {
 			this.name = name;
 			this.id = id;
+			this.result = result;
 		}
 	}
 
@@ -44,23 +45,32 @@ public class ProfileFetcher implements JsonDataHandler {
 	 * @throws NotFoundException
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) throws NotFoundException {
+	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
 		//TODO handle JsonSyntaxException
-		JsonReqProfileParams jsonReqParams = gson.fromJson(jsonReq, JsonReqProfileParams.class);
+		JsonReqProfileParams jsonReqParams;
+		try {
+			jsonReqParams = gson.fromJson(jsonReq, JsonReqProfileParams.class);
+		} catch (Exception e) {
+			return new ProfileResponse(null, null, RES_BAD_REQUEST);
+		}
 		
 		Profile profile;
 		if (jsonReqParams.userID==null) {
 			profile = socialFS.getCredentials().getProfile();
 			jsonReqParams.userID = profile.getUserId().toString();
 		} else {
-			UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
 			try {
+				UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
 				profile = socialFS.findProfile(uid);
 			} catch (ProfileNotFoundException e) {
-				throw new NotFoundException(e);
+				e.printStackTrace();
+				return new ProfileResponse(null, null, RES_NOT_FOUND);
+			}  catch (IllegalArgumentException e) {
+				e.printStackTrace();
+				return new ProfileResponse(null, null, RES_BAD_REQUEST);
 			}
 		}
-		return new ProfileData(profile.getName(), jsonReqParams.userID);
+		return new ProfileResponse(profile.getName(), jsonReqParams.userID, RES_SUCCESS);
 	}
 }
