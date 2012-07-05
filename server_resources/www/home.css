@@ -227,7 +227,7 @@ textarea:focus::-webkit-input-placeholder {
 
 #messagesApplicationFrame ul {
 	list-style:none;
-	/*width:400px;*/
+	/*width:400px; */
 	font-family:Georgia, Times, serif;
 	font-size:22px;
 	opacity:0.65;

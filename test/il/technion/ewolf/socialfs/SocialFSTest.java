@@ -138,7 +138,7 @@ public class SocialFSTest {
 		// getting the new file
 		SFSFile rootFile2 = profile.getRootFile();
 		SFSFile testFile = rootFile2.getSubFiles(0);
-		
+				
 		Assert.assertEquals("test1", testFile.getName());
 		Assert.assertEquals("some data", testFile.getData());
 		
@@ -264,7 +264,6 @@ public class SocialFSTest {
 				, group);
 		
 		System.out.println(socialFS1);
-		
 		
 		Assert.assertEquals("some data 1", rootFile1.getSubFile("/test1").getData());
 		Assert.assertEquals("some data 2", rootFile1.getSubFile("/test2").getData());
