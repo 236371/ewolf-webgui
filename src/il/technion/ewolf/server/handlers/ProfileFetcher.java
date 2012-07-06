@@ -21,15 +21,14 @@ public class ProfileFetcher implements JsonDataHandler {
 	}
 	
 	@SuppressWarnings("unused")
-	private class ProfileResponse {
+	private class ProfileResponse extends EWolfResponse {
 		private String name;
 		private String id;
-		private String result;
 	
 		private ProfileResponse(String name, String id, String result) {
+			super(result);
 			this.name = name;
 			this.id = id;
-			this.result = result;
 		}
 	}
 

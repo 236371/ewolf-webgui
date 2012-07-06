@@ -48,7 +48,7 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 		JsonReqAddWolfpackMemberParams jsonReqParams =
 				gson.fromJson(jsonReq, JsonReqAddWolfpackMemberParams.class);
 		if (jsonReqParams.wolfpackName == null || jsonReqParams.userID==null) {
-			return "Must specify both wolfpack name and user ID.";
+			return new EWolfResponse("Must specify both wolfpack name and user ID.");
 		}
 		
 		UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
@@ -57,21 +57,21 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 			profile = socialFS.findProfile(uid);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
-			return PROFILE_NOT_FOUND_MESSAGE;
+			return new EWolfResponse(PROFILE_NOT_FOUND_MESSAGE);
 		}
 
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
-			return WOLFPACK_NOT_FOUND_MESSAGE;
+			return new EWolfResponse(WOLFPACK_NOT_FOUND_MESSAGE);
 		}
 		try {
 			socialGroup.addMember(profile);
 		} catch (GroupNotFoundException e) {
 			e.printStackTrace();
-			return INTERNAL_ERROR_MESSAGE;
+			return new EWolfResponse(INTERNAL_ERROR_MESSAGE);
 		}
 		
-		return "success";
+		return new EWolfResponse();
 	}
 
 }

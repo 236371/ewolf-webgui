@@ -33,12 +33,11 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 	}
 
 	@SuppressWarnings("unused")
-	class WolfpackMembersResponse {
-		private List<ProfileData> lst;
-		private String result;
+	class WolfpackMembersResponse extends EWolfResponse {
+		private List<ProfileData> membersList;
 		public WolfpackMembersResponse(List<ProfileData> lst, String result) {
-			this.lst = lst;
-			this.result = result;
+			super(result);
+			this.membersList = lst;
 		}
 	}
 

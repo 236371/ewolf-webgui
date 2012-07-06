@@ -47,12 +47,12 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		JsonReqPostToNewsFeedParams jsonReqParams =
 				gson.fromJson(jsonReq, JsonReqPostToNewsFeedParams.class);
 		if (jsonReqParams.wolfpackName == null || jsonReqParams.post == null) {
-			return "Must specify both wolfpack name and post text";
+			return new EWolfResponse("Must specify both wolfpack name and post text");
 		}
 
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
-			return WOLFPACK_NOT_FOUND_MESSAGE;
+			return new EWolfResponse(WOLFPACK_NOT_FOUND_MESSAGE);
 		}
 
 		try {
@@ -60,17 +60,17 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		} catch (GroupNotFoundException e) {
 			System.out.println("Wolfpack " + socialGroup + " not found");
 			e.printStackTrace();
-			return WOLFPACK_NOT_FOUND_MESSAGE;
+			return new EWolfResponse(WOLFPACK_NOT_FOUND_MESSAGE);
 		} catch (WallNotFound e) {
 			System.out.println("Wall not found");
 			e.printStackTrace();
-			return INTERNAL_ERROR_MESSAGE;
+			return new EWolfResponse(INTERNAL_ERROR_MESSAGE);
 		} catch (FileNotFoundException e) {
 			System.out.println("File /wall/posts/ not found");
 			e.printStackTrace();
-			return INTERNAL_ERROR_MESSAGE;
+			return new EWolfResponse(INTERNAL_ERROR_MESSAGE);
 		}
-		return "success";
+		return new EWolfResponse();
 	}
 
 }

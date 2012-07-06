@@ -31,10 +31,10 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 				gson.fromJson(jsonReq, JsonReqCreateWolfpackParams.class);
 
 		if (jsonReqParams.wolfpackName == null) {
-			return "Must specify wolfpack name.";
+			return new EWolfResponse("Must specify wolfpack name.");
 		}
 		if (socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName) != null) {
-			return "wolfpack already exists";
+			return new EWolfResponse("wolfpack already exists");
 		}
 		try {
 			socialGroupsManager.findOrCreateSocialGroup(jsonReqParams.wolfpackName);
@@ -42,7 +42,7 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 			return new InternalEwolfErrorException(e);
 		}
 		//FIXME
-		return "success";
+		return new EWolfResponse();
 	}
 
 }

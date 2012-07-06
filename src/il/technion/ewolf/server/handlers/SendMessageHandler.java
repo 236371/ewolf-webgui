@@ -45,7 +45,7 @@ public class SendMessageHandler implements JsonDataHandler {
 				gson.fromJson(jsonReq, JsonReqSendMessageParams.class);
 
 		if (jsonReqParams.message == null || jsonReqParams.userID == null) {
-			return "Must specify both user ID and message body.";
+			return new EWolfResponse("Must specify both user ID and message body.");
 		}
 
 		UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
@@ -54,12 +54,12 @@ public class SendMessageHandler implements JsonDataHandler {
 			profile = socialFS.findProfile(uid);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
-			return PROFILE_NOT_FOUND_MESSAGE;
+			return new EWolfResponse(PROFILE_NOT_FOUND_MESSAGE);
 		}
 		
 		ContentMessage msg = smail.createContentMessage().setMessage(jsonReqParams.message);
 		smail.send(msg, profile);
-		return "success";
+		return new EWolfResponse();
 	}
 
 }

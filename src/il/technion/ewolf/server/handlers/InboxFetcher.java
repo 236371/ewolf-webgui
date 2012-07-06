@@ -56,12 +56,11 @@ public class InboxFetcher implements JsonDataHandler {
 	}
 
 	@SuppressWarnings("unused")
-	class InboxResponse {
-		private List<InboxMessage> lst;
-		private String result;
+	class InboxResponse extends EWolfResponse {
+		private List<InboxMessage> messageList;
 		public InboxResponse(List<InboxMessage> lst, String result) {
-			this.lst = lst;
-			this.result = result;
+			super(result);
+			this.messageList = lst;
 		}
 	}
 

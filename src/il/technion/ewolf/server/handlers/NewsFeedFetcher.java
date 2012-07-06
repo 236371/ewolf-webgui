@@ -88,6 +88,15 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			return -Long.signum(this.timestamp - o.timestamp); //"-" for ordering from newer posts to older
 		}
 	}
+	
+	class NewsFeedResponse extends EWolfResponse {
+		public NewsFeedResponse(String result, List<PostData> postList) {
+			super(result);
+			this.postList = postList;
+		}
+
+		List<PostData> postList;
+	}
 
 	/**
 	 * @param	jsonReq	serialized object of JsonReqNewsFeedParams class  
@@ -116,11 +125,15 @@ public class NewsFeedFetcher implements JsonDataHandler {
 //					": request type should be either \"userID\" or \"wolfpack\"");
 		}
 
-		return filterPosts(posts, jsonReqParams.maxMessages, jsonReqParams.newerThan,
+		List<PostData> filteredList = filterPosts(
+				posts, jsonReqParams.maxMessages, 
+				jsonReqParams.newerThan,
 				jsonReqParams.olderThan);
+		
+		return new NewsFeedResponse("success",filteredList);
 	}
 
-	private Object filterPosts(List<Post> posts, Integer filterNumOfPosts,
+	private List<PostData> filterPosts(List<Post> posts, Integer filterNumOfPosts,
 			Long filterFromDate, Long filterToDate) {
 		List<PostData> lst = new ArrayList<PostData>();
 		for (Post post: posts) {
