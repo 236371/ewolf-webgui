@@ -135,7 +135,7 @@ public class DummyEwolfNet {
 		for (int j=0; j<5; j++) {
 			String msg = "{\"text\":\""+
 					strUid2 + ": msg " + j +
-					"\",\"attachment\":[{\"filename\":\"testfile.doc\",\"contentType\":\"document\",\"path\":\"http://www.google.com\"},{\"filename\":\"image.jpg\",\"contentType\":\"image/jpeg\",\"path\":\"https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif\"}]}";
+					"\",\"attachment\":[{\"filename\":\"testfile.doc\",\"contentType\":\"document\",\"path\":\"http://www.google.com\"},{\"filename\":\"israel.jpg\",\"contentType\":\"image/jpeg\",\"path\":\"https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif\"},{\"filename\":\"spain.jpg\",\"contentType\":\"image/jpeg\",\"path\":\"https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/sp-lgflag.gif\"}]}";
 			messages[j] = sm2.createContentMessage().setMessage(msg);
 			sm2.send(messages[j], profile1);
 		}

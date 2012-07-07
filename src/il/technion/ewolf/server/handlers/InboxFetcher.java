@@ -57,11 +57,16 @@ public class InboxFetcher implements JsonDataHandler {
 
 	@SuppressWarnings("unused")
 	class InboxResponse extends EWolfResponse {
-		private List<InboxMessage> messageList;
-		public InboxResponse(List<InboxMessage> lst, String result) {
-			super(result);
+		public InboxResponse(List<InboxMessage> lst) {
+			super();
 			this.messageList = lst;
 		}
+		
+		public InboxResponse(String result) {
+			super(result);
+		}
+		
+		private List<InboxMessage> messageList;
 	}
 
 	/**
@@ -76,7 +81,7 @@ public class InboxFetcher implements JsonDataHandler {
 		try {
 			jsonReqParams = gson.fromJson(jsonReq, JsonReqInboxParams.class);
 		} catch (Exception e) {
-			return new InboxResponse(null, RES_BAD_REQUEST);
+			return new InboxResponse(RES_BAD_REQUEST);
 		}
 		List<InboxMessage> lst = new ArrayList<InboxMessage>();			
 
@@ -113,6 +118,6 @@ public class InboxFetcher implements JsonDataHandler {
 			lst = lst.subList(0, jsonReqParams.maxMessages);
 		}
 		
-		return new InboxResponse(lst, RES_SUCCESS);
+		return new InboxResponse(lst);
 	}
 }

@@ -90,9 +90,13 @@ public class NewsFeedFetcher implements JsonDataHandler {
 	}
 	
 	class NewsFeedResponse extends EWolfResponse {
-		public NewsFeedResponse(String result, List<PostData> postList) {
-			super(result);
+		public NewsFeedResponse(List<PostData> postList) {
+			super();
 			this.postList = postList;
+		}
+		
+		public NewsFeedResponse(String result) {
+			super(result);
 		}
 
 		List<PostData> postList;
@@ -130,7 +134,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 				jsonReqParams.newerThan,
 				jsonReqParams.olderThan);
 		
-		return new NewsFeedResponse("success",filteredList);
+		return new NewsFeedResponse(filteredList);
 	}
 
 	private List<PostData> filterPosts(List<Post> posts, Integer filterNumOfPosts,

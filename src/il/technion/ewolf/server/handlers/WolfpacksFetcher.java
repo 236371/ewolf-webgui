@@ -37,9 +37,13 @@ public class WolfpacksFetcher implements JsonDataHandler {
 	@SuppressWarnings("unused")
 	class WolfpacksResponse extends EWolfResponse {
 		private List<String> wolfpacksList;
-		public WolfpacksResponse(List<String> lst, String result) {
-			super(result);
+		public WolfpacksResponse(List<String> lst) {
+			super();
 			this.wolfpacksList = lst;
+		}
+		
+		public WolfpacksResponse(String result) {
+			super(result);
 		}
 	}
 	/**
@@ -53,7 +57,7 @@ public class WolfpacksFetcher implements JsonDataHandler {
 		try {
 			jsonReqParams = gson.fromJson(jsonReq, JsonReqWolfpacksParams.class);
 		} catch (Exception e) {
-			return new WolfpacksResponse(null, RES_BAD_REQUEST);
+			return new WolfpacksResponse(RES_BAD_REQUEST);
 		}
 		
 		List<WolfPack> wgroups = socialGroupsManager.getAllSocialGroups();
@@ -74,12 +78,12 @@ public class WolfpacksFetcher implements JsonDataHandler {
 				}
 			} catch (ProfileNotFoundException e) {
 				e.printStackTrace();
-				return new WolfpacksResponse(null, RES_NOT_FOUND);
+				return new WolfpacksResponse(RES_NOT_FOUND);
 			} catch (IllegalArgumentException e) {
 				e.printStackTrace();
-				return new WolfpacksResponse(null, RES_BAD_REQUEST);
+				return new WolfpacksResponse(RES_BAD_REQUEST);
 			}
 		}
-		return new WolfpacksResponse(groups, "success");
+		return new WolfpacksResponse(groups);
 	}
 }

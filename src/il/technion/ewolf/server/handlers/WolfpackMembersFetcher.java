@@ -35,9 +35,13 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 	@SuppressWarnings("unused")
 	class WolfpackMembersResponse extends EWolfResponse {
 		private List<ProfileData> membersList;
-		public WolfpackMembersResponse(List<ProfileData> lst, String result) {
-			super(result);
+		public WolfpackMembersResponse(List<ProfileData> lst) {
+			super();
 			this.membersList = lst;
+		}
+		
+		public WolfpackMembersResponse(String result) {
+			super(result);
 		}
 	}
 
@@ -60,7 +64,7 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 			jsonReqParams = gson.fromJson(jsonReq, JsonReqWolfpackMembersParams.class);
 		} catch (Exception e) {
 			e.printStackTrace();
-			return new WolfpackMembersResponse(null, RES_BAD_REQUEST);
+			return new WolfpackMembersResponse(RES_BAD_REQUEST);
 		}
 
 		List<ProfileData> resList = new ArrayList<ProfileData>();
@@ -71,7 +75,7 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		} else {
 			WolfPack wp = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 			if (wp == null) {
-				return new WolfpackMembersResponse(null, RES_NOT_FOUND);
+				return new WolfpackMembersResponse(RES_NOT_FOUND);
 			} else {
 				wolfpacks.add(wp);
 			}
@@ -85,7 +89,7 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		for (Profile profile: profiles) {
 			resList.add(new ProfileData(profile.getName(), profile.getUserId().toString()));
 		}
-		return new WolfpackMembersResponse(resList, RES_SUCCESS);
+		return new WolfpackMembersResponse(resList);
 	}
 
 }
