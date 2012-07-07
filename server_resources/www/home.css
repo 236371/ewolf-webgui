@@ -1,178 +1,11 @@
-
-/****************************** Body Style ***********************/
-html,body {
-	height:100%;
-	margin:0px;
-	padding:0px;
-	background-color: /*#f6f4f5*/ #E6EBEA;
-}
-
-body {
-	overflow-y:scroll;
-}
-
-#full {
-	background:#0f0;
-	height:100%
-}
-
-button, input[type="button"] {
-	width:60px;
-	background-color:#ddd;
-	border:1px;
-	border-color:#666;
-	border-radius:13px;
-	height:30px;	
-	font-weight:bold;
-}
-
-button, input[type="button"]:hover {
-	background-color:#eee;
-	border:3px;
-	cursor:pointer;
-	box-shadow:0px 0px 15px rgba(0,0,0,0.4);
-}
-
-input[type="text"] {
-	width:163px;
-	height:14px;
-	min-height:auto;
-	padding:10px 27px 6px 12px;
-	font-size:16px;
-	line-height:1;
-	color:#666;
-	background-color: /*#ccc*/ #ddd;
-	border:0;
-	-webkit-border-radius:13px;
-	-moz-border-radius:13px;
-	-webkit-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
-	-moz-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
-	-webkit-transition:all .2s ease-in-out;
-	-moz-transition:all .2s ease-in-out;
-	transition:all .2s ease-in-out;
-	border-radius:13px;	
-	box-shadow:inset 0 1px 2px rgba(0,0,0,.2);	
-	outline: none;
-}
-
-input[type="text"]:focus {
-	color:#444;
-	background-color:#fff;
-}
-
-input[type="text"]:focus::-webkit-input-placeholder {
-	color:#ccc;
-}
-
-textarea {
-	min-height:auto;
-	padding:10px 27px 6px 12px;
-	font-size:16px;
-	line-height:1;
-	color:#666;
-	background-color: /*#ccc*/ #ddd;
-	border:0;
-	-webkit-border-radius:13px;
-	-moz-border-radius:13px;
-	-webkit-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
-	-moz-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
-	-webkit-transition:all .2s ease-in-out;
-	-moz-transition:all .2s ease-in-out;
-	transition:all .2s ease-in-out;
-	border-radius:13px;	
-	box-shadow:inset 0 1px 2px rgba(0,0,0,.2);	
-	outline: none;
-}
-
-textarea:focus {
-	color:#444;
-	background-color:#fff;
-}
-
-textarea:focus::-webkit-input-placeholder {
-	color:#ccc;
-}
-
-.howling-back {
-	position:fixed;
-	left:-30px;
-	bottom:-100px;
-	opacity:0.15;
-}
-
-
-/*************************** Main Frame Style ********************/
-.applicationClass {
-	text-align:justify;
-}
-
-.mainFrameCSS {
-	top:50px;
-	left:170px;
-	right:0;
-	bottom:0;
-	z-index:998;
-	position:absolute;
-	overflow:auto;
-	float:left;
-/* 	height:100%; */
-}
-
-.loadingClass {
-	background-color:black;
-	opacity: 0.5;
-	border-radius:13px;
-	padding:2px 12px 2px 12px;	
-	margin: 0px 2px 5px 0px;
-	font-size:16px;
-	color:white;
-	display:none;
-	overflow:hidden;
-}
-
-.showMoreClass {
-	background-color:white;
-	color:black;
-	text-align:center;
-	opacity: 0.7;
-	border-radius:13px;
-	padding:2px 12px 2px 12px;	
-	margin: 0px 2px 5px 0px;
-	font-size:16px;
-	overflow:hidden;
-	cursor:pointer;
-}
-
-/*** APP *** APP *** APP *** APP *** APP *** Profile ***/
-
-.profileTitle {
+.eWolfTitle {
 	padding-left:10px;
 	width:200px;
 	font-size:30px;
 	font-weight:bold;
 	color:#af9c7c;
 }
-
-/*** APP *** APP *** APP *** APP *** APP *** Wolfpacks ***/
-
-.wolfpacksTitle {
-	padding-left:10px;
-	width:200px;
-	font-size:30px;
-	font-weight:bold;
-	color:#af9c7c;
-}
-
-
-/*** APP *** APP *** APP *** APP *** APP *** Messages ***/
-
-.inboxListTitle {
-	padding-left:10px;
-	width:200px;
-	font-size:30px;
-	font-weight:bold;
-	color:#af9c7c;
-}
+/*** Inbox ***/
 
 .newMessageBotton {
 	position:absolute;
@@ -225,7 +58,7 @@ textarea:focus::-webkit-input-placeholder {
 	border-bottom-left-radius:15px;
 }
 
-#messagesApplicationFrame ul {
+.messageList {
 	list-style:none;
 	/*width:400px; */
 	font-family:Georgia, Times, serif;
@@ -233,8 +66,8 @@ textarea:focus::-webkit-input-placeholder {
 	opacity:0.65;
 }
 
-#messagesApplicationFrame ul li { }
-#messagesApplicationFrame ul li a {
+/*#messagesApplicationFrame ul li { }*/
+.messageListItem {
 	display:block;
 	text-decoration:none;
 	color:#000000;
@@ -247,72 +80,51 @@ textarea:focus::-webkit-input-placeholder {
 	cursor:pointer;
 }
 
-#messagesApplicationFrame ul li a:hover {
+.messageListItem:hover {
 	color:#FFFFFF;
 	background-image:url(hover.png);
 	background-repeat:repeat-x;
+}/*************************** Main Frame Style ********************/
+.applicationClass {
+	text-align:justify;
 }
 
-#messagesApplicationFrame ul li a strong {
-	margin-right:10px;
-}
-
-/**************************** Top Bar Style *********************/
-.topbar {
-	background-color:/*black*/ whitesmoke;
-	opacity: 0.70;
-	height:45px;
-	min-width:750px;
-	padding:0px 0px 0px 0px;
-	overflow: hidden;
-	
-	z-index:10000;
-}
-
-.shadow-top {
-	-webkit-box-shadow:0 2px 3px rgba(0,0,0,.25);
-	-moz-box-shadow:0 2px 3px rgba(0,0,0,.25);
-	box-shadow:0 2px 3px rgba(0,0,0,.25);
-}
-
-.topbar-fixed {
-	position:fixed;
-	top:0;right:0;left:0;z-index:1000;
-}
-
-.topbar-absolute {
+.mainFrameCSS {
+	top:50px;
+	left:170px;
+	right:0;
+	bottom:0;
+	z-index:998;
 	position:absolute;
-	top:0;left:0;
-	width:750px;
+	overflow:auto;
+	float:left;
+/* 	height:100%; */
 }
 
-.menuItemMessageClass {
-	background-color:white;
-	opacity: 0.8;
+.loadingClass {
+	background-color:black;
+	opacity: 0.5;
 	border-radius:13px;
-	padding:1px 12px 1px 12px;	
-	font-size:12px;
+	padding:2px 12px 2px 12px;	
+	margin: 0px 2px 5px 0px;
+	font-size:16px;
+	color:white;
+	display:none;
+	overflow:hidden;
+}
+
+.showMoreClass {
+	background-color:white;
 	color:black;
-	vertical-align:middle;
-	position:fixed;
-	top:25px;right:5px;	
-	float:left;
+	text-align:center;
+	opacity: 0.7;
+	border-radius:13px;
+	padding:2px 12px 2px 12px;	
+	margin: 0px 2px 5px 0px;
+	font-size:16px;
+	overflow:hidden;
+	cursor:pointer;
 }
-
-.eWolf-title {
-	float:left;
-	width:200px;
-	font-size:40px;
-	font-weight:bold;
-	color:#af9c7c;
-}
-
-.title-bar {
-	height:45px;
-	float:left;
-	padding:7px 0 8px 0;
-}
-
 /****************************** Menu Style ***********************/
 .currentMenuSelection {
 	/*font-size:18px;*/
@@ -411,4 +223,160 @@ textarea:focus::-webkit-input-placeholder {
 .toggleButtons {
 	text-align:right;
 	margin-right:3px;
+}
+/**************************** Top Bar Style *********************/
+.topbar {
+	background-color:/*black*/ whitesmoke;
+	opacity: 0.70;
+	height:45px;
+	min-width:750px;
+	padding:0px 0px 0px 0px;
+	overflow: hidden;
+	
+	z-index:10000;
+}
+
+.shadow-top {
+	-webkit-box-shadow:0 2px 3px rgba(0,0,0,.25);
+	-moz-box-shadow:0 2px 3px rgba(0,0,0,.25);
+	box-shadow:0 2px 3px rgba(0,0,0,.25);
+}
+
+.topbar-fixed {
+	position:fixed;
+	top:0;right:0;left:0;z-index:1000;
+}
+
+.topbar-absolute {
+	position:absolute;
+	top:0;left:0;
+	width:750px;
+}
+
+.menuItemMessageClass {
+	background-color:white;
+	opacity: 0.8;
+	border-radius:13px;
+	padding:1px 12px 1px 12px;	
+	font-size:12px;
+	color:black;
+	vertical-align:middle;
+	position:fixed;
+	top:25px;right:5px;	
+	float:left;
+}
+
+.eWolf-title {
+	float:left;
+	width:200px;
+	font-size:40px;
+	font-weight:bold;
+	color:#af9c7c;
+}
+
+.title-bar {
+	height:45px;
+	float:left;
+	padding:7px 0 8px 0;
+}
+/****************************** Body Style ***********************/
+
+html,body {
+	height:100%;
+	margin:0px;
+	padding:0px;
+	background-color: /*#f6f4f5*/ #E6EBEA;
+}
+
+body {
+	overflow-y:scroll;
+}
+
+#full {
+	background:#0f0;
+	height:100%
+}
+
+button, input[type="button"] {
+	width:60px;
+	background-color:#ddd;
+	border:1px;
+	border-color:#666;
+	border-radius:13px;
+	height:30px;	
+	font-weight:bold;
+}
+
+button, input[type="button"]:hover {
+	background-color:#eee;
+	border:3px;
+	cursor:pointer;
+	box-shadow:0px 0px 15px rgba(0,0,0,0.4);
+}
+
+input[type="text"] {
+	width:163px;
+	height:14px;
+	min-height:auto;
+	padding:10px 27px 6px 12px;
+	font-size:16px;
+	line-height:1;
+	color:#666;
+	background-color: /*#ccc*/ #ddd;
+	border:0;
+	-webkit-border-radius:13px;
+	-moz-border-radius:13px;
+	-webkit-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
+	-moz-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
+	-webkit-transition:all .2s ease-in-out;
+	-moz-transition:all .2s ease-in-out;
+	transition:all .2s ease-in-out;
+	border-radius:13px;	
+	box-shadow:inset 0 1px 2px rgba(0,0,0,.2);	
+	outline: none;
+}
+
+input[type="text"]:focus {
+	color:#444;
+	background-color:#fff;
+}
+
+input[type="text"]:focus::-webkit-input-placeholder {
+	color:#ccc;
+}
+
+textarea {
+	min-height:auto;
+	padding:10px 27px 6px 12px;
+	font-size:16px;
+	line-height:1;
+	color:#666;
+	background-color: /*#ccc*/ #ddd;
+	border:0;
+	-webkit-border-radius:13px;
+	-moz-border-radius:13px;
+	-webkit-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
+	-moz-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
+	-webkit-transition:all .2s ease-in-out;
+	-moz-transition:all .2s ease-in-out;
+	transition:all .2s ease-in-out;
+	border-radius:13px;	
+	box-shadow:inset 0 1px 2px rgba(0,0,0,.2);	
+	outline: none;
+}
+
+textarea:focus {
+	color:#444;
+	background-color:#fff;
+}
+
+textarea:focus::-webkit-input-placeholder {
+	color:#ccc;
+}
+
+.howling-back {
+	position:fixed;
+	left:-30px;
+	bottom:-100px;
+	opacity:0.15;
 }
