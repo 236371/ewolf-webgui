@@ -19,6 +19,7 @@ import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
 import il.technion.ewolf.server.handlers.NewsFeedFetcher;
+import il.technion.ewolf.server.handlers.NewsFeedFetcher.NewsFeedResponse;
 import il.technion.ewolf.server.handlers.NewsFeedFetcher.PostData;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
@@ -80,7 +81,6 @@ public class NewsFeedFetcherTest {
 		return jElem;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Test
 	public void getAllPostsForUser() throws Exception {
 		for (int i=0; i < 2; ++i) {
@@ -192,10 +192,10 @@ public class NewsFeedFetcherTest {
 		Thread.sleep(1000);
 		
 		JsonElement params = setNewsFeedParams("user", null, uid1.toString(), null, null, null);
-		List<PostData> lst = ((List<PostData>)injectors.get(1).getInstance(NewsFeedFetcher.class).handleData(params));
-		Assert.assertEquals(lst.size(), 10);
+		NewsFeedResponse obj = ((NewsFeedResponse)injectors.get(1).getInstance(NewsFeedFetcher.class).handleData(params));
+		Assert.assertEquals(obj.lst.size(), 10);
 		for (int i=0; i<10; i++) {
-			PostData post = lst.get(i);
+			PostData post = obj.lst.get(i);
 			Assert.assertEquals(uid1.toString(), post.senderID);
 			Assert.assertEquals("post " + (9-i), post.post);
 		}

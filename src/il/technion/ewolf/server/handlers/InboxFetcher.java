@@ -55,10 +55,9 @@ public class InboxFetcher implements JsonDataHandler {
 		}
 	}
 
-	@SuppressWarnings("unused")
 	class InboxResponse {
-		private List<InboxMessage> lst;
-		private String result;
+		List<InboxMessage> lst;
+		String result;
 		public InboxResponse(List<InboxMessage> lst, String result) {
 			this.lst = lst;
 			this.result = result;

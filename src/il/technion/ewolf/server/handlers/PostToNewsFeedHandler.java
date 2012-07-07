@@ -32,9 +32,13 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		String post;
 	}
 
-	//response error messages
-	private static final String INTERNAL_ERROR_MESSAGE = "internal error";
-	private static final String WOLFPACK_NOT_FOUND_MESSAGE = "wolfpack not found";
+	@SuppressWarnings("unused")
+	class PostToNewsFeedResponse {
+		private String result;
+		public PostToNewsFeedResponse(String result) {
+			this.result = result;
+		}
+	}
 
 	/**
 	 * @param	jsonReq	serialized object of JsonReqCreateWolfpackParams class
@@ -43,16 +47,21 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 	@Override
 	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
-		//TODO handle JsonSyntaxException
-		JsonReqPostToNewsFeedParams jsonReqParams =
-				gson.fromJson(jsonReq, JsonReqPostToNewsFeedParams.class);
+		JsonReqPostToNewsFeedParams jsonReqParams;
+		try {
+			jsonReqParams = gson.fromJson(jsonReq, JsonReqPostToNewsFeedParams.class);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new PostToNewsFeedResponse(RES_BAD_REQUEST);
+		}
 		if (jsonReqParams.wolfpackName == null || jsonReqParams.post == null) {
-			return "Must specify both wolfpack name and post text";
+			return new PostToNewsFeedResponse(RES_BAD_REQUEST +
+					": must specify both wolfpack name and post text");
 		}
 
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
-			return WOLFPACK_NOT_FOUND_MESSAGE;
+			return new PostToNewsFeedResponse(RES_NOT_FOUND);
 		}
 
 		try {
@@ -60,17 +69,18 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		} catch (GroupNotFoundException e) {
 			System.out.println("Wolfpack " + socialGroup + " not found");
 			e.printStackTrace();
-			return WOLFPACK_NOT_FOUND_MESSAGE;
+			//TODO check what I should response here?
+			return new PostToNewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (WallNotFound e) {
 			System.out.println("Wall not found");
 			e.printStackTrace();
-			return INTERNAL_ERROR_MESSAGE;
+			return new PostToNewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (FileNotFoundException e) {
 			System.out.println("File /wall/posts/ not found");
 			e.printStackTrace();
-			return INTERNAL_ERROR_MESSAGE;
+			return new PostToNewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		}
-		return "success";
+		return new PostToNewsFeedResponse(RES_SUCCESS);
 	}
 
 }

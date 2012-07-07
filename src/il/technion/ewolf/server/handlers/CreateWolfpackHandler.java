@@ -1,7 +1,6 @@
 package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.ewolf.WolfPackLeader;
-import il.technion.ewolf.server.exceptions.InternalEwolfErrorException;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -19,6 +18,14 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 		String wolfpackName;
 	}
 
+	@SuppressWarnings("unused")
+	class CreateWolfpackResponse {
+		private String result;
+		public CreateWolfpackResponse(String result) {
+			this.result = result;
+		}
+	}
+
 	/**
 	 * @param	jsonReq	serialized object of JsonReqCreateWolfpackParams class
 	 * @return	"success" or error message
@@ -26,23 +33,26 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 	@Override
 	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
-		//TODO handle JsonSyntaxException
-		JsonReqCreateWolfpackParams jsonReqParams =
-				gson.fromJson(jsonReq, JsonReqCreateWolfpackParams.class);
+		JsonReqCreateWolfpackParams jsonReqParams;
+		try {
+			jsonReqParams = gson.fromJson(jsonReq, JsonReqCreateWolfpackParams.class);
+		} catch (Exception e) {
+			return new CreateWolfpackResponse(RES_BAD_REQUEST);
+		}
 
 		if (jsonReqParams.wolfpackName == null) {
-			return "Must specify wolfpack name.";
+			return new CreateWolfpackResponse(RES_BAD_REQUEST + ": must specify wolfpack name.");
 		}
+		//TODO do we want to get feedback about this?
 		if (socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName) != null) {
-			return "wolfpack already exists";
+			return new CreateWolfpackResponse(RES_BAD_REQUEST + ": wolfpack already exists");
 		}
 		try {
 			socialGroupsManager.findOrCreateSocialGroup(jsonReqParams.wolfpackName);
 		} catch (Exception e) {
-			return new InternalEwolfErrorException(e);
+			return new CreateWolfpackResponse(RES_INTERNAL_SERVER_ERROR);
 		}
-		//FIXME
-		return "success";
+		return new CreateWolfpackResponse(RES_SUCCESS);
 	}
 
 }

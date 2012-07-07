@@ -16,7 +16,7 @@ import il.technion.ewolf.msg.PokeMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.server.handlers.WolfpackMembersFetcher;
-import il.technion.ewolf.server.handlers.WolfpackMembersFetcher.ProfileData;
+import il.technion.ewolf.server.handlers.WolfpackMembersFetcher.WolfpackMembersResponse;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
@@ -70,7 +70,6 @@ public class WolfpackMembersFetcherTest {
 		return jElem;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Test
 	public void getAllMembers() throws Exception {
 		for (int i=0; i < 5; ++i) {
@@ -179,17 +178,17 @@ public class WolfpackMembersFetcherTest {
 		}
 
 		JsonElement params = setWolfpackMembersParams(null);
-		List<ProfileData> lst = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
+		WolfpackMembersResponse obj = (WolfpackMembersResponse) (injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
+		Assert.assertEquals(obj.result, JsonDataHandler.RES_SUCCESS);
 		List<String> strUidListAfter = new ArrayList<String>();
-		for (int i=0; i<lst.size(); i++) {
-			strUidListAfter.add(lst.get(i).id);
+		for (int i=0; i<obj.lst.size(); i++) {
+			strUidListAfter.add(obj.lst.get(i).id);
 		}
 		strUidListAfter.add(userIDList.get(0).toString());
 		Assert.assertTrue(CollectionUtils.isEqualCollection(strUidListBefore, strUidListAfter));
 		
 	}
-	
-	@SuppressWarnings({ "unchecked" })
+
 	@Test
 	public void getWolfPackMembers() throws Exception {
 		for (int i=0; i < 5; ++i) {
@@ -308,19 +307,21 @@ public class WolfpackMembersFetcherTest {
 		}
 
 		JsonElement params = setWolfpackMembersParams("wall-readers");
-		List<ProfileData> lst1 = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
+		WolfpackMembersResponse obj1 = (WolfpackMembersResponse) (injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
 		List<String> strUidListAfter = new ArrayList<String>();
-		for (int i=0; i<lst1.size(); i++) {
-			strUidListAfter.add(lst1.get(i).id);
+		for (int i=0; i<obj1.lst.size(); i++) {
+			strUidListAfter.add(obj1.lst.get(i).id);
 		}
 		strUidListAfter.add(userIDList.get(0).toString());
 		Assert.assertTrue(CollectionUtils.isEqualCollection(strUidListBefore, strUidListAfter));
+		Assert.assertEquals(obj1.result, JsonDataHandler.RES_SUCCESS);
 		
 		params = setWolfpackMembersParams("friends");
-		List<ProfileData> lst2 = ((List<ProfileData>)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
+		WolfpackMembersResponse obj2 = ((WolfpackMembersResponse)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
+		Assert.assertEquals(obj2.result, JsonDataHandler.RES_SUCCESS);
 		List<String> strUidList2After = new ArrayList<String>();
-		for (int i=0; i<lst2.size(); i++) {
-			strUidList2After.add(lst2.get(i).id);
+		for (int i=0; i<obj2.lst.size(); i++) {
+			strUidList2After.add(obj2.lst.get(i).id);
 		}
 		List<String> strUid2ListBefore = new ArrayList<String>();
 		strUid2ListBefore.add(userIDList.get(1).toString());

@@ -32,10 +32,13 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 		String userID;
 	}
 
-	//response error messages
-	private static final String PROFILE_NOT_FOUND_MESSAGE = "user not found";
-	private static final String INTERNAL_ERROR_MESSAGE = "internal error";
-	private static final String WOLFPACK_NOT_FOUND_MESSAGE = "wolfpack not found";
+	@SuppressWarnings("unused")
+	class AddWolfpackMemberResponse {
+		private String result;
+		public AddWolfpackMemberResponse(String result) {
+			this.result = result;
+		}
+	}
 
 	/**
 	 * @param	jsonReq	serialized object of JsonReqAddWolfpackMemberParams class
@@ -44,34 +47,43 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 	@Override
 	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
-		//TODO handle JsonSyntaxException
-		JsonReqAddWolfpackMemberParams jsonReqParams =
-				gson.fromJson(jsonReq, JsonReqAddWolfpackMemberParams.class);
+		JsonReqAddWolfpackMemberParams jsonReqParams;
+		try {
+			jsonReqParams = gson.fromJson(jsonReq, JsonReqAddWolfpackMemberParams.class);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new AddWolfpackMemberResponse(RES_BAD_REQUEST);
+		}
+
 		if (jsonReqParams.wolfpackName == null || jsonReqParams.userID==null) {
-			return "Must specify both wolfpack name and user ID.";
+			return new AddWolfpackMemberResponse(RES_BAD_REQUEST + 
+					": must specify both wolfpack name and user ID.");
 		}
 		
-		UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
 		Profile profile;
 		try {
+			UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
 			profile = socialFS.findProfile(uid);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
-			return PROFILE_NOT_FOUND_MESSAGE;
+			return new AddWolfpackMemberResponse(RES_NOT_FOUND);
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+			return new AddWolfpackMemberResponse(RES_BAD_REQUEST);
 		}
 
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
-			return WOLFPACK_NOT_FOUND_MESSAGE;
+			return new AddWolfpackMemberResponse(RES_NOT_FOUND);
 		}
 		try {
 			socialGroup.addMember(profile);
 		} catch (GroupNotFoundException e) {
 			e.printStackTrace();
-			return INTERNAL_ERROR_MESSAGE;
+			return new AddWolfpackMemberResponse(RES_INTERNAL_SERVER_ERROR);
 		}
 		
-		return "success";
+		return new AddWolfpackMemberResponse(RES_SUCCESS);
 	}
 
 }

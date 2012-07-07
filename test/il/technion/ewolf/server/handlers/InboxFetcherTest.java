@@ -15,6 +15,7 @@ import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.server.handlers.InboxFetcher;
 import il.technion.ewolf.server.handlers.InboxFetcher.InboxMessage;
+import il.technion.ewolf.server.handlers.InboxFetcher.InboxResponse;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
@@ -38,7 +39,6 @@ import com.google.gson.JsonElement;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
-@SuppressWarnings("unchecked")
 public class InboxFetcherTest {
 	private static final int BASE_PORT = 10000;
 	private List<Injector> injectors = new LinkedList<Injector>();
@@ -167,9 +167,9 @@ public class InboxFetcherTest {
 		Assert.assertEquals(20, inbox.size());
 
 		JsonElement params = setInboxParams(null, null, null, null);
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
+		InboxResponse obj = ((InboxResponse)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
 		for (int i=0; i<10; i++) {
-			InboxMessage im = lst.get(i);
+			InboxMessage im = obj.lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user3");
 			Assert.assertEquals(im.senderID, uid3.toString());
 		}
@@ -292,9 +292,9 @@ public class InboxFetcherTest {
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 		JsonElement params = setInboxParams(null, null, null, uid1.toString());
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
+		InboxResponse obj = ((InboxResponse)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
 		for (int i=0; i<10; i++) {
-			InboxMessage im = lst.get(i);
+			InboxMessage im = obj.lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user1");
 			Assert.assertEquals(im.senderID, uid1.toString());
 		}
@@ -410,15 +410,15 @@ public class InboxFetcherTest {
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 		JsonElement params = setInboxParams(null, timestamps[20], timestamps[0], null);
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class)
+		InboxResponse obj = ((InboxResponse)injectors.get(1).getInstance(InboxFetcher.class)
 				.handleData(params));
 		for (int i=0; i<10; i++) {
-			InboxMessage im = lst.get(i);
+			InboxMessage im = obj.lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user3");
 			Assert.assertEquals(im.senderID, uid3.toString());
 		}
 		for (int i=10; i<20; i++) {
-			InboxMessage im = lst.get(i);
+			InboxMessage im = obj.lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (19-i) + " from user1");
 			Assert.assertEquals(im.senderID, uid1.toString());
 		}
@@ -528,10 +528,10 @@ public class InboxFetcherTest {
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 		JsonElement params = setInboxParams(5, null, null, uid1.toString());
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
-		Assert.assertEquals(lst.size(), 5);
+		InboxResponse obj = ((InboxResponse)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
+		Assert.assertEquals(obj.lst.size(), 5);
 		for (int i=0; i<5; i++) {
-			InboxMessage im = lst.get(i);
+			InboxMessage im = obj.lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user1");
 			Assert.assertEquals(im.senderID, uid1.toString());
 		}	
@@ -645,11 +645,11 @@ public class InboxFetcherTest {
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 		JsonElement params = setInboxParams(5, timestamps[20], timestamps[18], null);
-		List<InboxMessage> lst = ((List<InboxMessage>)injectors.get(1).getInstance(InboxFetcher.class)
+		InboxResponse obj = ((InboxResponse)injectors.get(1).getInstance(InboxFetcher.class)
 				.handleData(params));
-		Assert.assertEquals(lst.size(), 2);
+		Assert.assertEquals(obj.lst.size(), 2);
 		for (int i=0; i<2; i++) {
-			InboxMessage im = lst.get(i);
+			InboxMessage im = obj.lst.get(i);
 			Assert.assertEquals(im.message,"msg " + (9-i) + " from user3");
 			Assert.assertEquals(im.senderID, uid3.toString());
 		}

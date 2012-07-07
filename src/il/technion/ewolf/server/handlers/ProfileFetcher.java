@@ -42,12 +42,10 @@ public class ProfileFetcher implements JsonDataHandler {
 	/**
 	 * @param	jsonReq	serialized object of JsonReqProfileParams class
 	 * @return	ProfileData object that contains user's name and ID
-	 * @throws NotFoundException
 	 */
 	@Override
 	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
-		//TODO handle JsonSyntaxException
 		JsonReqProfileParams jsonReqParams;
 		try {
 			jsonReqParams = gson.fromJson(jsonReq, JsonReqProfileParams.class);

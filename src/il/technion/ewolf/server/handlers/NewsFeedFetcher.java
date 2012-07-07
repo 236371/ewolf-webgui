@@ -17,9 +17,6 @@ import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
-import il.technion.ewolf.server.exceptions.BadRequestException;
-import il.technion.ewolf.server.exceptions.InternalEwolfErrorException;
-import il.technion.ewolf.server.exceptions.NotFoundException;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -39,6 +36,8 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		this.userIDFactory = userIDFactory;
 		this.snet = snet;
 	}
+
+	private static final String POST_OWNER_NOT_FOUND_MESSAGE = "Not found";
 
 	private class JsonReqNewsFeedParams {
 		//Request type: "user" or "wolfpack"
@@ -89,53 +88,81 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		}
 	}
 
+	class NewsFeedResponse {
+		List<PostData> lst;
+		String result;
+		public NewsFeedResponse(List<PostData> lst, String result) {
+			this.lst = lst;
+			this.result = result;
+		}
+	}
+
 	/**
 	 * @param	jsonReq	serialized object of JsonReqNewsFeedParams class  
 	 * @return	list of posts, each contains post ID, sender ID, sender name, timestamp and post text
-	 * @throws InternalEwolfErrorException 
-	 * @throws NotFoundException 
-	 * @throws BadRequestException 
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) throws InternalEwolfErrorException, NotFoundException, BadRequestException {
+	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
-		//TODO handle JsonSyntaxException
-		JsonReqNewsFeedParams jsonReqParams = gson.fromJson(jsonReq, JsonReqNewsFeedParams.class);
-		
-		List<Post> posts = null;
-		if (jsonReqParams.newsOf == null) {
-			throw new BadRequestException("Must specify whose news feed to fetch.");
+		JsonReqNewsFeedParams jsonReqParams;
+		try {
+			jsonReqParams = gson.fromJson(jsonReq, JsonReqNewsFeedParams.class);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new NewsFeedResponse(null, RES_BAD_REQUEST);
 		}
-		if (jsonReqParams.newsOf.equals("user")) {
-			posts = fetchPostsForUser(jsonReqParams.userID);
-		} else if (jsonReqParams.newsOf.equals("wolfpack")) {
-			posts = fetchPostsForWolfpack(jsonReqParams.wolfpackName);
-		} else {
-			//TODO throw Bad Request?
-//			throw new IllegalArgumentException(NewsFeedFetcher.class.getCanonicalName() + 
-//					": request type should be either \"userID\" or \"wolfpack\"");
+		
+		List<Post> posts;
+		if (jsonReqParams.newsOf == null) {
+			return new NewsFeedResponse(null,
+					RES_BAD_REQUEST + ": Must specify whose news feed to fetch");
+		}
+		try {
+			if (jsonReqParams.newsOf.equals("user")) {
+				posts = fetchPostsForUser(jsonReqParams.userID);
+			} else if (jsonReqParams.newsOf.equals("wolfpack")) {
+				posts = fetchPostsForWolfpack(jsonReqParams.wolfpackName);
+			} else {
+				return new NewsFeedResponse(null,
+						RES_BAD_REQUEST + ": request type should be either \"user\" or \"wolfpack\"");
+			}
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+			return new NewsFeedResponse(null, RES_BAD_REQUEST);
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return new NewsFeedResponse(null, RES_INTERNAL_SERVER_ERROR);
+		} catch (WallNotFound e) {
+			e.printStackTrace();
+			return new NewsFeedResponse(null, RES_INTERNAL_SERVER_ERROR);
+		} catch (ProfileNotFoundException e) {
+			e.printStackTrace();
+			return new NewsFeedResponse(null, RES_NOT_FOUND);
 		}
 
-		return filterPosts(posts, jsonReqParams.maxMessages, jsonReqParams.newerThan,
-				jsonReqParams.olderThan);
+		return new NewsFeedResponse(filterPosts(posts, jsonReqParams.maxMessages, jsonReqParams.newerThan,
+				jsonReqParams.olderThan), RES_SUCCESS);
 	}
 
-	private Object filterPosts(List<Post> posts, Integer filterNumOfPosts,
+	private List<PostData> filterPosts(List<Post> posts, Integer filterNumOfPosts,
 			Long filterFromDate, Long filterToDate) {
 		List<PostData> lst = new ArrayList<PostData>();
 		for (Post post: posts) {
-			Profile postOwner;
+			String name;
+			String id;
 			try {
-				postOwner = post.getOwner();
+				Profile postOwner = post.getOwner();
+				name = postOwner.getName();
+				id = postOwner.getUserId().toString();
 			} catch (ProfileNotFoundException e) {
-				//FIXME
-				postOwner = null;
+				name = POST_OWNER_NOT_FOUND_MESSAGE;
+				id = POST_OWNER_NOT_FOUND_MESSAGE;
 			}
 			Long timestamp = post.getTimestamp();
 			if (filterFromDate==null || filterFromDate<=timestamp) {
 				if (filterToDate==null || filterToDate>=timestamp) {
-					lst.add(new PostData(post.getPostId().toString(), postOwner.getUserId().toString(),
-							postOwner.getName(), post.getTimestamp(), ((TextPost)post).getText()));
+					lst.add(new PostData(post.getPostId().toString(), id,
+							name, post.getTimestamp(), ((TextPost)post).getText()));
 				}
 			}
 		}
@@ -148,13 +175,18 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return lst;
 	}
 
-	private List<Post> fetchPostsForWolfpack(String socialGroupName) throws InternalEwolfErrorException {
+	private List<Post> fetchPostsForWolfpack(String socialGroupName) throws FileNotFoundException, WallNotFound {
 		List<WolfPack> wolfpacks = new ArrayList<WolfPack>();
 		if (socialGroupName==null) {
 			wolfpacks = socialGroupsManager.getAllSocialGroups();
 		} else {
-			//FIXME
-			wolfpacks.add(socialGroupsManager.findSocialGroup(socialGroupName));
+			WolfPack wp = socialGroupsManager.findSocialGroup(socialGroupName);
+			if (wp == null) {
+				//FIXME how to handle?
+				//throw new NotFoundException("wolfpack " + socialGroupName + " not found");
+			} else {
+				wolfpacks.add(wp);
+			}
 		}
 		
 		Set<Profile> profiles = new HashSet<Profile>();
@@ -165,17 +197,13 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return fetchPostsForProfiles(profiles);
 	}
 
-	private List<Post> fetchPostsForUser(String strUid) throws InternalEwolfErrorException, NotFoundException {
+	private List<Post> fetchPostsForUser(String strUid) throws FileNotFoundException, WallNotFound, ProfileNotFoundException {
 		Profile profile;
 		if (strUid==null) {
 			profile = socialFS.getCredentials().getProfile();
 		} else {
 			UserID uid = userIDFactory.getFromBase64(strUid);
-			try {
-				profile = socialFS.findProfile(uid);
-			} catch (ProfileNotFoundException e) {
-				throw new NotFoundException(e);
-			}			
+			profile = socialFS.findProfile(uid);
 		}
 
 		Set<Profile> profiles = new HashSet<Profile>();
@@ -183,16 +211,10 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return fetchPostsForProfiles(profiles);
 	}
 
-	private List<Post> fetchPostsForProfiles(Set<Profile> profiles) throws InternalEwolfErrorException {
+	private List<Post> fetchPostsForProfiles(Set<Profile> profiles) throws FileNotFoundException, WallNotFound {
 		List<Post> posts = new ArrayList<Post>();
 		for (Profile profile: profiles) {
-			try {
-				posts.addAll(snet.getWall(profile).getAllPosts());
-			} catch (FileNotFoundException e) {
-				throw new InternalEwolfErrorException(e);
-			} catch (WallNotFound e) {
-				throw new InternalEwolfErrorException(e);
-			}
+			posts.addAll(snet.getWall(profile).getAllPosts());
 		}		
 		return posts;
 	}

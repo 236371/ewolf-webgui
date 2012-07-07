@@ -21,10 +21,9 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		this.socialGroupsManager = socialGroupsManager;
 	}
 
-	@SuppressWarnings("unused")
 	class ProfileData {
-		private String name;
-		private String id;
+		String name;
+		String id;
 	
 		ProfileData(String name, String id) {
 			this.name = name;
@@ -32,10 +31,9 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		}
 	}
 
-	@SuppressWarnings("unused")
 	class WolfpackMembersResponse {
-		private List<ProfileData> lst;
-		private String result;
+		List<ProfileData> lst;
+		String result;
 		public WolfpackMembersResponse(List<ProfileData> lst, String result) {
 			this.lst = lst;
 			this.result = result;
@@ -55,7 +53,6 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 	@Override
 	public Object handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
-		//TODO handle JsonSyntaxException
 		JsonReqWolfpackMembersParams jsonReqParams;
 		try {
 			jsonReqParams = gson.fromJson(jsonReq, JsonReqWolfpackMembersParams.class);
