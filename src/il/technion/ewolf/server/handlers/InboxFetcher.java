@@ -17,6 +17,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
+import static il.technion.ewolf.server.handlers.EWolfResponse.*;
+
 public class InboxFetcher implements JsonDataHandler {
 	private static final String SENDER_NOT_FOUND_MESSAGE = "Not found";
 	private final SocialMail smail;
@@ -55,12 +57,15 @@ public class InboxFetcher implements JsonDataHandler {
 		}
 	}
 
-	class InboxResponse {
-		List<InboxMessage> lst;
-		String result;
-		public InboxResponse(List<InboxMessage> lst, String result) {
-			this.lst = lst;
-			this.result = result;
+	class InboxResponse extends EWolfResponse {
+		List<InboxMessage> messageList;
+
+		public InboxResponse(List<InboxMessage> lst) {
+			this.messageList = lst;
+		}
+		
+		public InboxResponse(String result) {
+			super(result);
 		}
 	}
 
@@ -76,7 +81,7 @@ public class InboxFetcher implements JsonDataHandler {
 		try {
 			jsonReqParams = gson.fromJson(jsonReq, JsonReqInboxParams.class);
 		} catch (Exception e) {
-			return new InboxResponse(null, RES_BAD_REQUEST);
+			return new InboxResponse(RES_BAD_REQUEST);
 		}
 		List<InboxMessage> lst = new ArrayList<InboxMessage>();			
 
@@ -113,6 +118,6 @@ public class InboxFetcher implements JsonDataHandler {
 			lst = lst.subList(0, jsonReqParams.maxMessages);
 		}
 		
-		return new InboxResponse(lst, RES_SUCCESS);
+		return new InboxResponse(lst);
 	}
 }

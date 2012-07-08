@@ -9,6 +9,7 @@ import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
+import static il.technion.ewolf.server.handlers.EWolfResponse.*;
 
 public class ProfileFetcher implements JsonDataHandler {
 	private final SocialFS socialFS;
@@ -21,15 +22,17 @@ public class ProfileFetcher implements JsonDataHandler {
 	}
 	
 	@SuppressWarnings("unused")
-	private class ProfileResponse {
+	class ProfileResponse extends EWolfResponse {
 		private String name;
 		private String id;
-		private String result;
 	
-		private ProfileResponse(String name, String id, String result) {
+		public ProfileResponse(String name, String id) {
 			this.name = name;
 			this.id = id;
-			this.result = result;
+		}
+
+		public ProfileResponse(String result) {
+			super(result);
 		}
 	}
 
@@ -50,7 +53,7 @@ public class ProfileFetcher implements JsonDataHandler {
 		try {
 			jsonReqParams = gson.fromJson(jsonReq, JsonReqProfileParams.class);
 		} catch (Exception e) {
-			return new ProfileResponse(null, null, RES_BAD_REQUEST);
+			return new ProfileResponse(RES_BAD_REQUEST);
 		}
 		
 		Profile profile;
@@ -63,12 +66,12 @@ public class ProfileFetcher implements JsonDataHandler {
 				profile = socialFS.findProfile(uid);
 			} catch (ProfileNotFoundException e) {
 				e.printStackTrace();
-				return new ProfileResponse(null, null, RES_NOT_FOUND);
+				return new ProfileResponse(RES_NOT_FOUND);
 			}  catch (IllegalArgumentException e) {
 				e.printStackTrace();
-				return new ProfileResponse(null, null, RES_BAD_REQUEST);
+				return new ProfileResponse(RES_BAD_REQUEST);
 			}
 		}
-		return new ProfileResponse(profile.getName(), jsonReqParams.userID, RES_SUCCESS);
+		return new ProfileResponse(profile.getName(), jsonReqParams.userID);
 	}
 }

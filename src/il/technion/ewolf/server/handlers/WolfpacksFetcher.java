@@ -16,6 +16,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
+import static il.technion.ewolf.server.handlers.EWolfResponse.*;
+
 public class WolfpacksFetcher implements JsonDataHandler {
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
@@ -34,13 +36,15 @@ public class WolfpacksFetcher implements JsonDataHandler {
 		String userID;
 	}
 
-	@SuppressWarnings("unused")
-	class WolfpacksResponse {
-		private List<String> lst;
-		private String result;
-		public WolfpacksResponse(List<String> lst, String result) {
-			this.lst = lst;
-			this.result = result;
+	class WolfpacksResponse extends EWolfResponse {
+		List<String> wolfpacksList;
+
+		public WolfpacksResponse(List<String> lst) {
+			this.wolfpacksList = lst;
+		}
+
+		public WolfpacksResponse(String result) {
+			super(result);
 		}
 	}
 	/**
@@ -54,7 +58,7 @@ public class WolfpacksFetcher implements JsonDataHandler {
 		try {
 			jsonReqParams = gson.fromJson(jsonReq, JsonReqWolfpacksParams.class);
 		} catch (Exception e) {
-			return new WolfpacksResponse(null, RES_BAD_REQUEST);
+			return new WolfpacksResponse(RES_BAD_REQUEST);
 		}
 		
 		List<WolfPack> wgroups = socialGroupsManager.getAllSocialGroups();
@@ -75,12 +79,12 @@ public class WolfpacksFetcher implements JsonDataHandler {
 				}
 			} catch (ProfileNotFoundException e) {
 				e.printStackTrace();
-				return new WolfpacksResponse(null, RES_NOT_FOUND);
+				return new WolfpacksResponse(RES_NOT_FOUND);
 			} catch (IllegalArgumentException e) {
 				e.printStackTrace();
-				return new WolfpacksResponse(null, RES_BAD_REQUEST);
+				return new WolfpacksResponse(RES_BAD_REQUEST);
 			}
 		}
-		return new WolfpacksResponse(groups, "success");
+		return new WolfpacksResponse(groups);
 	}
 }

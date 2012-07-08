@@ -133,7 +133,10 @@ public class DummyEwolfNet {
 		//send messages from user2 to user1
 		ContentMessage[] messages = new ContentMessage[5];
 		for (int j=0; j<5; j++) {
-			messages[j] = sm2.createContentMessage().setMessage(strUid2 + ": msg " + j);
+			String msg = "{\"text\":\""+
+					strUid2 + ": msg " + j +
+					"\",\"attachment\":[{\"filename\":\"testfile.doc\",\"contentType\":\"document\",\"path\":\"http://www.google.com\"},{\"filename\":\"israel.jpg\",\"contentType\":\"image/jpeg\",\"path\":\"https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif\"},{\"filename\":\"spain.jpg\",\"contentType\":\"image/jpeg\",\"path\":\"https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/sp-lgflag.gif\"}]}";
+			messages[j] = sm2.createContentMessage().setMessage(msg);
 			sm2.send(messages[j], profile1);
 		}
 		

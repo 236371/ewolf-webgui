@@ -6,6 +6,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
+import static il.technion.ewolf.server.handlers.EWolfResponse.*;
+
 public class CreateWolfpackHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 	
@@ -18,11 +20,11 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 		String wolfpackName;
 	}
 
-	@SuppressWarnings("unused")
-	class CreateWolfpackResponse {
-		private String result;
+	class CreateWolfpackResponse extends EWolfResponse {
 		public CreateWolfpackResponse(String result) {
-			this.result = result;
+			super(result);
+		}
+		public CreateWolfpackResponse() {
 		}
 	}
 
@@ -52,7 +54,7 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 		} catch (Exception e) {
 			return new CreateWolfpackResponse(RES_INTERNAL_SERVER_ERROR);
 		}
-		return new CreateWolfpackResponse(RES_SUCCESS);
+		return new CreateWolfpackResponse();
 	}
 
 }

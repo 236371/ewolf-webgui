@@ -23,6 +23,8 @@ import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
+import static il.technion.ewolf.server.handlers.EWolfResponse.*;
+
 public class NewsFeedFetcher implements JsonDataHandler {
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
@@ -87,13 +89,15 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			return -Long.signum(this.timestamp - o.timestamp); //"-" for ordering from newer posts to older
 		}
 	}
-
-	class NewsFeedResponse {
-		List<PostData> lst;
-		String result;
-		public NewsFeedResponse(List<PostData> lst, String result) {
-			this.lst = lst;
-			this.result = result;
+	
+	class NewsFeedResponse extends EWolfResponse {
+		List<PostData> postList;
+		
+		public NewsFeedResponse(List<PostData> postList) {
+			this.postList = postList;
+		}
+		public NewsFeedResponse(String result) {
+			super(result);
 		}
 	}
 
@@ -109,13 +113,13 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			jsonReqParams = gson.fromJson(jsonReq, JsonReqNewsFeedParams.class);
 		} catch (Exception e) {
 			e.printStackTrace();
-			return new NewsFeedResponse(null, RES_BAD_REQUEST);
+			return new NewsFeedResponse(RES_BAD_REQUEST);
 		}
 		
 		List<Post> posts;
 		if (jsonReqParams.newsOf == null) {
-			return new NewsFeedResponse(null,
-					RES_BAD_REQUEST + ": Must specify whose news feed to fetch");
+			return new NewsFeedResponse(RES_BAD_REQUEST +
+					": Must specify whose news feed to fetch");
 		}
 		try {
 			if (jsonReqParams.newsOf.equals("user")) {
@@ -123,25 +127,25 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			} else if (jsonReqParams.newsOf.equals("wolfpack")) {
 				posts = fetchPostsForWolfpack(jsonReqParams.wolfpackName);
 			} else {
-				return new NewsFeedResponse(null,
-						RES_BAD_REQUEST + ": request type should be either \"user\" or \"wolfpack\"");
+				return new NewsFeedResponse(RES_BAD_REQUEST +
+						": request type should be either \"user\" or \"wolfpack\"");
 			}
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
-			return new NewsFeedResponse(null, RES_BAD_REQUEST);
+			return new NewsFeedResponse(RES_BAD_REQUEST);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-			return new NewsFeedResponse(null, RES_INTERNAL_SERVER_ERROR);
+			return new NewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (WallNotFound e) {
 			e.printStackTrace();
-			return new NewsFeedResponse(null, RES_INTERNAL_SERVER_ERROR);
+			return new NewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
-			return new NewsFeedResponse(null, RES_NOT_FOUND);
+			return new NewsFeedResponse(RES_NOT_FOUND);
 		}
 
 		return new NewsFeedResponse(filterPosts(posts, jsonReqParams.maxMessages, jsonReqParams.newerThan,
-				jsonReqParams.olderThan), RES_SUCCESS);
+				jsonReqParams.olderThan));
 	}
 
 	private List<PostData> filterPosts(List<Post> posts, Integer filterNumOfPosts,

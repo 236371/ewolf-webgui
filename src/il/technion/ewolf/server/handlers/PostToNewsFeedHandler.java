@@ -13,6 +13,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
+import static il.technion.ewolf.server.handlers.EWolfResponse.*;
+
 public class PostToNewsFeedHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 	private final SocialNetwork snet;
@@ -32,11 +34,11 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		String post;
 	}
 
-	@SuppressWarnings("unused")
-	class PostToNewsFeedResponse {
-		private String result;
+	class PostToNewsFeedResponse extends EWolfResponse {
 		public PostToNewsFeedResponse(String result) {
-			this.result = result;
+			super(result);
+		}
+		public PostToNewsFeedResponse() {
 		}
 	}
 
@@ -80,7 +82,7 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 			e.printStackTrace();
 			return new PostToNewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		}
-		return new PostToNewsFeedResponse(RES_SUCCESS);
+		return new PostToNewsFeedResponse();
 	}
 
 }

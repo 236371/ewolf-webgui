@@ -13,6 +13,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
+import static il.technion.ewolf.server.handlers.EWolfResponse.*;
 
 public class AddWolfpackMemberHandler implements JsonDataHandler {
 	private final SocialFS socialFS;
@@ -32,11 +33,11 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 		String userID;
 	}
 
-	@SuppressWarnings("unused")
-	class AddWolfpackMemberResponse {
-		private String result;
+	class AddWolfpackMemberResponse extends EWolfResponse {
 		public AddWolfpackMemberResponse(String result) {
-			this.result = result;
+			super(result);
+		}
+		public AddWolfpackMemberResponse() {
 		}
 	}
 
@@ -83,7 +84,7 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 			return new AddWolfpackMemberResponse(RES_INTERNAL_SERVER_ERROR);
 		}
 		
-		return new AddWolfpackMemberResponse(RES_SUCCESS);
+		return new AddWolfpackMemberResponse();
 	}
 
 }

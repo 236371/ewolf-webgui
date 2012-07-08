@@ -12,6 +12,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
+import static il.technion.ewolf.server.handlers.EWolfResponse.*;
+
 public class SendMessageHandler implements JsonDataHandler {
 	private final SocialMail smail;
 	private final SocialFS socialFS;
@@ -30,11 +32,11 @@ public class SendMessageHandler implements JsonDataHandler {
 		String message;
 	}
 
-	@SuppressWarnings("unused")
-	class SendMessageResponse {
-		private String result;
+	class SendMessageResponse extends EWolfResponse {
 		public SendMessageResponse(String result) {
-			this.result = result;
+			super(result);
+		}
+		public SendMessageResponse(){
 		}
 	}
 
@@ -68,7 +70,7 @@ public class SendMessageHandler implements JsonDataHandler {
 		
 		ContentMessage msg = smail.createContentMessage().setMessage(jsonReqParams.message);
 		smail.send(msg, profile);
-		return new SendMessageResponse(RES_SUCCESS);
+		return new SendMessageResponse();
 	}
 
 }
