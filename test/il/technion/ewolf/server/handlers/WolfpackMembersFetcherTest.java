@@ -179,10 +179,10 @@ public class WolfpackMembersFetcherTest {
 
 		JsonElement params = setWolfpackMembersParams(null);
 		WolfpackMembersResponse obj = (WolfpackMembersResponse) (injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
-		Assert.assertEquals(obj.result, JsonDataHandler.RES_SUCCESS);
+		Assert.assertEquals(obj.result, EWolfResponse.RES_SUCCESS);
 		List<String> strUidListAfter = new ArrayList<String>();
-		for (int i=0; i<obj.lst.size(); i++) {
-			strUidListAfter.add(obj.lst.get(i).id);
+		for (int i=0; i<obj.membersList.size(); i++) {
+			strUidListAfter.add(obj.membersList.get(i).id);
 		}
 		strUidListAfter.add(userIDList.get(0).toString());
 		Assert.assertTrue(CollectionUtils.isEqualCollection(strUidListBefore, strUidListAfter));
@@ -309,19 +309,19 @@ public class WolfpackMembersFetcherTest {
 		JsonElement params = setWolfpackMembersParams("wall-readers");
 		WolfpackMembersResponse obj1 = (WolfpackMembersResponse) (injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
 		List<String> strUidListAfter = new ArrayList<String>();
-		for (int i=0; i<obj1.lst.size(); i++) {
-			strUidListAfter.add(obj1.lst.get(i).id);
+		for (int i=0; i<obj1.membersList.size(); i++) {
+			strUidListAfter.add(obj1.membersList.get(i).id);
 		}
 		strUidListAfter.add(userIDList.get(0).toString());
 		Assert.assertTrue(CollectionUtils.isEqualCollection(strUidListBefore, strUidListAfter));
-		Assert.assertEquals(obj1.result, JsonDataHandler.RES_SUCCESS);
+		Assert.assertEquals(obj1.result, EWolfResponse.RES_SUCCESS);
 		
 		params = setWolfpackMembersParams("friends");
 		WolfpackMembersResponse obj2 = ((WolfpackMembersResponse)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
-		Assert.assertEquals(obj2.result, JsonDataHandler.RES_SUCCESS);
+		Assert.assertEquals(obj2.result, EWolfResponse.RES_SUCCESS);
 		List<String> strUidList2After = new ArrayList<String>();
-		for (int i=0; i<obj2.lst.size(); i++) {
-			strUidList2After.add(obj2.lst.get(i).id);
+		for (int i=0; i<obj2.membersList.size(); i++) {
+			strUidList2After.add(obj2.membersList.get(i).id);
 		}
 		List<String> strUid2ListBefore = new ArrayList<String>();
 		strUid2ListBefore.add(userIDList.get(1).toString());
