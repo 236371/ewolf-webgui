@@ -8,11 +8,13 @@ import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.stash.Group;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.http.Consts;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
@@ -30,6 +32,7 @@ import org.apache.http.HttpEntityEnclosingRequest;
 import com.google.inject.Inject;
 
 public class SFSUploadHandler implements HttpRequestHandler {
+	private static final int FILENAME_LENGTH = 10;
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
 
@@ -47,42 +50,51 @@ public class SFSUploadHandler implements HttpRequestHandler {
 		
 		String uri = req.getRequestLine().getUri();
 
-		Profile profile;
-		String filename=null;
-		String contentType;
+		Profile profile = socialFS.getCredentials().getProfile();
+		String wolfpackName = null;
+		String ext = null;
+		String resFileName;
 		try {
 			List<NameValuePair> parameters = 
 					URLEncodedUtils.parse(new URI(uri).getQuery(),Consts.UTF_8);
-			if (parameters.size() != 2) {
-				//TODO how to handle errors? failed share file -> need report to user
-				return;
-			}
 			for (NameValuePair v : parameters) {
-				System.out.println(v.getName() + ": "+v.getValue());
 				String name = v.getName();
+				System.out.println(name + ": "+v.getValue());
 
-				if (name.equals("filename")) {
-					filename = v.getValue();
-				} else if (name.equals("contentType")) {
-					contentType = v.getValue();
-				} else {
-					//TODO how to handle errors? failed share file -> need report to user
-					return;
+				if (name.equals("fileName")) {
+					String fileName = v.getValue();
+					String[] splitedFileName = fileName.split(".");
+					ext = splitedFileName[splitedFileName.length];
 				}
+				if (name.equals("wolfpackName")) {
+					wolfpackName = v.getValue();
+				}
+			}
+			if (ext == null || wolfpackName == null) {
+				//TODO bad request
+				return;
 			}
 
 			String fileData = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 
-			profile = socialFS.getCredentials().getProfile();
 			SFSFile sharedFolder = profile.getRootFile().getSubFile("sharedFolder");
+			//create unique file name
+			while (true) {
+				resFileName = RandomStringUtils.randomAlphanumeric(FILENAME_LENGTH) + "." + ext;
+				try {
+					sharedFolder.getSubFile(resFileName);
+				} catch (FileNotFoundException e) {
+					break;
+				}
+			}
 
 			SFSFile file = socialFS.getSFSFileFactory().createNewFile()
-					.setName(filename)
+					.setName(resFileName)
 					.setData(fileData);
-			WolfPack sharedSocialGroup = socialGroupsManager.findSocialGroup("wall-readers");
+			WolfPack sharedSocialGroup = socialGroupsManager.findSocialGroup(wolfpackName);
 			Group group = sharedSocialGroup.getGroup();
 			sharedFolder.append(file, group);
-			System.out.println(sharedFolder.getSubFile(filename).getData());
+			System.out.println(sharedFolder.getSubFile(resFileName).getData());
 		} catch (URISyntaxException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -93,7 +105,7 @@ public class SFSUploadHandler implements HttpRequestHandler {
 			return;
 		}
 
-		String path = "/sfs/" + profile.getUserId().toString() + "/" + filename;
+		String path = "/sfs?userID=" + profile.getUserId().toString() + "&fileName=" + resFileName;
 		res.setEntity(new StringEntity(path, ContentType.TEXT_PLAIN));
 	}
 }
