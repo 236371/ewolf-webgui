@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.handlers;
+package il.technion.ewolf.server.jsonDataHandlers;
 
 import il.technion.ewolf.chunkeeper.ChunKeeper;
 import il.technion.ewolf.chunkeeper.ChunKeeperModule;
@@ -15,8 +15,9 @@ import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.msg.PokeMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
-import il.technion.ewolf.server.handlers.WolfpackMembersFetcher;
-import il.technion.ewolf.server.handlers.WolfpackMembersFetcher.WolfpackMembersResponse;
+import il.technion.ewolf.server.jsonDataHandlers.EWolfResponse;
+import il.technion.ewolf.server.jsonDataHandlers.WolfpackMembersFetcher;
+import il.technion.ewolf.server.jsonDataHandlers.WolfpackMembersFetcher.WolfpackMembersResponse;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;

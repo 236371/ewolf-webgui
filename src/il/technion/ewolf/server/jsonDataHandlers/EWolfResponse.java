@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.handlers;
+package il.technion.ewolf.server.jsonDataHandlers;
 
 public abstract class EWolfResponse {
 	public String result;

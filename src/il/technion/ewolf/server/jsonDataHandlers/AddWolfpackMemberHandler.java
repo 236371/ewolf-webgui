@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.handlers;
+package il.technion.ewolf.server.jsonDataHandlers;
 
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
@@ -13,7 +13,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-import static il.technion.ewolf.server.handlers.EWolfResponse.*;
+import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
 
 public class AddWolfpackMemberHandler implements JsonDataHandler {
 	private final SocialFS socialFS;

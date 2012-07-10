@@ -1,6 +1,6 @@
-package il.technion.ewolf.server;
+package il.technion.ewolf.server.handlers;
 
-import il.technion.ewolf.server.handlers.JsonDataHandler;
+import il.technion.ewolf.server.jsonDataHandlers.JsonDataHandler;
 
 import java.io.IOException;
 import java.util.HashMap;

@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.handlers;
+package il.technion.ewolf.server.jsonDataHandlers;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,7 +13,7 @@ import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.socialfs.Profile;
 
-import static il.technion.ewolf.server.handlers.EWolfResponse.*;
+import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
 
 public class WolfpackMembersFetcher implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;

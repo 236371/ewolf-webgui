@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.handlers;
+package il.technion.ewolf.server.jsonDataHandlers;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -23,7 +23,7 @@ import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
-import static il.technion.ewolf.server.handlers.EWolfResponse.*;
+import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
 
 public class NewsFeedFetcher implements JsonDataHandler {
 	private final SocialFS socialFS;
