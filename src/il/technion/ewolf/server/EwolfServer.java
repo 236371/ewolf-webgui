@@ -88,7 +88,7 @@ public class EwolfServer {
 		//ewolf resources handlers register
 		connector.register("/json*", createJsonHandlerNew());
 		
-		connector.register("/sfsupload*", new SFSUploadHandler());
+		connector.register("/sfsupload*", itsInjector.getInstance(SFSUploadHandler.class));
 
 		//server resources handlers register
 		connector.register("*", new JarResourceHandler());

@@ -12,6 +12,7 @@ import com.google.inject.name.Named;
 public class EwolfAccountCreator {
 
 	
+	private static final String WALL_READERS = "wall-readers";
 	private final SocialFSCreator socialFSCreator;
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
@@ -32,10 +33,19 @@ public class EwolfAccountCreator {
 		this.socialGroupsManager = socialGroupsManager;
 	}
 	
+	private void createSharedFolder() throws Exception {
+		SFSFile sharedFolder = socialFS.getSFSFileFactory()
+				.createNewFolder()
+				.setName("sharedFolder");
+		//TODO make separate group?
+		WolfPack sharedSocialGroup = socialGroupsManager
+				.createSocialGroup(WALL_READERS);
+		rootFolder.append(sharedFolder, sharedSocialGroup.getGroup());
+	}
 	
 	private void createWall() throws Exception {
 		WolfPack wallReadersSocialGroup = socialGroupsManager
-			.createSocialGroup("wall-readers");
+			.createSocialGroup(WALL_READERS);
 		
 		SFSFile wallFolder = socialFS.getSFSFileFactory()
 			.createNewFolder()
@@ -65,6 +75,7 @@ public class EwolfAccountCreator {
 		rootFolder.append(socialGroupsFolder, socialFS.getStash().createGroup());
 		
 		createWall();
+		createSharedFolder();
 		
 		System.out.println(socialFS);
 	}
