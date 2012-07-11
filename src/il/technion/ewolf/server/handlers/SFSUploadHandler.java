@@ -2,6 +2,7 @@ package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
+import il.technion.ewolf.server.jsonDataHandlers.EWolfResponse;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SFSFile;
 import il.technion.ewolf.socialfs.SocialFS;
@@ -29,7 +30,11 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
+
+import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
 
 public class SFSUploadHandler implements HttpRequestHandler {
 	private static final int FILENAME_LENGTH = 10;
@@ -40,6 +45,14 @@ public class SFSUploadHandler implements HttpRequestHandler {
 	public SFSUploadHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager) {
 		this.socialFS = socialFS;
 		this.socialGroupsManager = socialGroupsManager;
+	}
+
+	class SFSUploadHandlerResponse extends EWolfResponse {
+		String path;
+		public SFSUploadHandlerResponse(String result, String path) {
+			super(result);
+			this.path = path;
+		}
 	}
 
 	@Override
@@ -70,7 +83,7 @@ public class SFSUploadHandler implements HttpRequestHandler {
 				}
 			}
 			if (ext == null || wolfpackName == null) {
-				//TODO bad request
+				setResponse(res, null, RES_BAD_REQUEST);
 				return;
 			}
 
@@ -91,20 +104,31 @@ public class SFSUploadHandler implements HttpRequestHandler {
 					.setName(resFileName)
 					.setData(fileData);
 			WolfPack sharedSocialGroup = socialGroupsManager.findSocialGroup(wolfpackName);
+			if (sharedSocialGroup == null) {
+				setResponse(res, null, RES_BAD_REQUEST);
+				return;
+			}
 			Group group = sharedSocialGroup.getGroup();
 			sharedFolder.append(file, group);
 			System.out.println(sharedFolder.getSubFile(resFileName).getData());
 		} catch (URISyntaxException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			setResponse(res, null, RES_BAD_REQUEST);
 			return;
 		} catch (GroupNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			setResponse(res, null, RES_INTERNAL_SERVER_ERROR);
 			return;
 		}
 
 		String path = "/sfs?userID=" + profile.getUserId().toString() + "&fileName=" + resFileName;
-		res.setEntity(new StringEntity(path, ContentType.TEXT_PLAIN));
+		setResponse(res, path, RES_SUCCESS);
+	}
+
+	private void setResponse(HttpResponse res, String path, String result) {
+		SFSUploadHandlerResponse resObj = new SFSUploadHandlerResponse(result, path);
+		Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
+		String json = gson.toJson(resObj);
+		res.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
 	}
 }
