@@ -16,6 +16,7 @@ import java.util.List;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.http.Consts;
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
@@ -27,7 +28,6 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
-import org.apache.http.HttpEntityEnclosingRequest;
 
 import com.google.inject.Inject;
 
@@ -59,7 +59,6 @@ public class SFSUploadHandler implements HttpRequestHandler {
 					URLEncodedUtils.parse(new URI(uri).getQuery(),Consts.UTF_8);
 			for (NameValuePair v : parameters) {
 				String name = v.getName();
-				System.out.println(name + ": "+v.getValue());
 
 				if (name.equals("fileName")) {
 					String fileName = v.getValue();

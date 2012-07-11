@@ -44,11 +44,10 @@ public class EwolfServer {
 	
 	public EwolfServer(EwolfConfigurations configurations) {
 		if(configurations == null) {
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("Configuration file is missing.");
 		}
 		
 		this.configurations = configurations;
-		
 		this.itsInjector = createInjector();
 	}
 
@@ -81,13 +80,12 @@ public class EwolfServer {
 		
 		registerConnectorHandlers();
 		
-		System.out.println("server started");
+		System.out.println("Server started.");
 	}
 	
 	private void registerConnectorHandlers() {
 		//ewolf resources handlers register
-		connector.register("/json*", createJsonHandlerNew());
-		
+		connector.register("/json*", createJsonHandler());
 		connector.register("/sfsupload*", itsInjector.getInstance(SFSUploadHandler.class));
 
 		//server resources handlers register
@@ -96,7 +94,7 @@ public class EwolfServer {
 //				new ServerResourceFactory(ServerResources.getFileTypeMap())));
 	}
 	
-	private JsonHandler createJsonHandlerNew() {
+	private JsonHandler createJsonHandler() {
 		return new JsonHandler()
 		.addHandler("inbox", itsInjector.getInstance(InboxFetcher.class))
 		.addHandler("wolfpacks", itsInjector.getInstance(WolfpacksFetcher.class))
