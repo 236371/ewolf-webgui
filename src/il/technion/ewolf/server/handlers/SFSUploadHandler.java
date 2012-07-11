@@ -75,8 +75,8 @@ public class SFSUploadHandler implements HttpRequestHandler {
 
 				if (name.equals("fileName")) {
 					String fileName = v.getValue();
-					String[] splitedFileName = fileName.split(".");
-					ext = splitedFileName[splitedFileName.length];
+					String[] splitedFileName = fileName.split("\\.");
+					ext = splitedFileName[splitedFileName.length-1];
 				}
 				if (name.equals("wolfpackName")) {
 					wolfpackName = v.getValue();
@@ -87,6 +87,7 @@ public class SFSUploadHandler implements HttpRequestHandler {
 				return;
 			}
 
+			//TODO work for utf-8
 			String fileData = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 
 			SFSFile sharedFolder = profile.getRootFile().getSubFile("sharedFolder");
