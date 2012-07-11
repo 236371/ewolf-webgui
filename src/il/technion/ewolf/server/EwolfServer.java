@@ -13,6 +13,7 @@ import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
 import il.technion.ewolf.server.handlers.JarResourceHandler;
 import il.technion.ewolf.server.handlers.JsonHandler;
+import il.technion.ewolf.server.handlers.SFShandler;
 import il.technion.ewolf.server.handlers.SFSUploadHandler;
 import il.technion.ewolf.server.jsonDataHandlers.AddWolfpackMemberHandler;
 import il.technion.ewolf.server.jsonDataHandlers.CreateWolfpackHandler;
@@ -87,6 +88,7 @@ public class EwolfServer {
 		//ewolf resources handlers register
 		connector.register("/json*", createJsonHandler());
 		connector.register("/sfsupload*", itsInjector.getInstance(SFSUploadHandler.class));
+		connector.register("/sfs*", itsInjector.getInstance(SFShandler.class));
 
 		//server resources handlers register
 		connector.register("*", new JarResourceHandler());
