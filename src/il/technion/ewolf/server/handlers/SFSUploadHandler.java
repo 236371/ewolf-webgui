@@ -13,6 +13,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.util.List;
 
 import org.apache.commons.lang.RandomStringUtils;
@@ -87,8 +88,7 @@ public class SFSUploadHandler implements HttpRequestHandler {
 				return;
 			}
 
-			//TODO work for utf-8
-			String fileData = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
+			String fileData = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity(), Consts.UTF_8);
 
 			SFSFile sharedFolder = profile.getRootFile().getSubFile("sharedFolder");
 			//create unique file name
@@ -122,7 +122,8 @@ public class SFSUploadHandler implements HttpRequestHandler {
 			return;
 		}
 
-		String path = "/sfs?userID=" + profile.getUserId().toString() + "&fileName=" + resFileName;
+		String encodedID = URLEncoder.encode(profile.getUserId().toString(), "UTF-8");
+		String path = "/sfs?userID=" + encodedID + "&fileName=" + resFileName;
 		setResponse(res, path, RES_SUCCESS);
 	}
 

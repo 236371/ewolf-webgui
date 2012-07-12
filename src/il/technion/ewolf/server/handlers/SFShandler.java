@@ -19,7 +19,8 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.apache.http.entity.SerializableEntity;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
@@ -45,23 +46,20 @@ public class SFShandler implements HttpRequestHandler {
 		String uri = req.getRequestLine().getUri();
 		try {
 			List<NameValuePair> parameters = 
-					URLEncodedUtils.parse(new URI(uri).getQuery(),Consts.UTF_8);
+					URLEncodedUtils.parse(new URI(uri).getRawQuery(), Consts.UTF_8);
 			String fileName = null;
 			String userID = null;
-			String ext = null;
 			for (NameValuePair p : parameters) {
 				String name = p.getName();
 
 				if (name.equals("fileName")) {
 					fileName = p.getValue();
-					String[] splitedFileName = fileName.split("\\.");
-					ext = splitedFileName[splitedFileName.length-1];
 				}
 				if (name.equals("userID")) {
 					userID = p.getValue();
 				}
 			}
-			if (userID == null || fileName == null || ext == null) {
+			if (userID == null || fileName == null) {
 				//TODO reply bad request
 				return;
 			}
@@ -79,9 +77,9 @@ public class SFShandler implements HttpRequestHandler {
 				return;
 			}
 			SFSFile sharedFolder = profile.getRootFile().getSubFile("sharedFolder");
-			res.addHeader(HTTP.CONTENT_TYPE, ServerResources.getFileTypeMap().getContentType(fileName));
-			//TODO work for utf-8?
-			res.setEntity(new SerializableEntity(sharedFolder.getSubFile(fileName).getData(), false));
+			String strEntity = sharedFolder.getSubFile(fileName).getData().toString();
+			String mimeType = ServerResources.getFileTypeMap().getContentType(fileName);
+			res.setEntity(new StringEntity(strEntity, ContentType.create(mimeType, Consts.UTF_8)));
 		} catch (URISyntaxException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
