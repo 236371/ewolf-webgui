@@ -70,7 +70,7 @@ public class SFSUploadHandler implements HttpRequestHandler {
 		String resFileName;
 		try {
 			List<NameValuePair> parameters = 
-					URLEncodedUtils.parse(new URI(uri).getQuery(),Consts.UTF_8);
+					URLEncodedUtils.parse(new URI(uri).getRawQuery(),Consts.UTF_8);
 			for (NameValuePair v : parameters) {
 				String name = v.getName();
 
