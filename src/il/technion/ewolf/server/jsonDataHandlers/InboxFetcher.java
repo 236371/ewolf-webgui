@@ -46,10 +46,11 @@ public class InboxFetcher implements JsonDataHandler {
 	}
 
 	class InboxMessage implements Comparable<InboxMessage>{
+		String itemID;
 		String senderID;
 		String senderName;
 		Long timestamp;
-		String message;
+		String mail;
 
 		@Override
 		public int compareTo(InboxMessage o) {
@@ -58,10 +59,10 @@ public class InboxFetcher implements JsonDataHandler {
 	}
 
 	class InboxResponse extends EWolfResponse {
-		List<InboxMessage> messageList;
+		List<InboxMessage> mailList;
 
 		public InboxResponse(List<InboxMessage> lst) {
-			this.messageList = lst;
+			this.mailList = lst;
 		}
 		
 		public InboxResponse(String result) {
@@ -95,6 +96,7 @@ public class InboxFetcher implements JsonDataHandler {
 			}
 				
 			InboxMessage msg = new InboxMessage();
+
 			try {
 				Profile sender = m.getSender();
 				msg.senderID = sender.getUserId().toString();
@@ -107,7 +109,7 @@ public class InboxFetcher implements JsonDataHandler {
 			msg.timestamp = m.getTimestamp();
 			
 			if(jsonReqParams.isMatchCriteria(msg)) {
-				msg.message = ((ContentMessage)m).getMessage();
+				msg.mail = ((ContentMessage)m).getMessage();
 				lst.add(msg);
 			}
 		}

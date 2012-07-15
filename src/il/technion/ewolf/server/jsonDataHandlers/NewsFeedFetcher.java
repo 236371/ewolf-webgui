@@ -70,18 +70,18 @@ public class NewsFeedFetcher implements JsonDataHandler {
 	}
 
 	class PostData implements Comparable<PostData>{
-		String postID;
+		String itemID;
 		String senderID;
 		String senderName;
 		Long timestamp;
-		String post;
+		String mail;
 		
 		PostData(String postID, String senderID, String senderName, Long timestamp, String post) {
-			this.postID = postID;
+			this.itemID = postID;
 			this.senderID = senderID;
 			this.senderName = senderName;
 			this.timestamp = timestamp;
-			this.post = post;
+			this.mail = post;
 		}
 
 		@Override
@@ -91,10 +91,10 @@ public class NewsFeedFetcher implements JsonDataHandler {
 	}
 	
 	class NewsFeedResponse extends EWolfResponse {
-		List<PostData> postList;
+		List<PostData> mailList;
 		
 		public NewsFeedResponse(List<PostData> postList) {
-			this.postList = postList;
+			this.mailList = postList;
 		}
 		public NewsFeedResponse(String result) {
 			super(result);

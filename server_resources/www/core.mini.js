@@ -1,6 +1,3325 @@
-var AppContainer=function(e,a){var c=false;var b=true;var d=$("<div/>").attr({id:e+"ApplicationFrame"}).hide().appendTo(a);eWolf.bind("select."+e,function(g,f){if(e==f){d.slideDown(700);c=true;if(b){eWolf.trigger("refresh."+e,[e])}}else{d.slideUp(700);c=false}});eWolf.bind("refresh."+e,function(g,f){if(e==f){b=false}});eWolf.bind("needRefresh."+e,function(g,f){b=true;if(c){eWolf.trigger("refresh."+e,[e])}});return{getFrame:function(){return d},getId:function(){return e},isSelected:function(){return c},destroy:function(){eWolf.unbind("select."+e);d.remove();delete this}}};function Application(e,a,d,b,c){this.id=e;this.container=a;this.menu=d;this.menuList=b;this.loadingFrame=c;this.loader=null;this.loading=false;this.frame=$("<div/>").attr({id:this.id+"ApplicationFrame"}).hide().data("applicationItem",this).appendTo(this.container);return this}Application.prototype.appendLoader=function(a){this.loader=a};Application.prototype.isNeedRefresh=function(){return this.frame.is(":empty")};Application.prototype.isLoading=function(){return this.loading};Application.prototype.appear=function(){this.container.children("div").slideUp(700);this.frame.slideDown(700)};Application.prototype.setLoading=function(){this.loading=true;if(this.loader!=null){this.loader.showLoading()}};Application.prototype.clearLoading=function(){if(this.loader!=null){this.loader.hideLoading()}this.loading=false};Application.prototype.refresh=function(){};var Flicker=function(m,e){var l=new AppContainer(m,e);var c=l.getFrame();var b=l.getId();var f=new Date(0);var d=new Date(new Date()+7);var h=new ShowMore(c,function(){a(true)});var g=new RequestHandler(b,"http://api.flickr.com/services/feeds/photos_public.gne?jsoncallback=?",k,null,60);function n(u,t,s,p,q){var o=false;if(u-d<0){d=u;o=true}if(u-f>0){f=u;o=false}return j(t,s,p,q,o)}function i(o,t){var p=f;var s=d;var q=null;var u=0;$.each(o,function(w,x){var y=new Date(x.published);var v=false;if(t){v=y-s<0}else{v=y-p>0}if(v){q=n(y,x.title,x.media.m,x.link,q);u++;if(u>7){h.draw();return false}}})}function j(u,t,p,s,o){var v=$("<a/>").attr({href:p,target:"_TRG_"+u});$("<img/>").attr({src:t,style:"padding:5px 5px 5px 5px; height:130px;"}).appendTo(v);if(s==null){if(o){c.append(v)}else{c.prepend(v)}}else{s.after(v)}var q=$("<em/>").append("&nbsp;");v.after(q);return q}function k(p,o){console.log(p);if(o.getOlderItems){h.remove()}i(p.items,o.getOlderItems)}function a(o){g.getData({tags:b,tagmode:"any",format:"json"},{getOlderItems:o})}eWolf.bind("refresh."+b,function(p,o){a(false)});return{getId:function(){return b},isSelected:function(){return l.isSelected()},destroy:function(){eWolf.unbind("refresh."+b);eWolf.unbind("select."+b);l.destroy();delete this}}};var Inbox=function(d,f){var n=new AppContainer(d,f);var e=n.getFrame();var b=0;var h=new RequestHandler(d,"/json",j,null,60);var a=null;var p=null;$("<div/>").attr({"class":"eWolfTitle",id:d+"Title"}).append("Inbox").appendTo(e);$("<input/>").attr({id:"newMessageBtn",type:"button",value:"New Message...","class":"newMessageBotton"}).appendTo(e).click(function(){new NewMessageBox("__newmessage__"+d,e)});var m=$("<div/>").appendTo(e);var k=$("<ul/>").attr({id:d,"class":"messageList"}).appendTo(m);var g=new ShowMore(e,function(){c(true)}).draw();function o(q,w,u,t,v,s){if(p==null||u-p<0){p=u}if(a==null||u-a>0){a=u}return i(q,w,u,t,v,s)}function i(q,x,u,t,w,s){var v=new InboxItem("__inboxitem__"+b,q,x,u,t);b++;if(w==null){if(s){v.appendTo(k)}else{v.prependTo(k)}}else{v.insertAfter(w.getListItem())}return v}function c(q){var s={maxMessages:10};if(q&&a!=null&&p!=null){s.olderThan=p-1}else{if(a!=null){s.newerThan=a+1}}l(s,q)}function j(t,s){console.log(t);if(t.inbox!=null){if(t.inbox.result=="success"){if(t.inbox.messageList!=null){var q=null;$.each(t.inbox.messageList,function(u,v){q=o(v.senderName,v.senderID,v.timestamp,v.message,q,s.getOlderItems)});if(s.getOlderItems&&t.inbox.messageList.length<s.inbox.maxMessages){g.remove()}}else{console.log("No messageList parameter in response")}}else{console.log(t.inbox.result)}}else{console.log("No inbox parameter in response")}}function l(s,q){h.getData({inbox:s},{getOlderItems:q,inbox:s})}eWolf.bind("refresh."+d,function(s,q){c(false)});return{getId:function(){return d},isSelected:function(){return n.isSelected()},destroy:function(){eWolf.unbind("refresh."+d);n.destroy();delete this}}};var InboxItem=function(e,i,m,k,g){var l=">> ";var d="dd/MM/yyyy (HH:mm)";var h=null;var b=$("<li/>").attr({id:e,"class":"messageListItem"});var f=$("<span/>").attr({id:e,style:"width:1%;","class":"preMessageBox"}).append(l).appendTo(b);var c=$("<span/>").attr({id:e,style:"width:1%;"}).appendTo(b);var a=new Date(k);var j=$("<span/>").attr({id:e,"class":"timestampBox"}).append(a.toString(d)).appendTo(b);b.click(function(){if(h==null){var o=MailItem(JSON.parse(g));h=$("<li/>").attr({id:e,"class":"messageBox"}).append(o).insertAfter(b)}else{h.toggle()}});function n(){var o=b.width()-j.width()-f.width()-20;c.text(i).shorten({width:o})}eWolf.bind("mainFrameResize",function(p,o){n()});return{appendTo:function(o){b.appendTo(o);n();return this},prependTo:function(o){b.prependTo(o);n();return this},insertAfter:function(o){b.insertAfter(o);n();return this},getListItem:function(){return b},getId:function(){return e},destroy:function(){message.destroy();b.remove();delete this}};return this};var menuItemSpinnerOpts={lines:10,length:4,width:2,radius:3,rotate:0,color:"#000",speed:0.8,trail:60,shadow:false,hwaccel:false,className:"spinner",zIndex:2000000000,top:0,left:0};var Loading=function(b){var d=0;function a(){d++;b.spin(spinnerOpts);b.show(200)}function c(){b.hide(200);b.data("spinner").stop();d--}eWolf.bind("loading",a);eWolf.bind("loadingEnd",c);return{listenToEvent:function(f,e){eWolf.bind(f,a);eWolf.bind(e,c)},stopListenToEvent:function(f,e){eWolf.unbind(f,a);eWolf.unbind(e,c)}}};var spinnerOpts={lines:10,length:4,width:2,radius:3,rotate:0,color:"#fff",speed:0.8,trail:60,shadow:false,hwaccel:false,className:"spinner",zIndex:2000000000,top:0,left:0};$.fn.spin=function(a){this.each(function(){var c=$(this),b=c.data();if(b.spinner){b.spinner.stop();delete b.spinner}if(a!==false){b.spinner=new Spinner($.extend({color:c.css("color")},a)).spin(this)}});return this};var MailItem=function(d){var b=$("<div/>").append(d.text);if(d.attachment!=null){var a=$("<div/>");var c=$("<ul/>");$.each(d.attachment,function(g,f){if(f.contentType.substring(0,5)=="image"){var h=$("<a/>").attr({href:f.path,target:"_TRG_"+f.filename}).appendTo(a);$("<img/>").attr({src:f.path,style:"padding:5px 5px 5px 5px; height:130px;"}).appendTo(h);$("<em/>").append("&nbsp;").appendTo(a)}else{var e=$("<li/>").appendTo(c);$("<a/>").attr({href:f.path,target:"_TRG_"+f.filename}).append(f.filename).appendTo(e)}});if(!a.is(":empty")){a.appendTo(b)}if(!c.is(":empty")){b.append("Attachments:");c.appendTo(b)}}return b};var MainApps=function(h,b){var e=h.createNewMenuList("mainapps","Main");var g=[];var c=new Profile("profile",b);e.addMenuItem("profile","My Profile");g.push(c);var a=new Flicker("wall",b);e.addMenuItem("wall","My Wall");g.push(a);var f=new Flicker("news_feed",b);e.addMenuItem("news_feed","News Feed");g.push(f);var d=new Inbox("messages",b);e.addMenuItem("messages","Messages");g.push(d);return this};var MenuItem=function(c,n,l,j){var h=false;var g=false;var p=new MenuMessage(c+"Message","menuItemMessageClass",l,j);var a=$("<li/>").attr({id:c});var d=$("<a/>").appendTo(a);var i=$("<span/>").attr({id:c,style:"width:1%;"}).appendTo(d);var e=$("<div/>").attr({"class":"refreshButtonArea",id:c,}).appendTo(d).hide();var b=$("<div/>").attr({"class":"refreshButtonArea",id:c,}).appendTo(d).hide();var k=$("<img/>").attr({id:c,src:"refresh.svg","class":"refreshButton"}).appendTo(e);a.click(function(){if(g==false){eWolf.trigger("select",[c])}});k.click(function(){if(h==false){eWolf.trigger("refresh."+c,[c])}});a.mouseover(function(){p.show()});a.mouseout(function(){p.hide()});function o(){var q=145;if(g&&!h){e.show();q=q-20}else{e.hide()}if(h){b.show();q=q-20}else{b.hide()}i.text(n).shorten({width:q})}function m(){d.addClass("currentMenuSelection");g=true;o()}function f(){d.removeClass("currentMenuSelection");g=false;o()}eWolf.bind("select."+c,function(s,q){if(c==q){m()}else{f()}});eWolf.bind("loading."+c,function(s,q){if(c==q){h=true;o();b.spin(menuItemSpinnerOpts)}});eWolf.bind("loadingEnd."+c,function(s,q){if(c==q){h=false;o();b.data("spinner").stop()}});return{appendTo:function(q){a.appendTo(q);o();return this},getId:function(){return c},destroy:function(){p.destroy();a.remove();delete this}};return this};var menuItemSpinnerOpts={lines:10,length:4,width:2,radius:3,rotate:0,color:"#000",speed:0.8,trail:60,shadow:false,hwaccel:false,className:"spinner",zIndex:2000000000,top:0,left:0};var MenuList=function(f,g,e,a){var b=[];var d=$("<div/>").attr({"class":"menuList",id:g+"Frame"}).hide();$("<div/>").attr({"class":"menuListTitle",id:g+"Title"}).append(e).appendTo(d);var c=$("<ul/>").attr({id:g}).appendTo(d);return{addMenuItem:function(j,i){var h=new MenuItem(j,i,"Click to show "+i.toLowerCase(),a).appendTo(c);b[j]=h;if(Object.keys(b).length>0){d.show()}},removeMenuItem:function(h){if(b[h]!=null){b[h].destroy();delete b[h]}if(Object.keys(b).length<=0){d.hide()}},appendTo:function(h){d.appendTo(h);return this}}};var MenuMessage=function(e,b,d,a){var c=null;return{show:function(){if(c==null){c=$("<div/>").attr({id:e,"class":b}).text(d).appendTo(a)}else{c.show()}},hide:function(){if(c!=null){c.remove();c=null}},destroy:function(){if(c!=null){c.remove();c=null;delete this}}}};var NewMessageBox=function(n,l){var c=new RequestHandler(n,"/json",s,null,0);var j=$("<div/>").attr({"class":"newMessageBoxClass"}).appendTo(l).animate({opacity:0.9},350,function(){});var d=$("<table/>").appendTo(j);var m=$("<tr/>").appendTo(d);$("<td/>").append("Send to:").appendTo(m);var a=$("<input/>").attr({id:"sendToId",type:"text",placeholder:"Send to (user id)",style:"width:300px !important;"});$("<td/>").append(a).appendTo(m);var k=$("<tr/>").appendTo(d);$("<td/>").attr("style","vertical-align:text-top;").append("Message:").appendTo(k);var t=$("<textarea/>").attr({id:"textileMessage",placeholder:"Your message",style:"width:300px !important;height:300px  !important;"});$("<td/>").append(t).appendTo(k);var f=$("<tr/>").appendTo(d);$("<td/>").attr("style","vertical-align:text-top;").append("Attachment:").appendTo(f);var h=$("<td/>").appendTo(f);var e=new filedrag(h);var q=$("<tr/>").appendTo(d);$("<td/>").appendTo(q);var o=$("<td/>").appendTo(q);$("<input/>").attr({id:"sendMessageBtn",type:"button",value:"Send"}).appendTo(o).click(function(){var v=t.val().replace(/\n/g,"<br>");var u={text:v,attachment:[{filename:"testfile.doc",contentType:"document",path:"http://www.google.com"},{filename:"image.jpg",contentType:"image/jpeg",path:"https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"}]};console.log(JSON.stringify(u));c.getData({sendMessage:{userID:a.val(),message:JSON.stringify(u)}},{})});o.append("&nbsp;");$("<input/>").attr({id:"sabortBtn",type:"button",value:"Cancel"}).appendTo(o).click(function(){b()});var i=$("<tr/>").appendTo(d);$("<td/>").appendTo(i);var g=$("<td/>").appendTo(i);var p=$("<span/>").attr({style:"color:red;"}).appendTo(g);function s(v,u){console.log(v);if(v.sendMessage!=null){if(v.sendMessage.result=="success"){b()}else{p.html(v.sendMessage.result)}}else{console.log("No sendMessage parameter in response")}}function b(){if(j!=null){j.animate({opacity:0},350,function(){j.remove();j=null;delete this})}else{delete this}}return{destroy:function(){b()}}};var NewsFeed=function(){};var NewsFeedItem=function(f,a,e,c,d,b){};var Profile=function(b,e){var k=new AppContainer(b,e);var c=k.getFrame();var g=new RequestHandler(b,"/json",i,null,3600);$("<div/>").attr({"class":"eWolfTitle",id:b+"Title"}).append("My Profile").appendTo(c);var h=$("<div/>").appendTo(c);var a=null;$("<div/>").attr({"class":"eWolfTitle",id:b+"Title"}).append("My Wolfpacks").appendTo(c);var d=$("<div/>").appendTo(c);var j=null;function i(m,l){console.log(m);if(m.profile!=null){if(m.profile.result=="success"){if(a!=null){a.remove()}a=$("<ul/>").appendTo(h);$("<li/>").append("<B>Name:</B> "+m.profile.name).appendTo(a);$("<li/>").append("<B>ID:</B> "+m.profile.id).appendTo(a)}else{console.log(m.profile.result)}}else{console.log("No profile parameter in response")}if(m.wolfpacks!=null){if(m.wolfpacks.result=="success"){if(m.wolfpacks.wolfpacksList!=null){if(j!=null){j.remove()}j=$("<ul/>").appendTo(d);$.each(m.wolfpacks.wolfpacksList,function(o,n){$("<li/>").append(n).appendTo(j)})}else{console.log("No wolfpacksList parameter in response")}}else{console.log(m.wolfpacks.result)}}else{console.log("No wolfpacks parameter in response")}}function f(){g.getData({profile:{},wolfpacks:{}},null)}eWolf.bind("refresh."+b,function(m,l){f()});return{getId:function(){return b},isSelected:function(){return k.isSelected()},destroy:function(){eWolf.unbind("refresh."+b);k.destroy();delete this}}};var RequestHandler=function(g,e,b,d,a){var f=null;function c(){if(d!=null){d(passToHandler)}eWolf.trigger("loadingEnd",[g]);if(a>0){f=setTimeout("eWolf.trigger('needRefresh."+g+"',["+g+"])",a*1000)}}return{getId:function(){return g},setRequestAddress:function(h){e=h},getData:function(i,h){clearTimeout(f);eWolf.trigger("loading",[g]);$.post(e,JSON.stringify(i),function(k,j){b(k,h)},"json").complete(c)}}};var SearchApp=function(b,c,e,j,h,d){var k=c.createNewMenuList("search","Searches");var a=new Object();var i=null;function g(m,o){var n=new Flicker(m,e);a[m]=n;k.addMenuItem(m,o)}function l(m){if(a[m]!=null){a[m].destroy();delete a[m];k.removeMenuItem(m)}}function f(){if(i!=null){l(i);i=null}}d.click(function(){var m=j.val();if(m!=""){g(m,"Show "+m);eWolf.trigger("select",[m])}});h.click(function(){var m=j.val();if(m!=""){f();i=m;g(m,"Last: "+m);eWolf.trigger("select",[m])}});eWolf.bind("select."+b,function(n,m){if(m!=i){f()}});j.keyup(function(m){if(m.keyCode==13&&j.val()!=""){if(m.shiftKey){d.click()}else{h.click()}}if(j.val()==""){h.hide(200);d.hide(200)}else{h.show(200);d.show(200)}});return this};var ShowMore=function(c,b){var a=null;return{remove:function(){if(a!=null){a.remove()}return this},draw:function(){this.remove();a=$("<div/>").attr({"class":"showMoreClass"}).append("Show More...").click(b);c.append(a);return this}}};var SideMenu=function(a,e,i){a.data("menuObj",this);e.data("menuObj",this);var h=a.children("#toggleButtons");var n=h.children("#btnHideMenu").data("menuObj",this).click(function(){m()}),j=h.children("#btnShowMenu").data("menuObj",this).click(function(){p()}),k=h.children("#btnPin").data("menuObj",this).click(function(){o()}),d=h.children("#btnUnPin").data("menuObj",this).click(function(){l()}),c=[];function p(){j.hide();b();q();n.show()}function m(){n.hide();g();f();j.show()}function o(){q();k.hide();d.show();n.show();a.unbind("mouseover");a.unbind("mouseout")}function l(){f();d.hide();k.show();n.hide();a.mouseover(function(){b()});a.mouseout(function(){g()})}function g(){a.stop();a.animate({opacity:0.25,left:"-175px",},200,function(){})}function b(){a.stop();a.animate({opacity:0.7,left:"-35px",},200,function(){})}function f(){e.stop();e.animate({left:"30px",right:"0"},200,function(){eWolf.trigger("mainFrameResize",["sideMenu"])})}function q(){e.stop();e.animate({left:"170px",right:"0"},200,function(){eWolf.trigger("mainFrameResize",["sideMenu"])})}$(window).resize(function(){eWolf.trigger("mainFrameResize",["window"])});return{append:function(s){a.append(s)},createNewMenuList:function(u,t){var s=new MenuList(this,u,t,i).appendTo(a);c.push(s);return s}}};var Wolfpacks=function(g,b){var d=g.createNewMenuList("wolfpacks","Wolfpacks");var c=new RequestHandler("wolfpacks","/json",e,null,0);var f=[];c.getData({wolfpacks:{}},null);function a(h,j){var i=new Flicker(h,b);d.addMenuItem(h,j);f.push(i)}function e(h,i){console.log(h);if(h.wolfpacks!=null){if(h.wolfpacks.result=="success"){if(h.wolfpacks.wolfpacksList!=null){$.each(h.wolfpacks.wolfpacksList,function(k,j){a("__packid__"+j,j)})}else{console.log("No wolfpackList parameter in response")}}else{console.log(h.wolfpacks.result)}}else{console.log("No wolfpacks parameter in response")}}return this};jQuery.extend({createUploadIframe:function(d,b){var a="jUploadFrame"+d;var c='<iframe id="'+a+'" name="'+a+'" style="position:absolute; top:-9999px; left:-9999px"';if(window.ActiveXObject){if(typeof b=="boolean"){c+=' src="javascript:false"'}else{if(typeof b=="string"){c+=' src="'+b+'"'}}}c+=" />";jQuery(c).appendTo(document.body);return jQuery("#"+a).get(0)},createUploadForm:function(a,j,d){var h="jUploadForm"+a;var c="jUploadFile"+a;var b=jQuery('<form  action="" method="POST" name="'+h+'" id="'+h+'" enctype="multipart/form-data"></form>');if(d){for(var e in d){jQuery('<input type="hidden" name="'+e+'" value="'+d[e]+'" />').appendTo(b)}}jQuery('<input type="hidden" name="wolfpackName" value="StamWolfpack" />').appendTo(b);var f=jQuery("#"+j);var g=jQuery(f).clone();jQuery(f).attr("id",c);jQuery(f).before(g);jQuery(f).appendTo(b);jQuery(b).css("position","absolute");jQuery(b).css("top","-1200px");jQuery(b).css("left","-1200px");jQuery(b).appendTo("body");return b},ajaxFileUpload:function(k){k=jQuery.extend({},jQuery.ajaxSettings,k);var a=new Date().getTime();var b=jQuery.createUploadForm(a,k.fileElementId,(typeof(k.data)=="undefined"?false:k.data));var i=jQuery.createUploadIframe(a,k.secureuri);var h="jUploadFrame"+a;var j="jUploadForm"+a;if(k.global&&!jQuery.active++){jQuery.event.trigger("ajaxStart")}var c=false;var f={};if(k.global){jQuery.event.trigger("ajaxSend",[f,k])}var d=function(l){var p=document.getElementById(h);try{if(p.contentWindow){f.responseText=p.contentWindow.document.body?p.contentWindow.document.body.innerHTML:null;f.responseXML=p.contentWindow.document.XMLDocument?p.contentWindow.document.XMLDocument:p.contentWindow.document}else{if(p.contentDocument){f.responseText=p.contentDocument.document.body?p.contentDocument.document.body.innerHTML:null;f.responseXML=p.contentDocument.document.XMLDocument?p.contentDocument.document.XMLDocument:p.contentDocument.document}}}catch(o){jQuery.handleError(k,f,null,o)}if(f||l=="timeout"){c=true;var m;try{m=l!="timeout"?"success":"error";if(m!="error"){var n=jQuery.uploadHttpData(f,k.dataType);if(k.success){k.success(n,m)}if(k.global){jQuery.event.trigger("ajaxSuccess",[f,k])}}else{jQuery.handleError(k,f,m)}}catch(o){m="error";jQuery.handleError(k,f,m,o)}if(k.global){jQuery.event.trigger("ajaxComplete",[f,k])}if(k.global&&!--jQuery.active){jQuery.event.trigger("ajaxStop")}if(k.complete){k.complete(f,m)}jQuery(p).unbind();setTimeout(function(){try{jQuery(p).remove();jQuery(b).remove()}catch(q){jQuery.handleError(k,f,null,q)}},100);f=null}};if(k.timeout>0){setTimeout(function(){if(!c){d("timeout")}},k.timeout)}try{var b=jQuery("#"+j);jQuery(b).attr("action",k.url);jQuery(b).attr("method","POST");jQuery(b).attr("target",h);if(b.encoding){jQuery(b).attr("encoding","multipart/form-data")}else{jQuery(b).attr("enctype","multipart/form-data")}jQuery(b).submit()}catch(g){jQuery.handleError(k,f,null,g)}jQuery("#"+h).load(d);return{abort:function(){}}},uploadHttpData:function(r,type){var data=!type;data=type=="xml"||data?r.responseXML:r.responseText;if(type=="script"){jQuery.globalEval(data)}if(type=="json"){eval("data = "+data)}if(type=="html"){jQuery("<div>").html(data).evalScripts()}return data}});var eWolfMaster=new function(){};var eWolf=$(eWolfMaster);var filedrag=function(b){var f=[];var j=$("<input/>").attr({type:"file",id:"fileselect",name:"fileselect[]",multiple:"multiple"}).appendTo(b);var e=$("<div/>").attr("id","filedrag").append("or drop files here").appendTo(b);var i=$("<ul/>").attr({id:"filelist","class":"filesList"}).appendTo(b);function g(m){var l=$("<input/>").attr({type:"checkbox",checked:"checked"});$("<li/>").attr({"class":"filelistItem"}).append(l).append(m).appendTo(i)}if(window.File&&window.FileList&&window.FileReader){d()}function k(l){return document.getElementById(l)}function h(l){l.stopPropagation();l.preventDefault();l.target.className=(l.type=="dragover"?"hover":"")}function a(o){h(o);var m=o.target.files||o.dataTransfer.files;for(var l=0,n;n=m[l];l++){f.push(n);c(n)}}function c(l){g("<strong>"+l.name+"</strong> type: <strong>"+l.type+"</strong> size: <strong>"+l.size+"</strong> bytes")}function d(){j[0].addEventListener("change",a,false);var l=new XMLHttpRequest();if(l.upload){e[0].addEventListener("dragover",h,false);e[0].addEventListener("dragleave",h,false);e[0].addEventListener("drop",a,false);e[0].style.display="block"}}return{getFiles:function(){return files}}};var qq=qq||{};qq.extend=function(b,a){for(var c in a){b[c]=a[c]}};qq.indexOf=function(b,c,d){if(b.indexOf){return b.indexOf(c,d)}d=d||0;var a=b.length;if(d<0){d+=a}for(;d<a;d++){if(d in b&&b[d]===c){return d}}return -1};qq.getUniqueId=(function(){var a=0;return function(){return a++}})();qq.attach=function(a,c,b){if(a.addEventListener){a.addEventListener(c,b,false)}else{if(a.attachEvent){a.attachEvent("on"+c,b)}}};qq.detach=function(a,c,b){if(a.removeEventListener){a.removeEventListener(c,b,false)}else{if(a.attachEvent){a.detachEvent("on"+c,b)}}};qq.preventDefault=function(a){if(a.preventDefault){a.preventDefault()}else{a.returnValue=false}};qq.insertBefore=function(d,c){c.parentNode.insertBefore(d,c)};qq.remove=function(a){a.parentNode.removeChild(a)};qq.contains=function(b,a){if(b==a){return true}if(b.contains){return b.contains(a)}else{return !!(a.compareDocumentPosition(b)&8)}};qq.toElement=(function(){var a=document.createElement("div");return function(c){a.innerHTML=c;var b=a.firstChild;a.removeChild(b);return b}})();qq.css=function(a,b){if(b.opacity!=null){if(typeof a.style.opacity!="string"&&typeof(a.filters)!="undefined"){b.filter="alpha(opacity="+Math.round(100*b.opacity)+")"}}qq.extend(a.style,b)};qq.hasClass=function(b,a){var c=new RegExp("(^| )"+a+"( |$)");return c.test(b.className)};qq.addClass=function(b,a){if(!qq.hasClass(b,a)){b.className+=" "+a}};qq.removeClass=function(b,a){var c=new RegExp("(^| )"+a+"( |$)");b.className=b.className.replace(c," ").replace(/^\s+|\s+$/g,"")};qq.setText=function(a,b){a.innerText=b;a.textContent=b};qq.children=function(b){var a=[],c=b.firstChild;while(c){if(c.nodeType==1){a.push(c)}c=c.nextSibling}return a};qq.getByClass=function(d,e){if(d.querySelectorAll){return d.querySelectorAll("."+e)}var b=[];var f=d.getElementsByTagName("*");var a=f.length;for(var c=0;c<a;c++){if(qq.hasClass(f[c],e)){b.push(f[c])}}return b};qq.obj2url=function(f,b,h){var g=[],d="&",e=function(k,j){var l=b?(/\[\]$/.test(b))?b:b+"["+j+"]":j;if((l!="undefined")&&(j!="undefined")){g.push((typeof k==="object")?qq.obj2url(k,l,true):(Object.prototype.toString.call(k)==="[object Function]")?encodeURIComponent(l)+"="+encodeURIComponent(k()):encodeURIComponent(l)+"="+encodeURIComponent(k))}};if(!h&&b){d=(/\?/.test(b))?(/\?$/.test(b))?"":"&":"?";g.push(b);g.push(qq.obj2url(f))}else{if((Object.prototype.toString.call(f)==="[object Array]")&&(typeof f!="undefined")){for(var c=0,a=f.length;c<a;++c){e(f[c],c)}}else{if((typeof f!="undefined")&&(f!==null)&&(typeof f==="object")){for(var c in f){e(f[c],c)}}else{g.push(encodeURIComponent(b)+"="+encodeURIComponent(f))}}}return g.join(d).replace(/^&/,"").replace(/%20/g,"+")};var qq=qq||{};qq.FileUploaderBasic=function(a){this._options={debug:false,action:"/server/upload",params:{},button:null,multiple:true,maxConnections:3,allowedExtensions:[],sizeLimit:0,minSizeLimit:0,onSubmit:function(c,b){},onProgress:function(e,d,b,c){},onComplete:function(d,c,b){},onCancel:function(c,b){},messages:{typeError:"{file} has invalid extension. Only {extensions} are allowed.",sizeError:"{file} is too large, maximum file size is {sizeLimit}.",minSizeError:"{file} is too small, minimum file size is {minSizeLimit}.",emptyError:"{file} is empty, please select files again without it.",onLeave:"The files are being uploaded, if you leave now the upload will be cancelled."},showMessage:function(b){alert(b)}};qq.extend(this._options,a);this._filesInProgress=0;this._handler=this._createUploadHandler();if(this._options.button){this._button=this._createUploadButton(this._options.button)}this._preventLeaveInProgress()};qq.FileUploaderBasic.prototype={setParams:function(a){this._options.params=a},getInProgress:function(){return this._filesInProgress},_createUploadButton:function(b){var a=this;return new qq.UploadButton({element:b,multiple:this._options.multiple&&qq.UploadHandlerXhr.isSupported(),onChange:function(c){a._onInputChange(c)}})},_createUploadHandler:function(){var a=this,c;if(qq.UploadHandlerXhr.isSupported()){c="UploadHandlerXhr"}else{c="UploadHandlerForm"}var b=new qq[c]({debug:this._options.debug,action:this._options.action,maxConnections:this._options.maxConnections,onProgress:function(g,f,d,e){a._onProgress(g,f,d,e);a._options.onProgress(g,f,d,e)},onComplete:function(f,e,d){a._onComplete(f,e,d);a._options.onComplete(f,e,d)},onCancel:function(e,d){a._onCancel(e,d);a._options.onCancel(e,d)}});return b},_preventLeaveInProgress:function(){var a=this;qq.attach(window,"beforeunload",function(b){if(!a._filesInProgress){return}var b=b||window.event;b.returnValue=a._options.messages.onLeave;return a._options.messages.onLeave})},_onSubmit:function(b,a){this._filesInProgress++},_onProgress:function(d,c,a,b){},_onComplete:function(c,b,a){this._filesInProgress--;if(a.error){this._options.showMessage(a.error)}},_onCancel:function(b,a){this._filesInProgress--},_onInputChange:function(a){if(this._handler instanceof qq.UploadHandlerXhr){this._uploadFileList(a.files)}else{if(this._validateFile(a)){this._uploadFile(a)}}this._button.reset()},_uploadFileList:function(b){for(var a=0;a<b.length;a++){if(!this._validateFile(b[a])){return}}for(var a=0;a<b.length;a++){this._uploadFile(b[a])}},_uploadFile:function(a){var c=this._handler.add(a);var b=this._handler.getName(c);if(this._options.onSubmit(c,b)!==false){this._onSubmit(c,b);this._handler.upload(c,this._options.params)}},_validateFile:function(c){var a,b;if(c.value){a=c.value.replace(/.*(\/|\\)/,"")}else{a=c.fileName!=null?c.fileName:c.name;b=c.fileSize!=null?c.fileSize:c.size}if(!this._isAllowedExtension(a)){this._error("typeError",a);return false}else{if(b===0){this._error("emptyError",a);return false}else{if(b&&this._options.sizeLimit&&b>this._options.sizeLimit){this._error("sizeError",a);return false}else{if(b&&b<this._options.minSizeLimit){this._error("minSizeError",a);return false}}}}return true},_error:function(c,d){var b=this._options.messages[c];function a(e,f){b=b.replace(e,f)}a("{file}",this._formatFileName(d));a("{extensions}",this._options.allowedExtensions.join(", "));a("{sizeLimit}",this._formatSize(this._options.sizeLimit));a("{minSizeLimit}",this._formatSize(this._options.minSizeLimit));this._options.showMessage(b)},_formatFileName:function(a){if(a.length>33){a=a.slice(0,19)+"..."+a.slice(-13)}return a},_isAllowedExtension:function(d){var b=(-1!==d.indexOf("."))?d.replace(/.*[.]/,"").toLowerCase():"";var c=this._options.allowedExtensions;if(!c.length){return true}for(var a=0;a<c.length;a++){if(c[a].toLowerCase()==b){return true}}return false},_formatSize:function(a){var b=-1;do{a=a/1024;b++}while(a>99);return Math.max(a,0.1).toFixed(1)+["kB","MB","GB","TB","PB","EB"][b]}};qq.FileUploader=function(a){qq.FileUploaderBasic.apply(this,arguments);qq.extend(this._options,{element:null,listElement:null,template:'<div class="qq-uploader"><div class="qq-upload-drop-area"><span>Drop files here to upload</span></div><div class="qq-upload-button">Upload a file</div><ul class="qq-upload-list"></ul></div>',fileTemplate:'<li><span class="qq-upload-file"></span><span class="qq-upload-spinner"></span><span class="qq-upload-size"></span><a class="qq-upload-cancel" href="#">Cancel</a><span class="qq-upload-failed-text">Failed</span></li>',classes:{button:"qq-upload-button",drop:"qq-upload-drop-area",dropActive:"qq-upload-drop-area-active",list:"qq-upload-list",file:"qq-upload-file",spinner:"qq-upload-spinner",size:"qq-upload-size",cancel:"qq-upload-cancel",success:"qq-upload-success",fail:"qq-upload-fail"}});qq.extend(this._options,a);this._element=this._options.element;this._element.innerHTML=this._options.template;this._listElement=this._options.listElement||this._find(this._element,"list");this._classes=this._options.classes;this._button=this._createUploadButton(this._find(this._element,"button"));this._bindCancelEvent();this._setupDragDrop()};qq.extend(qq.FileUploader.prototype,qq.FileUploaderBasic.prototype);qq.extend(qq.FileUploader.prototype,{_find:function(c,b){var a=qq.getByClass(c,this._options.classes[b])[0];if(!a){throw new Error("element not found "+b)}return a},_setupDragDrop:function(){var b=this,c=this._find(this._element,"drop");var a=new qq.UploadDropZone({element:c,onEnter:function(d){qq.addClass(c,b._classes.dropActive);d.stopPropagation()},onLeave:function(d){d.stopPropagation()},onLeaveNotDescendants:function(d){qq.removeClass(c,b._classes.dropActive)},onDrop:function(d){c.style.display="none";qq.removeClass(c,b._classes.dropActive);b._uploadFileList(d.dataTransfer.files)}});c.style.display="none";qq.attach(document,"dragenter",function(d){if(!a._isValidFileDrag(d)){return}c.style.display="block"});qq.attach(document,"dragleave",function(f){if(!a._isValidFileDrag(f)){return}var d=document.elementFromPoint(f.clientX,f.clientY);if(!d||d.nodeName=="HTML"){c.style.display="none"}})},_onSubmit:function(b,a){qq.FileUploaderBasic.prototype._onSubmit.apply(this,arguments);this._addToList(b,a)},_onProgress:function(g,f,a,d){qq.FileUploaderBasic.prototype._onProgress.apply(this,arguments);var c=this._getItemByFileId(g);var b=this._find(c,"size");b.style.display="inline";var e;if(a!=d){e=Math.round(a/d*100)+"% from "+this._formatSize(d)}else{e=this._formatSize(d)}qq.setText(b,e)},_onComplete:function(d,c,a){qq.FileUploaderBasic.prototype._onComplete.apply(this,arguments);var b=this._getItemByFileId(d);qq.remove(this._find(b,"cancel"));qq.remove(this._find(b,"spinner"));if(a.success){qq.addClass(b,this._classes.success)}else{qq.addClass(b,this._classes.fail)}},_addToList:function(d,c){var a=qq.toElement(this._options.fileTemplate);a.qqFileId=d;var b=this._find(a,"file");qq.setText(b,this._formatFileName(c));this._find(a,"size").style.display="none";this._listElement.appendChild(a)},_getItemByFileId:function(b){var a=this._listElement.firstChild;while(a){if(a.qqFileId==b){return a}a=a.nextSibling}},_bindCancelEvent:function(){var a=this,b=this._listElement;qq.attach(b,"click",function(f){f=f||window.event;var d=f.target||f.srcElement;if(qq.hasClass(d,a._classes.cancel)){qq.preventDefault(f);var c=d.parentNode;a._handler.cancel(c.qqFileId);qq.remove(c)}})}});qq.UploadDropZone=function(a){this._options={element:null,onEnter:function(b){},onLeave:function(b){},onLeaveNotDescendants:function(b){},onDrop:function(b){}};qq.extend(this._options,a);this._element=this._options.element;this._disableDropOutside();this._attachEvents()};qq.UploadDropZone.prototype={_disableDropOutside:function(a){if(!qq.UploadDropZone.dropOutsideDisabled){qq.attach(document,"dragover",function(b){if(b.dataTransfer){b.dataTransfer.dropEffect="none";b.preventDefault()}});qq.UploadDropZone.dropOutsideDisabled=true}},_attachEvents:function(){var a=this;qq.attach(a._element,"dragover",function(c){if(!a._isValidFileDrag(c)){return}var b=c.dataTransfer.effectAllowed;if(b=="move"||b=="linkMove"){c.dataTransfer.dropEffect="move"}else{c.dataTransfer.dropEffect="copy"}c.stopPropagation();c.preventDefault()});qq.attach(a._element,"dragenter",function(b){if(!a._isValidFileDrag(b)){return}a._options.onEnter(b)});qq.attach(a._element,"dragleave",function(c){if(!a._isValidFileDrag(c)){return}a._options.onLeave(c);var b=document.elementFromPoint(c.clientX,c.clientY);if(qq.contains(this,b)){return}a._options.onLeaveNotDescendants(c)});qq.attach(a._element,"drop",function(b){if(!a._isValidFileDrag(b)){return}b.preventDefault();a._options.onDrop(b)})},_isValidFileDrag:function(c){var b=c.dataTransfer,a=navigator.userAgent.indexOf("AppleWebKit")>-1;return b&&b.effectAllowed!="none"&&(b.files||(!a&&b.types.contains&&b.types.contains("Files")))}};qq.UploadButton=function(a){this._options={element:null,multiple:false,name:"file",onChange:function(b){},hoverClass:"qq-upload-button-hover",focusClass:"qq-upload-button-focus"};qq.extend(this._options,a);this._element=this._options.element;qq.css(this._element,{position:"relative",overflow:"hidden",direction:"ltr"});this._input=this._createInput()};qq.UploadButton.prototype={getInput:function(){return this._input},reset:function(){if(this._input.parentNode){qq.remove(this._input)}qq.removeClass(this._element,this._options.focusClass);this._input=this._createInput()},_createInput:function(){var b=document.createElement("input");if(this._options.multiple){b.setAttribute("multiple","multiple")}b.setAttribute("type","file");b.setAttribute("name",this._options.name);qq.css(b,{position:"absolute",right:0,top:0,fontFamily:"Arial",fontSize:"118px",margin:0,padding:0,cursor:"pointer",opacity:0});this._element.appendChild(b);var a=this;qq.attach(b,"change",function(){a._options.onChange(b)});qq.attach(b,"mouseover",function(){qq.addClass(a._element,a._options.hoverClass)});qq.attach(b,"mouseout",function(){qq.removeClass(a._element,a._options.hoverClass)});qq.attach(b,"focus",function(){qq.addClass(a._element,a._options.focusClass)});qq.attach(b,"blur",function(){qq.removeClass(a._element,a._options.focusClass)});if(window.attachEvent){b.setAttribute("tabIndex","-1")}return b}};qq.UploadHandlerAbstract=function(a){this._options={debug:false,action:"/upload.php",maxConnections:999,onProgress:function(e,d,b,c){},onComplete:function(d,c,b){},onCancel:function(c,b){}};qq.extend(this._options,a);this._queue=[];this._params=[]};qq.UploadHandlerAbstract.prototype={log:function(a){if(this._options.debug&&window.console){console.log("[uploader] "+a)}},add:function(a){},upload:function(d,b){var a=this._queue.push(d);var c={};qq.extend(c,b);this._params[d]=c;if(a<=this._options.maxConnections){this._upload(d,this._params[d])}},cancel:function(a){this._cancel(a);this._dequeue(a)},cancelAll:function(){for(var a=0;a<this._queue.length;a++){this._cancel(this._queue[a])}this._queue=[]},getName:function(a){},getSize:function(a){},getQueue:function(){return this._queue},_upload:function(a){},_cancel:function(a){},_dequeue:function(d){var b=qq.indexOf(this._queue,d);this._queue.splice(b,1);var a=this._options.maxConnections;if(this._queue.length>=a&&b<a){var c=this._queue[a-1];this._upload(c,this._params[c])}}};qq.UploadHandlerForm=function(a){qq.UploadHandlerAbstract.apply(this,arguments);this._inputs={}};qq.extend(qq.UploadHandlerForm.prototype,qq.UploadHandlerAbstract.prototype);qq.extend(qq.UploadHandlerForm.prototype,{add:function(a){a.setAttribute("name","qqfile");var b="qq-upload-handler-iframe"+qq.getUniqueId();this._inputs[b]=a;if(a.parentNode){qq.remove(a)}return b},getName:function(a){return this._inputs[a].value.replace(/.*(\/|\\)/,"")},_cancel:function(b){this._options.onCancel(b,this.getName(b));delete this._inputs[b];var a=document.getElementById(b);if(a){a.setAttribute("src","javascript:false;");qq.remove(a)}},_upload:function(g,e){var b=this._inputs[g];if(!b){throw new Error("file with passed id was not added, or already uploaded or cancelled")}var f=this.getName(g);var c=this._createIframe(g);var d=this._createForm(c,e);d.appendChild(b);var a=this;this._attachLoadEvent(c,function(){a.log("iframe loaded");var h=a._getIframeContentJSON(c);a._options.onComplete(g,f,h);a._dequeue(g);delete a._inputs[g];setTimeout(function(){qq.remove(c)},1)});d.submit();qq.remove(d);return g},_attachLoadEvent:function(a,b){qq.attach(a,"load",function(){if(!a.parentNode){return}if(a.contentDocument&&a.contentDocument.body&&a.contentDocument.body.innerHTML=="false"){return}b()})},_getIframeContentJSON:function(iframe){var doc=iframe.contentDocument?iframe.contentDocument:iframe.contentWindow.document,response;this.log("converting iframe's innerHTML to JSON");this.log("innerHTML = "+doc.body.innerHTML);try{response=eval("("+doc.body.innerHTML+")")}catch(err){response={}}return response},_createIframe:function(b){var a=qq.toElement('<iframe src="javascript:false;" name="'+b+'" />');a.setAttribute("id",b);a.style.display="none";document.body.appendChild(a);return a},_createForm:function(a,c){var b=qq.toElement('<form method="post" enctype="multipart/form-data"></form>');var d=qq.obj2url(c,this._options.action);b.setAttribute("action",d);b.setAttribute("target",a.name);b.style.display="none";document.body.appendChild(b);return b}});qq.UploadHandlerXhr=function(a){qq.UploadHandlerAbstract.apply(this,arguments);this._files=[];this._xhrs=[];this._loaded=[]};qq.UploadHandlerXhr.isSupported=function(){var a=document.createElement("input");a.type="file";return("multiple" in a&&typeof File!="undefined"&&typeof(new XMLHttpRequest()).upload!="undefined")};qq.extend(qq.UploadHandlerXhr.prototype,qq.UploadHandlerAbstract.prototype);qq.extend(qq.UploadHandlerXhr.prototype,{add:function(a){if(!(a instanceof File)){throw new Error("Passed obj in not a File (in qq.UploadHandlerXhr)")}return this._files.push(a)-1},getName:function(b){var a=this._files[b];return a.fileName!=null?a.fileName:a.name},getSize:function(b){var a=this._files[b];return a.fileSize!=null?a.fileSize:a.size},getLoaded:function(a){return this._loaded[a]||0},_upload:function(h,f){var d=this._files[h],b=this.getName(h),c=this.getSize(h);this._loaded[h]=0;var e=this._xhrs[h]=new XMLHttpRequest();var a=this;e.upload.onprogress=function(i){if(i.lengthComputable){a._loaded[h]=i.loaded;a._options.onProgress(h,b,i.loaded,i.total)}};e.onreadystatechange=function(){if(e.readyState==4){a._onComplete(h,e)}};f=f||{};f.qqfile=b;var g=qq.obj2url(f,this._options.action);e.open("POST",g,true);e.setRequestHeader("X-Requested-With","XMLHttpRequest");e.setRequestHeader("X-File-Name",encodeURIComponent(b));e.setRequestHeader("Content-Type","application/octet-stream");e.send(d)},_onComplete:function(id,xhr){if(!this._files[id]){return}var name=this.getName(id);var size=this.getSize(id);this._options.onProgress(id,name,size,size);if(xhr.status==200){this.log("xhr - server response received");this.log("responseText = "+xhr.responseText);var response;try{response=eval("("+xhr.responseText+")")}catch(err){response={}}this._options.onComplete(id,name,response)}else{this._options.onComplete(id,name,{})}this._files[id]=null;this._xhrs[id]=null;this._dequeue(id)},_cancel:function(a){this._options.onCancel(a,this.getName(a));this._files[a]=null;if(this._xhrs[a]){this._xhrs[a].abort();this._xhrs[a]=null}}});Date.CultureInfo={name:"en-US",englishName:"English (United States)",nativeName:"English (United States)",dayNames:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],abbreviatedDayNames:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],shortestDayNames:["Su","Mo","Tu","We","Th","Fr","Sa"],firstLetterDayNames:["S","M","T","W","T","F","S"],monthNames:["January","February","March","April","May","June","July","August","September","October","November","December"],abbreviatedMonthNames:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],amDesignator:"AM",pmDesignator:"PM",firstDayOfWeek:0,twoDigitYearMax:2029,dateElementOrder:"mdy",formatPatterns:{shortDate:"M/d/yyyy",longDate:"dddd, MMMM dd, yyyy",shortTime:"h:mm tt",longTime:"h:mm:ss tt",fullDateTime:"dddd, MMMM dd, yyyy h:mm:ss tt",sortableDateTime:"yyyy-MM-ddTHH:mm:ss",universalSortableDateTime:"yyyy-MM-dd HH:mm:ssZ",rfc1123:"ddd, dd MMM yyyy HH:mm:ss GMT",monthDay:"MMMM dd",yearMonth:"MMMM, yyyy"},regexPatterns:{jan:/^jan(uary)?/i,feb:/^feb(ruary)?/i,mar:/^mar(ch)?/i,apr:/^apr(il)?/i,may:/^may/i,jun:/^jun(e)?/i,jul:/^jul(y)?/i,aug:/^aug(ust)?/i,sep:/^sep(t(ember)?)?/i,oct:/^oct(ober)?/i,nov:/^nov(ember)?/i,dec:/^dec(ember)?/i,sun:/^su(n(day)?)?/i,mon:/^mo(n(day)?)?/i,tue:/^tu(e(s(day)?)?)?/i,wed:/^we(d(nesday)?)?/i,thu:/^th(u(r(s(day)?)?)?)?/i,fri:/^fr(i(day)?)?/i,sat:/^sa(t(urday)?)?/i,future:/^next/i,past:/^last|past|prev(ious)?/i,add:/^(\+|after|from)/i,subtract:/^(\-|before|ago)/i,yesterday:/^yesterday/i,today:/^t(oday)?/i,tomorrow:/^tomorrow/i,now:/^n(ow)?/i,millisecond:/^ms|milli(second)?s?/i,second:/^sec(ond)?s?/i,minute:/^min(ute)?s?/i,hour:/^h(ou)?rs?/i,week:/^w(ee)?k/i,month:/^m(o(nth)?s?)?/i,day:/^d(ays?)?/i,year:/^y((ea)?rs?)?/i,shortMeridian:/^(a|p)/i,longMeridian:/^(a\.?m?\.?|p\.?m?\.?)/i,timezone:/^((e(s|d)t|c(s|d)t|m(s|d)t|p(s|d)t)|((gmt)?\s*(\+|\-)\s*\d\d\d\d?)|gmt)/i,ordinalSuffix:/^\s*(st|nd|rd|th)/i,timeContext:/^\s*(\:|a|p)/i},abbreviatedTimeZoneStandard:{GMT:"-000",EST:"-0400",CST:"-0500",MST:"-0600",PST:"-0700"},abbreviatedTimeZoneDST:{GMT:"-000",EDT:"-0500",CDT:"-0600",MDT:"-0700",PDT:"-0800"}};Date.getMonthNumberFromName=function(b){var e=Date.CultureInfo.monthNames,a=Date.CultureInfo.abbreviatedMonthNames,d=b.toLowerCase();for(var c=0;c<e.length;c++){if(e[c].toLowerCase()==d||a[c].toLowerCase()==d){return c}}return -1};Date.getDayNumberFromName=function(b){var f=Date.CultureInfo.dayNames,a=Date.CultureInfo.abbreviatedDayNames,e=Date.CultureInfo.shortestDayNames,d=b.toLowerCase();for(var c=0;c<f.length;c++){if(f[c].toLowerCase()==d||a[c].toLowerCase()==d){return c}}return -1};Date.isLeapYear=function(a){return(((a%4===0)&&(a%100!==0))||(a%400===0))};Date.getDaysInMonth=function(a,b){return[31,(Date.isLeapYear(a)?29:28),31,30,31,30,31,31,30,31,30,31][b]};Date.getTimezoneOffset=function(a,b){return(b||false)?Date.CultureInfo.abbreviatedTimeZoneDST[a.toUpperCase()]:Date.CultureInfo.abbreviatedTimeZoneStandard[a.toUpperCase()]};Date.getTimezoneAbbreviation=function(b,d){var c=(d||false)?Date.CultureInfo.abbreviatedTimeZoneDST:Date.CultureInfo.abbreviatedTimeZoneStandard,a;for(a in c){if(c[a]===b){return a}}return null};Date.prototype.clone=function(){return new Date(this.getTime())};Date.prototype.compareTo=function(a){if(isNaN(this)){throw new Error(this)}if(a instanceof Date&&!isNaN(a)){return(this>a)?1:(this<a)?-1:0}else{throw new TypeError(a)}};Date.prototype.equals=function(a){return(this.compareTo(a)===0)};Date.prototype.between=function(c,a){var b=this.getTime();return b>=c.getTime()&&b<=a.getTime()};Date.prototype.addMilliseconds=function(a){this.setMilliseconds(this.getMilliseconds()+a);return this};Date.prototype.addSeconds=function(a){return this.addMilliseconds(a*1000)};Date.prototype.addMinutes=function(a){return this.addMilliseconds(a*60000)};Date.prototype.addHours=function(a){return this.addMilliseconds(a*3600000)};Date.prototype.addDays=function(a){return this.addMilliseconds(a*86400000)};Date.prototype.addWeeks=function(a){return this.addMilliseconds(a*604800000)};Date.prototype.addMonths=function(a){var b=this.getDate();this.setDate(1);this.setMonth(this.getMonth()+a);this.setDate(Math.min(b,this.getDaysInMonth()));return this};Date.prototype.addYears=function(a){return this.addMonths(a*12)};Date.prototype.add=function(b){if(typeof b=="number"){this._orient=b;return this}var a=b;if(a.millisecond||a.milliseconds){this.addMilliseconds(a.millisecond||a.milliseconds)}if(a.second||a.seconds){this.addSeconds(a.second||a.seconds)}if(a.minute||a.minutes){this.addMinutes(a.minute||a.minutes)}if(a.hour||a.hours){this.addHours(a.hour||a.hours)}if(a.month||a.months){this.addMonths(a.month||a.months)}if(a.year||a.years){this.addYears(a.year||a.years)}if(a.day||a.days){this.addDays(a.day||a.days)}return this};Date._validate=function(d,c,a,b){if(typeof d!="number"){throw new TypeError(d+" is not a Number.")}else{if(d<c||d>a){throw new RangeError(d+" is not a valid value for "+b+".")}}return true};Date.validateMillisecond=function(a){return Date._validate(a,0,999,"milliseconds")};Date.validateSecond=function(a){return Date._validate(a,0,59,"seconds")};Date.validateMinute=function(a){return Date._validate(a,0,59,"minutes")};Date.validateHour=function(a){return Date._validate(a,0,23,"hours")};Date.validateDay=function(c,a,b){return Date._validate(c,1,Date.getDaysInMonth(a,b),"days")};Date.validateMonth=function(a){return Date._validate(a,0,11,"months")};Date.validateYear=function(a){return Date._validate(a,1,9999,"seconds")};Date.prototype.set=function(b){var a=b;if(!a.millisecond&&a.millisecond!==0){a.millisecond=-1}if(!a.second&&a.second!==0){a.second=-1}if(!a.minute&&a.minute!==0){a.minute=-1}if(!a.hour&&a.hour!==0){a.hour=-1}if(!a.day&&a.day!==0){a.day=-1}if(!a.month&&a.month!==0){a.month=-1}if(!a.year&&a.year!==0){a.year=-1}if(a.millisecond!=-1&&Date.validateMillisecond(a.millisecond)){this.addMilliseconds(a.millisecond-this.getMilliseconds())}if(a.second!=-1&&Date.validateSecond(a.second)){this.addSeconds(a.second-this.getSeconds())}if(a.minute!=-1&&Date.validateMinute(a.minute)){this.addMinutes(a.minute-this.getMinutes())}if(a.hour!=-1&&Date.validateHour(a.hour)){this.addHours(a.hour-this.getHours())}if(a.month!==-1&&Date.validateMonth(a.month)){this.addMonths(a.month-this.getMonth())}if(a.year!=-1&&Date.validateYear(a.year)){this.addYears(a.year-this.getFullYear())}if(a.day!=-1&&Date.validateDay(a.day,this.getFullYear(),this.getMonth())){this.addDays(a.day-this.getDate())}if(a.timezone){this.setTimezone(a.timezone)}if(a.timezoneOffset){this.setTimezoneOffset(a.timezoneOffset)}return this};Date.prototype.clearTime=function(){this.setHours(0);this.setMinutes(0);this.setSeconds(0);this.setMilliseconds(0);return this};Date.prototype.isLeapYear=function(){var a=this.getFullYear();return(((a%4===0)&&(a%100!==0))||(a%400===0))};Date.prototype.isWeekday=function(){return !(this.is().sat()||this.is().sun())};Date.prototype.getDaysInMonth=function(){return Date.getDaysInMonth(this.getFullYear(),this.getMonth())};Date.prototype.moveToFirstDayOfMonth=function(){return this.set({day:1})};Date.prototype.moveToLastDayOfMonth=function(){return this.set({day:this.getDaysInMonth()})};Date.prototype.moveToDayOfWeek=function(a,b){var c=(a-this.getDay()+7*(b||+1))%7;return this.addDays((c===0)?c+=7*(b||+1):c)};Date.prototype.moveToMonth=function(c,a){var b=(c-this.getMonth()+12*(a||+1))%12;return this.addMonths((b===0)?b+=12*(a||+1):b)};Date.prototype.getDayOfYear=function(){return Math.floor((this-new Date(this.getFullYear(),0,1))/86400000)};Date.prototype.getWeekOfYear=function(a){var h=this.getFullYear(),c=this.getMonth(),f=this.getDate();var j=a||Date.CultureInfo.firstDayOfWeek;var e=7+1-new Date(h,0,1).getDay();if(e==8){e=1}var b=((Date.UTC(h,c,f,0,0,0)-Date.UTC(h,0,1,0,0,0))/86400000)+1;var i=Math.floor((b-e+7)/7);if(i===j){h--;var g=7+1-new Date(h,0,1).getDay();if(g==2||g==8){i=53}else{i=52}}return i};Date.prototype.isDST=function(){console.log("isDST");return this.toString().match(/(E|C|M|P)(S|D)T/)[2]=="D"};Date.prototype.getTimezone=function(){return Date.getTimezoneAbbreviation(this.getUTCOffset,this.isDST())};Date.prototype.setTimezoneOffset=function(b){var a=this.getTimezoneOffset(),c=Number(b)*-6/10;this.addMinutes(c-a);return this};Date.prototype.setTimezone=function(a){return this.setTimezoneOffset(Date.getTimezoneOffset(a))};Date.prototype.getUTCOffset=function(){var b=this.getTimezoneOffset()*-10/6,a;if(b<0){a=(b-10000).toString();return a[0]+a.substr(2)}else{a=(b+10000).toString();return"+"+a.substr(1)}};Date.prototype.getDayName=function(a){return a?Date.CultureInfo.abbreviatedDayNames[this.getDay()]:Date.CultureInfo.dayNames[this.getDay()]};Date.prototype.getMonthName=function(a){return a?Date.CultureInfo.abbreviatedMonthNames[this.getMonth()]:Date.CultureInfo.monthNames[this.getMonth()]};Date.prototype._toString=Date.prototype.toString;Date.prototype.toString=function(c){var a=this;var b=function b(d){return(d.toString().length==1)?"0"+d:d};return c?c.replace(/dd?d?d?|MM?M?M?|yy?y?y?|hh?|HH?|mm?|ss?|tt?|zz?z?/g,function(d){switch(d){case"hh":return b(a.getHours()<13?a.getHours():(a.getHours()-12));case"h":return a.getHours()<13?a.getHours():(a.getHours()-12);case"HH":return b(a.getHours());case"H":return a.getHours();case"mm":return b(a.getMinutes());case"m":return a.getMinutes();case"ss":return b(a.getSeconds());case"s":return a.getSeconds();case"yyyy":return a.getFullYear();case"yy":return a.getFullYear().toString().substring(2,4);case"dddd":return a.getDayName();case"ddd":return a.getDayName(true);case"dd":return b(a.getDate());case"d":return a.getDate().toString();case"MMMM":return a.getMonthName();case"MMM":return a.getMonthName(true);case"MM":return b((a.getMonth()+1));case"M":return a.getMonth()+1;case"t":return a.getHours()<12?Date.CultureInfo.amDesignator.substring(0,1):Date.CultureInfo.pmDesignator.substring(0,1);case"tt":return a.getHours()<12?Date.CultureInfo.amDesignator:Date.CultureInfo.pmDesignator;case"zzz":case"zz":case"z":return""}}):this._toString()};Date.now=function(){return new Date()};Date.today=function(){return Date.now().clearTime()};Date.prototype._orient=+1;Date.prototype.next=function(){this._orient=+1;return this};Date.prototype.last=Date.prototype.prev=Date.prototype.previous=function(){this._orient=-1;return this};Date.prototype._is=false;Date.prototype.is=function(){this._is=true;return this};Number.prototype._dateElement="day";Number.prototype.fromNow=function(){var a={};a[this._dateElement]=this;return Date.now().add(a)};Number.prototype.ago=function(){var a={};a[this._dateElement]=this*-1;return Date.now().add(a)};(function(){var g=Date.prototype,a=Number.prototype;var p=("sunday monday tuesday wednesday thursday friday saturday").split(/\s/),o=("january february march april may june july august september october november december").split(/\s/),n=("Millisecond Second Minute Hour Day Week Month Year").split(/\s/),m;var l=function(i){return function(){if(this._is){this._is=false;return this.getDay()==i}return this.moveToDayOfWeek(i,this._orient)}};for(var f=0;f<p.length;f++){g[p[f]]=g[p[f].substring(0,3)]=l(f)}var h=function(i){return function(){if(this._is){this._is=false;return this.getMonth()===i}return this.moveToMonth(i,this._orient)}};for(var d=0;d<o.length;d++){g[o[d]]=g[o[d].substring(0,3)]=h(d)}var e=function(i){return function(){if(i.substring(i.length-1)!="s"){i+="s"}return this["add"+i](this._orient)}};var b=function(i){return function(){this._dateElement=i;return this}};for(var c=0;c<n.length;c++){m=n[c].toLowerCase();g[m]=g[m+"s"]=e(n[c]);a[m]=a[m+"s"]=b(m)}}());Date.prototype.toJSONString=function(){return this.toString("yyyy-MM-ddThh:mm:ssZ")};Date.prototype.toShortDateString=function(){return this.toString(Date.CultureInfo.formatPatterns.shortDatePattern)};Date.prototype.toLongDateString=function(){return this.toString(Date.CultureInfo.formatPatterns.longDatePattern)};Date.prototype.toShortTimeString=function(){return this.toString(Date.CultureInfo.formatPatterns.shortTimePattern)};Date.prototype.toLongTimeString=function(){return this.toString(Date.CultureInfo.formatPatterns.longTimePattern)};Date.prototype.getOrdinal=function(){switch(this.getDate()){case 1:case 21:case 31:return"st";case 2:case 22:return"nd";case 3:case 23:return"rd";default:return"th"}};(function(){Date.Parsing={Exception:function(i){this.message="Parse error at '"+i.substring(0,10)+" ...'"}};var a=Date.Parsing;var c=a.Operators={rtoken:function(i){return function(j){var k=j.match(i);if(k){return([k[0],j.substring(k[0].length)])}else{throw new a.Exception(j)}}},token:function(i){return function(j){return c.rtoken(new RegExp("^s*"+j+"s*"))(j)}},stoken:function(i){return c.rtoken(new RegExp("^"+i))},until:function(i){return function(j){var k=[],m=null;while(j.length){try{m=i.call(this,j)}catch(l){k.push(m[0]);j=m[1];continue}break}return[k,j]}},many:function(i){return function(j){var m=[],k=null;while(j.length){try{k=i.call(this,j)}catch(l){return[m,j]}m.push(k[0]);j=k[1]}return[m,j]}},optional:function(i){return function(j){var k=null;try{k=i.call(this,j)}catch(l){return[null,j]}return[k[0],k[1]]}},not:function(i){return function(j){try{i.call(this,j)}catch(k){return[null,j]}throw new a.Exception(j)}},ignore:function(i){return i?function(j){var k=null;k=i.call(this,j);return[null,k[1]]}:null},product:function(){var k=arguments[0],l=Array.prototype.slice.call(arguments,1),m=[];for(var j=0;j<k.length;j++){m.push(c.each(k[j],l))}return m},cache:function(k){var i={},j=null;return function(l){try{j=i[l]=(i[l]||k.call(this,l))}catch(m){j=i[l]=m}if(j instanceof a.Exception){throw j}else{return j}}},any:function(){var i=arguments;return function(k){var l=null;for(var j=0;j<i.length;j++){if(i[j]==null){continue}try{l=(i[j].call(this,k))}catch(m){l=null}if(l){return l}}throw new a.Exception(k)}},each:function(){var i=arguments;return function(k){var n=[],l=null;for(var j=0;j<i.length;j++){if(i[j]==null){continue}try{l=(i[j].call(this,k))}catch(m){throw new a.Exception(k)}n.push(l[0]);k=l[1]}return[n,k]}},all:function(){var j=arguments,i=i;return i.each(i.optional(j))},sequence:function(i,j,k){j=j||c.rtoken(/^\s*/);k=k||null;if(i.length==1){return i[0]}return function(o){var p=null,t=null;var v=[];for(var n=0;n<i.length;n++){try{p=i[n].call(this,o)}catch(u){break}v.push(p[0]);try{t=j.call(this,p[1])}catch(m){t=null;break}o=t[1]}if(!p){throw new a.Exception(o)}if(t){throw new a.Exception(t[1])}if(k){try{p=k.call(this,p[1])}catch(l){throw new a.Exception(p[1])}}return[v,(p?p[1]:o)]}},between:function(j,k,i){i=i||j;var l=c.each(c.ignore(j),k,c.ignore(i));return function(m){var n=l.call(this,m);return[[n[0][0],r[0][2]],n[1]]}},list:function(i,j,k){j=j||c.rtoken(/^\s*/);k=k||null;return(i instanceof Array?c.each(c.product(i.slice(0,-1),c.ignore(j)),i.slice(-1),c.ignore(k)):c.each(c.many(c.each(i,c.ignore(j))),px,c.ignore(k)))},set:function(i,j,k){j=j||c.rtoken(/^\s*/);k=k||null;return function(B){var l=null,n=null,m=null,o=null,t=[[],B],A=false;for(var v=0;v<i.length;v++){m=null;n=null;l=null;A=(i.length==1);try{l=i[v].call(this,B)}catch(y){continue}o=[[l[0]],l[1]];if(l[1].length>0&&!A){try{m=j.call(this,l[1])}catch(z){A=true}}else{A=true}if(!A&&m[1].length===0){A=true}if(!A){var w=[];for(var u=0;u<i.length;u++){if(v!=u){w.push(i[u])}}n=c.set(w,j).call(this,m[1]);if(n[0].length>0){o[0]=o[0].concat(n[0]);o[1]=n[1]}}if(o[1].length<t[1].length){t=o}if(t[1].length===0){break}}if(t[0].length===0){return t}if(k){try{m=k.call(this,t[1])}catch(x){throw new a.Exception(t[1])}t[1]=m[1]}return t}},forward:function(i,j){return function(k){return i[j].call(this,k)}},replace:function(j,i){return function(k){var l=j.call(this,k);return[i,l[1]]}},process:function(j,i){return function(k){var l=j.call(this,k);return[i.call(this,l[0]),l[1]]}},min:function(i,j){return function(k){var l=j.call(this,k);if(l[0].length<i){throw new a.Exception(k)}return l}}};var h=function(i){return function(){var j=null,m=[];if(arguments.length>1){j=Array.prototype.slice.call(arguments)}else{if(arguments[0] instanceof Array){j=arguments[0]}}if(j){for(var l=0,k=j.shift();l<k.length;l++){j.unshift(k[l]);m.push(i.apply(null,j));j.shift();return m}}else{return i.apply(null,arguments)}}};var g="optional not ignore cache".split(/\s/);for(var d=0;d<g.length;d++){c[g[d]]=h(c[g[d]])}var f=function(i){return function(){if(arguments[0] instanceof Array){return i.apply(null,arguments[0])}else{return i.apply(null,arguments)}}};var e="each any all".split(/\s/);for(var b=0;b<e.length;b++){c[e[b]]=f(c[e[b]])}}());(function(){var f=function(j){var k=[];for(var g=0;g<j.length;g++){if(j[g] instanceof Array){k=k.concat(f(j[g]))}else{if(j[g]){k.push(j[g])}}}return k};Date.Grammar={};Date.Translator={hour:function(g){return function(){this.hour=Number(g)}},minute:function(g){return function(){this.minute=Number(g)}},second:function(g){return function(){this.second=Number(g)}},meridian:function(g){return function(){this.meridian=g.slice(0,1).toLowerCase()}},timezone:function(g){return function(){var j=g.replace(/[^\d\+\-]/g,"");if(j.length){this.timezoneOffset=Number(j)}else{this.timezone=g.toLowerCase()}}},day:function(g){var j=g[0];return function(){this.day=Number(j.match(/\d+/)[0])}},month:function(g){return function(){this.month=((g.length==3)?Date.getMonthNumberFromName(g):(Number(g)-1))}},year:function(g){return function(){var j=Number(g);this.year=((g.length>2)?j:(j+(((j+2000)<Date.CultureInfo.twoDigitYearMax)?2000:1900)))}},rday:function(g){return function(){switch(g){case"yesterday":this.days=-1;break;case"tomorrow":this.days=1;break;case"today":this.days=0;break;case"now":this.days=0;this.now=true;break}}},finishExact:function(g){g=(g instanceof Array)?g:[g];var j=new Date();this.year=j.getFullYear();this.month=j.getMonth();this.day=1;this.hour=0;this.minute=0;this.second=0;for(var k=0;k<g.length;k++){if(g[k]){g[k].call(this)}}this.hour=(this.meridian=="p"&&this.hour<13)?this.hour+12:this.hour;if(this.day>Date.getDaysInMonth(this.year,this.month)){throw new RangeError(this.day+" is not a valid value for days.")}var l=new Date(this.year,this.month,this.day,this.hour,this.minute,this.second);if(this.timezone){l.set({timezone:this.timezone})}else{if(this.timezoneOffset){l.set({timezoneOffset:this.timezoneOffset})}}return l},finish:function(g){g=(g instanceof Array)?f(g):[g];if(g.length===0){return null}for(var m=0;m<g.length;m++){if(typeof g[m]=="function"){g[m].call(this)}}if(this.now){return new Date()}var j=Date.today();var p=null;var n=!!(this.days!=null||this.orient||this.operator);if(n){var o,l,k;k=((this.orient=="past"||this.operator=="subtract")?-1:1);if(this.weekday){this.unit="day";o=(Date.getDayNumberFromName(this.weekday)-j.getDay());l=7;this.days=o?((o+(k*l))%l):(k*l)}if(this.month){this.unit="month";o=(this.month-j.getMonth());l=12;this.months=o?((o+(k*l))%l):(k*l);this.month=null}if(!this.unit){this.unit="day"}if(this[this.unit+"s"]==null||this.operator!=null){if(!this.value){this.value=1}if(this.unit=="week"){this.unit="day";this.value=this.value*7}this[this.unit+"s"]=this.value*k}return j.add(this)}else{if(this.meridian&&this.hour){this.hour=(this.hour<13&&this.meridian=="p")?this.hour+12:this.hour}if(this.weekday&&!this.day){this.day=(j.addDays((Date.getDayNumberFromName(this.weekday)-j.getDay()))).getDate()}if(this.month&&!this.day){this.day=1}return j.set(this)}}};var b=Date.Parsing.Operators,e=Date.Grammar,d=Date.Translator,i;e.datePartDelimiter=b.rtoken(/^([\s\-\.\,\/\x27]+)/);e.timePartDelimiter=b.stoken(":");e.whiteSpace=b.rtoken(/^\s*/);e.generalDelimiter=b.rtoken(/^(([\s\,]|at|on)+)/);var a={};e.ctoken=function(m){var l=a[m];if(!l){var n=Date.CultureInfo.regexPatterns;var k=m.split(/\s+/),j=[];for(var g=0;g<k.length;g++){j.push(b.replace(b.rtoken(n[k[g]]),k[g]))}l=a[m]=b.any.apply(null,j)}return l};e.ctoken2=function(g){return b.rtoken(Date.CultureInfo.regexPatterns[g])};e.h=b.cache(b.process(b.rtoken(/^(0[0-9]|1[0-2]|[1-9])/),d.hour));e.hh=b.cache(b.process(b.rtoken(/^(0[0-9]|1[0-2])/),d.hour));e.H=b.cache(b.process(b.rtoken(/^([0-1][0-9]|2[0-3]|[0-9])/),d.hour));e.HH=b.cache(b.process(b.rtoken(/^([0-1][0-9]|2[0-3])/),d.hour));e.m=b.cache(b.process(b.rtoken(/^([0-5][0-9]|[0-9])/),d.minute));e.mm=b.cache(b.process(b.rtoken(/^[0-5][0-9]/),d.minute));e.s=b.cache(b.process(b.rtoken(/^([0-5][0-9]|[0-9])/),d.second));e.ss=b.cache(b.process(b.rtoken(/^[0-5][0-9]/),d.second));e.hms=b.cache(b.sequence([e.H,e.mm,e.ss],e.timePartDelimiter));e.t=b.cache(b.process(e.ctoken2("shortMeridian"),d.meridian));e.tt=b.cache(b.process(e.ctoken2("longMeridian"),d.meridian));e.z=b.cache(b.process(b.rtoken(/^(\+|\-)?\s*\d\d\d\d?/),d.timezone));e.zz=b.cache(b.process(b.rtoken(/^(\+|\-)\s*\d\d\d\d/),d.timezone));e.zzz=b.cache(b.process(e.ctoken2("timezone"),d.timezone));e.timeSuffix=b.each(b.ignore(e.whiteSpace),b.set([e.tt,e.zzz]));e.time=b.each(b.optional(b.ignore(b.stoken("T"))),e.hms,e.timeSuffix);e.d=b.cache(b.process(b.each(b.rtoken(/^([0-2]\d|3[0-1]|\d)/),b.optional(e.ctoken2("ordinalSuffix"))),d.day));e.dd=b.cache(b.process(b.each(b.rtoken(/^([0-2]\d|3[0-1])/),b.optional(e.ctoken2("ordinalSuffix"))),d.day));e.ddd=e.dddd=b.cache(b.process(e.ctoken("sun mon tue wed thu fri sat"),function(g){return function(){this.weekday=g}}));e.M=b.cache(b.process(b.rtoken(/^(1[0-2]|0\d|\d)/),d.month));e.MM=b.cache(b.process(b.rtoken(/^(1[0-2]|0\d)/),d.month));e.MMM=e.MMMM=b.cache(b.process(e.ctoken("jan feb mar apr may jun jul aug sep oct nov dec"),d.month));e.y=b.cache(b.process(b.rtoken(/^(\d\d?)/),d.year));e.yy=b.cache(b.process(b.rtoken(/^(\d\d)/),d.year));e.yyy=b.cache(b.process(b.rtoken(/^(\d\d?\d?\d?)/),d.year));e.yyyy=b.cache(b.process(b.rtoken(/^(\d\d\d\d)/),d.year));i=function(){return b.each(b.any.apply(null,arguments),b.not(e.ctoken2("timeContext")))};e.day=i(e.d,e.dd);e.month=i(e.M,e.MMM);e.year=i(e.yyyy,e.yy);e.orientation=b.process(e.ctoken("past future"),function(g){return function(){this.orient=g}});e.operator=b.process(e.ctoken("add subtract"),function(g){return function(){this.operator=g}});e.rday=b.process(e.ctoken("yesterday tomorrow today now"),d.rday);e.unit=b.process(e.ctoken("minute hour day week month year"),function(g){return function(){this.unit=g}});e.value=b.process(b.rtoken(/^\d\d?(st|nd|rd|th)?/),function(g){return function(){this.value=g.replace(/\D/g,"")}});e.expression=b.set([e.rday,e.operator,e.value,e.unit,e.orientation,e.ddd,e.MMM]);i=function(){return b.set(arguments,e.datePartDelimiter)};e.mdy=i(e.ddd,e.month,e.day,e.year);e.ymd=i(e.ddd,e.year,e.month,e.day);e.dmy=i(e.ddd,e.day,e.month,e.year);e.date=function(g){return((e[Date.CultureInfo.dateElementOrder]||e.mdy).call(this,g))};e.format=b.process(b.many(b.any(b.process(b.rtoken(/^(dd?d?d?|MM?M?M?|yy?y?y?|hh?|HH?|mm?|ss?|tt?|zz?z?)/),function(g){if(e[g]){return e[g]}else{throw Date.Parsing.Exception(g)}}),b.process(b.rtoken(/^[^dMyhHmstz]+/),function(g){return b.ignore(b.stoken(g))}))),function(g){return b.process(b.each.apply(null,g),d.finishExact)});var h={};var c=function(g){return h[g]=(h[g]||e.format(g)[0])};e.formats=function(j){if(j instanceof Array){var k=[];for(var g=0;g<j.length;g++){k.push(c(j[g]))}return b.any.apply(null,k)}else{return c(j)}};e._formats=e.formats(["yyyy-MM-ddTHH:mm:ss","ddd, MMM dd, yyyy H:mm:ss tt","ddd MMM d yyyy HH:mm:ss zzz","d"]);e._start=b.process(b.set([e.date,e.time,e.expression],e.generalDelimiter,e.whiteSpace),d.finish);e.start=function(g){try{var j=e._formats.call({},g);if(j[1].length===0){return j}}catch(k){}return e._start.call({},g)}}());Date._parse=Date.parse;Date.parse=function(a){var b=null;if(!a){return null}try{b=Date.Grammar.start.call({},a)}catch(c){return null}return((b[1].length===0)?b[0]:null)};Date.getParseFunction=function(b){var a=Date.Grammar.formats(b);return function(c){var d=null;try{d=a.call({},c)}catch(f){return null}return((d[1].length===0)?d[0]:null)}};Date.parseExact=function(a,b){return Date.getParseFunction(b)(a)};(function(f){var k=false,l,a,e,m="shorten-info",d="shorten-options";f.fn.shorten=function(){var q={},o=arguments,p=o.callee;if(o.length){if(o[0].constructor==Object){q=o[0]}else{if(o[0]=="options"){return f(this).eq(0).data(d)}else{q={width:parseInt(o[0]),tail:o[1]}}}}this.css("visibility","hidden");var n=f.extend({},p.defaults,q);return this.each(function(){var z=f(this),F=z.text(),A=F.length,B,C=f("<span/>").html(n.tail).text(),y,t={shortened:false,textOverflow:false};if(z.css("float")!="none"){B=n.width||z.width()}else{B=n.width||z.parent().width()}if(B<0){return true}z.data(d,n);this.style.whiteSpace="nowrap";if(l){a=g.call(this);e=j}else{a=b.call(this);e=i}var u=e.call(this,F,a);if(u<B){z.text(F);this.style.visibility="visible";z.data(m,t);return true}if(n.tooltip){this.setAttribute("title",F)}if(p._native&&!q.width){var s=f("<span>"+n.tail+"</span>").text();if(s.length==1&&s.charCodeAt(0)==8230){z.text(F);this.style.overflow="hidden";this.style[p._native]="ellipsis";this.style.visibility="visible";t.shortened=true;t.textOverflow="ellipsis";z.data(m,t);return true}}y=e.call(this,C,a);B=B-y;var E=B*1.15;if(u-E>0){var v=E/u,x=Math.ceil(A*v),D=F.substring(0,x),w=e.call(this,D,a);if(w>B){F=D;A=F.length}}do{A--;F=F.substring(0,A)}while(e.call(this,F,a)>=B);z.html(f.trim(f("<span/>").text(F).html())+n.tail);this.style.visibility="visible";t.shortened=true;z.data(m,t);return true});return true};var h=document.documentElement.style;if("textOverflow" in h){k="textOverflow"}else{if("OTextOverflow" in h){k="OTextOverflow"}}if(typeof Modernizr!="undefined"&&Modernizr.canvastext){l=Modernizr.canvastext}else{var c=document.createElement("canvas");l=!!(c.getContext&&c.getContext("2d")&&(typeof c.getContext("2d").fillText==="function"))}f.fn.shorten._is_canvasTextSupported=l;f.fn.shorten._native=k;function g(){var o=f(this);var n=document.createElement("canvas");ctx=n.getContext("2d");o.html(n);ctx.font=o.css("font-style")+" "+o.css("font-variant")+" "+o.css("font-weight")+" "+Math.ceil(parseFloat(o.css("font-size")))+"px "+o.css("font-family");return ctx}function j(o,n){return n.measureText(o).width}function b(){var o="padding:0; margin:0; border:none; font:inherit;";var n=f('<table style="'+o+'width:auto;zoom:1;position:absolute;"><tr style="'+o+'"><td style="'+o+'white-space:nowrap;"></td></tr></table>');$td=f("td",n);f(this).html(n);return $td}function i(o,n){n.text(o);return n.width()}f.fn.shorten.defaults={tail:"&hellip;",tooltip:true}})(jQuery);(function(I,H,G){function C(b,h){var g=H.createElement(b||"div"),f;for(f in h){g[f]=h[f]}return g}function B(e){for(var d=1,f=arguments.length;d<f;d++){e.appendChild(arguments[d])}return e}function z(J,q,p,o){var n=["opacity",q,~~(J*100),p,o].join("-"),m=0.01+p/o*100,i=Math.max(1-(1-J)/q*(100-m),J),f=D.substring(0,D.indexOf("Animation")).toLowerCase(),e=f&&"-"+f+"-"||"";return E[n]||(A.insertRule("@"+e+"keyframes "+n+"{0%{opacity:"+i+"}"+m+"%{opacity:"+J+"}"+(m+0.01)+"%{opacity:1}"+(m+q)%100+"%{opacity:"+J+"}100%{opacity:"+i+"}}",0),E[n]=1),n}function y(d,c){var j=d.style,i,h;if(j[c]!==G){return c}c=c.charAt(0).toUpperCase()+c.slice(1);for(h=0;h<F.length;h++){i=F[h]+c;if(j[i]!==G){return i}}}function x(e,d){for(var f in d){e.style[y(e,f)||f]=d[f]}return e}function w(f){for(var c=1;c<arguments.length;c++){var h=arguments[c];for(var g in h){f[g]===G&&(f[g]=h[g])}}return f}function v(d){var c={x:d.offsetLeft,y:d.offsetTop};while(d=d.offsetParent){c.x+=d.offsetLeft,c.y+=d.offsetTop}return c}var F=["webkit","Moz","ms","O"],E={},D,A=function(){var b=C("style");return B(H.getElementsByTagName("head")[0],b),b.sheet||b.styleSheet}(),u={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:0.25,fps:20,zIndex:2000000000,className:"spinner",top:"auto",left:"auto"},t=function s(b){if(!this.spin){return new s(b)}this.opts=w(b||{},s.defaults,u)};t.defaults={},w(t.prototype,{spin:function(R){this.stop();var Q=this,P=Q.opts,O=Q.el=x(C(0,{className:P.className}),{position:"relative",zIndex:P.zIndex}),N=P.radius+P.length+P.width,M,L;R&&(R.insertBefore(O,R.firstChild||null),L=v(R),M=v(O),x(O,{left:(P.left=="auto"?L.x-M.x+(R.offsetWidth>>1):P.left+N)+"px",top:(P.top=="auto"?L.y-M.y+(R.offsetHeight>>1):P.top+N)+"px"})),O.setAttribute("aria-role","progressbar"),Q.lines(O,Q.opts);if(!D){var K=0,J=P.fps,n=J/P.speed,l=(1-P.opacity)/(n*P.trail/100),g=n/P.lines;!function f(){K++;for(var b=P.lines;b;b--){var c=Math.max(1-(K+b*g)%n*l,P.opacity);Q.opacity(O,P.lines-b,c,P)}Q.timeout=Q.el&&setTimeout(f,~~(1000/J))}()}return Q},stop:function(){var b=this.el;return b&&(clearTimeout(this.timeout),b.parentNode&&b.parentNode.removeChild(b),this.el=G),this},lines:function(g,f){function h(b,c){return x(C(),{position:"absolute",width:f.length+f.width+"px",height:f.width+"px",background:b,boxShadow:c,transformOrigin:"left",transform:"rotate("+~~(360/f.lines*j+f.rotate)+"deg) translate("+f.radius+"px,0)",borderRadius:(f.width>>1)+"px"})}var j=0,i;for(;j<f.lines;j++){i=x(C(),{position:"absolute",top:1+~(f.width/2)+"px",transform:f.hwaccel?"translate3d(0,0,0)":"",opacity:f.opacity,animation:D&&z(f.opacity,f.trail,j,f.lines)+" "+1/f.speed+"s linear infinite"}),f.shadow&&B(i,x(h("#000","0 0 4px #000"),{top:"2px"})),B(g,B(i,h(f.color,"0 0 1px rgba(0,0,0,.1)")))}return g},opacity:function(e,d,f){d<e.childNodes.length&&(e.childNodes[d].style.opacity=f)}}),!function(){function d(f,e){return C("<"+f+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',e)}var c=x(C("group"),{behavior:"url(#default#VML)"});!y(c,"transform")&&c.adj?(A.addRule(".spin-vml","behavior:url(#default#VML)"),t.prototype.lines=function(J,q){function n(){return x(d("group",{coordsize:o+" "+o,coordorigin:-p+" "+-p}),{width:o,height:o})}function a(f,j,i){B(l,B(x(n(),{rotation:360/q.lines*f+"deg",left:~~j}),B(x(d("roundrect",{arcsize:1}),{width:p,height:q.width,left:q.radius,top:-q.width>>1,filter:i}),d("fill",{color:q.color,opacity:q.opacity}),d("stroke",{opacity:0}))))}var p=q.length+q.width,o=2*p,m=-(q.width+q.length)*2+"px",l=x(n(),{position:"absolute",top:m,left:m}),h;if(q.shadow){for(h=1;h<=q.lines;h++){a(h,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)")}}for(h=1;h<=q.lines;h++){a(h)}return B(J,l)},t.prototype.opacity=function(g,f,j,i){var h=g.firstChild;i=i.shadow&&i.lines||0,h&&f+i<h.childNodes.length&&(h=h.childNodes[f+i],h=h&&h.firstChild,h=h&&h.firstChild,h&&(h.opacity=j))}):D=y(c,"animation")}(),I.Spinner=t})(window,document);
-/*!
- * Main function
- * Initializations
+var AppContainer = function(id,container) {
+		var selected = false;
+		var needRefresh = true;
+		
+		var frame = $("<div/>").attr({
+			"id": id+"ApplicationFrame",
+			"class": "applicationContainer"
+		})	.hide(0)
+			.appendTo(container);
+		
+		eWolf.bind("select."+id,function(event,eventId) {
+			if(id == eventId) {				
+				frame.show(0);
+				frame.animate({
+					opacity : 1,
+				}, 700, function() {
+				});
+				
+				selected = true;
+				if(needRefresh) {
+					eWolf.trigger("refresh",[id]);
+				}
+			} else {
+				frame.animate({
+					opacity : 0,
+				}, 300, function() {
+					frame.hide(0);
+				});
+				
+				selected = false;
+			}			
+		});
+		
+		eWolf.bind("refresh."+id,function(event,eventId) {	
+			if(id == eventId) {
+				needRefresh = false;
+			}
+		});
+		
+		eWolf.bind("needRefresh."+id,function(event,eventId) {
+			needRefresh = true;
+			
+			if(selected) {
+				eWolf.trigger("refresh."+id,[id]);
+			}
+		});
+		
+		return {
+			getFrame : function() {
+				return frame;
+			},
+			getId : function() {
+				return id;
+			},
+			isSelected : function() {
+				return selected;
+			},
+			destroy : function() {
+				eWolf.unbind("select."+id);
+				frame.remove();
+				delete this;
+			}
+		};
+};var GenericItem = function(senderID,senderName,timestamp,mail,
+		listClass,msgBoxClass,preMessageTitle,allowShrink) {
+	
+	var dateFormat = "dd/MM/yyyy (HH:mm)";
+		
+	var itemSpan = $("<span/>");
+	
+	var listItem = $("<li/>").attr({
+		"class": listClass
+	}).appendTo(itemSpan);
+	
+	var preMessageBox = $("<span/>").attr({
+		"style": "width:1%;",
+		"class": "preMessageBox"
+	}).append(preMessageTitle).appendTo(listItem);	
+	
+	var senderBox = new User(senderID,senderName).appendTo(listItem);
+	
+	var itsTime = new Date(timestamp);
+	
+	var timestampBox = $("<span/>").attr({
+		"class": "timestampBox"
+	}).append(itsTime.toString(dateFormat)).appendTo(listItem);
+		
+	var itsMessage = $("<li/>").attr({
+		 "class": msgBoxClass
+	 })	.append(MailItem(JSON.parse(mail)))
+	 	.insertAfter(listItem);
+	
+	if(allowShrink) {
+		itsMessage.hide();
+		
+		listItem.click(function() {		
+			itsMessage.toggle();
+		});
+	}	
+	
+	function updateView() {
+		var w = listItem.width()-timestampBox.width()-preMessageBox.width()-20;		
+		senderBox.text(senderName).shorten({width:w});
+	}	
+	
+	eWolf.bind("mainFrameResize", function(event,eventId) {
+		updateView();
+	});
+	
+	return {
+		appendTo: function(place) {
+			itemSpan.appendTo(place);
+			updateView();
+			return this;
+		},
+		prependTo: function(place) {
+			itemSpan.prependTo(place);
+			updateView();
+			return this;
+		},
+		insertAfter: function(place) {
+			itemSpan.insertAfter(place);
+			updateView();
+			return this;
+		},
+		getListItem : function() {
+			return itemSpan;
+		},
+		destroy: function() {
+			message.destroy();
+			itemSpan.remove();
+			delete this;
+		}
+	};
+	
+	return this;
+};var GenericMailList = function(id,mailType,serverSettings,
+		listClass,msgBoxClass,preMessageTitle,allowShrink) {
+	var newestDate = null;
+	var oldestDate = null;
+	
+	var lastItem = null;
+	
+	var request = new PostRequestHandler(id,"/json",handleNewData,null,60);	
+	
+	var frame = $("<span/>");
+	
+	var list = $("<ul/>").attr({
+		"class" : "messageList"
+	}).appendTo(frame);
+	
+	var showMore = new ShowMore(frame,function() {
+		_updateFromServer(true);
+	}).draw();
+	
+	eWolf.bind("refresh."+id,function(event,eventId) {
+		if(id == eventId) {
+			_updateFromServer(false);
+		}
+	});
+	
+	function handleNewData(data, parameters) {
+		console.log(data);
+		
+		var item = data[mailType];
+
+		if (item != null) {
+			if(item.result == "success") {
+				if(item.mailList != null) {
+					$.each(item.mailList, function(j, mailItem) {
+						_addItem(mailItem.senderID,mailItem.senderName,
+								mailItem.timestamp, mailItem.mail);
+					});
+					
+					if (parameters[mailType].newerThan == null &&
+							item.mailList.length < parameters[mailType].maxMessages) {
+						showMore.remove();
+					}
+					
+				} else {
+					console.log("No mailList parameter in response");
+				}				
+			} else {
+				console.log(item.result);
+			}
+		} else {
+			console.log("No " + mailType + " parameter in response");
+		}
+	}
+	
+	function _updateFromServer (getOlder) {		
+		var data = {};
+		$.extend(data,serverSettings);
+		
+		if(getOlder && newestDate != null && oldestDate != null) {
+			data.olderThan = oldestDate-1;
+		} else if(newestDate != null) {
+			data.newerThan = newestDate+1;
+		}		
+		
+		var postData = {};
+		postData[mailType] = data;
+		
+		request.getData(postData);
+	}
+	
+	function _addItem (senderID,senderName,timestamp,mail) {
+		 var obj = new GenericItem(senderID,senderName,timestamp,mail,
+				 listClass,msgBoxClass,preMessageTitle,allowShrink);
+		 
+		var appended = false;
+		 
+		if(oldestDate == null || timestamp - oldestDate < 0) {
+			 oldestDate = timestamp;
+			 obj.appendTo(list);
+			 appended = true;
+		}
+		
+		if(newestDate == null || timestamp - newestDate > 0) {
+			newestDate = timestamp;
+			if(!appended) {
+				obj.prependTo(list);
+				appended = true;
+			}
+		}
+		
+		if(!appended) {
+			obj.insertAfter(lastItem.getListItem());
+		}
+		
+		lastItem = obj;
+		
+		return obj;
+	}
+	
+	return {
+		appendTo: function (canvas) {
+			frame.appendTo(canvas);
+			return this;
+		},
+		addItem: function (senderID,senderName,timestamp,mail) {
+			return _addItem (senderID,senderName,timestamp,mail);
+		},
+		getOldestTimestamp: function () {
+			return oldestDate;
+		},
+		getNewestTimestamp: function () {
+			return newestDate;
+		},
+		updateFromServer: function (getOlder) {		
+			return _updateFromServer(getOlder);
+		}
+	};
+};var Inbox = function (id,applicationFrame) {
+	var appContainer = new AppContainer(id,applicationFrame);
+	var frame = appContainer.getFrame();
+	
+	var titleDiv = $("<div/>").attr({
+		"class" : "eWolfTitle"
+	})	.append("Inbox")
+		.appendTo(frame);
+	
+	$("<input/>").attr({
+		"type": "button",
+		"value": "New Message...",
+		"class": "newMessageBotton"
+	}).appendTo(titleDiv).click(function() {
+		new NewMessageBox("__newmessage__"+id,frame);
+	});
+	
+	new GenericMailList(id,"inbox",{maxMessages:2},"messageListItem",
+			"messageBox", ">> ",true).appendTo(frame);	
+	
+	return {
+		getId : function() {
+			return id;
+		},
+		isSelected : function() {
+			return appContainer.isSelected();
+		},
+		destroy : function() {
+			eWolf.unbind("refresh."+id);
+			appContainer.destroy();
+			delete this;
+		}
+	};
+};
+var Loading = function(indicator) {
+	var loadingCount = 0;
+	
+	function startLoading() {
+		loadingCount++;
+		indicator.spin(spinnerOpts);
+		indicator.show(200);
+	}
+	
+	function stopLoading() {
+		indicator.hide(200);
+		indicator.data('spinner').stop();
+		loadingCount--;
+	}
+	
+	eWolf.bind("loading",startLoading);	
+	eWolf.bind("loadingEnd",stopLoading);
+
+
+	return {
+		listenToEvent : function(eventStart,eventEnd) {
+			eWolf.bind(eventStart,startLoading);	
+			eWolf.bind(eventEnd,stopLoading);
+		},
+		stopListenToEvent : function(eventStart,eventEnd) {
+			eWolf.unbind(eventStart,startLoading);	
+			eWolf.unbind(eventEnd,stopLoading);
+		}
+	};
+};
+
+var spinnerOpts = {
+  lines: 10, // The number of lines to draw
+  length: 4, // The length of each line
+  width: 2, // The line thickness
+  radius: 3, // The radius of the inner circle
+  rotate: 0, // The rotation offset
+  color: '#fff', // #rgb or #rrggbb
+  speed: 0.8, // Rounds per second
+  trail: 60, // Afterglow percentage
+  shadow: false, // Whether to render a shadow
+  hwaccel: false, // Whether to use hardware acceleration
+  className: 'spinner', // The CSS class to assign to the spinner
+  zIndex: 2e9, // The z-index (defaults to 2000000000)
+  top: 0, // Top position relative to parent in px
+  left: 0 // Left position relative to parent in px
+};
+
+$.fn.spin = function(opts) {
+	this.each(function() {
+		var $this = $(this), data = $this.data();
+
+		if (data.spinner) {
+			data.spinner.stop();
+			delete data.spinner;
+		}
+		if (opts !== false) {
+			data.spinner = new Spinner($.extend({
+				color : $this.css('color')
+			}, opts)).spin(this);
+		}
+	});
+	return this;
+};var MailItem = function(item) {
+	var canvas = $("<div/>").append(item.text);
+	
+	if(item.attachment != null) {
+		var imageCanvas = $("<div/>");
+
+		var attachCanvas = $("<ul/>");
+		
+		$.each(item.attachment, function(i, attach) {
+			if(attach.contentType.substring(0,5) == "image") {
+				var aObj = $("<a/>").attr({
+					href: attach.path,
+					target: "_TRG_"+attach.filename
+				}).appendTo(imageCanvas);
+				
+				$("<img/>").attr({
+					"src": attach.path,
+					style: "padding:5px 5px 5px 5px; height:130px;"
+				}).appendTo(aObj);				
+				
+				
+				$("<em/>").append("&nbsp;").appendTo(imageCanvas);
+			} else {
+				var li = $("<li/>").appendTo(attachCanvas);
+				
+				$("<a/>").attr({
+					href: attach.path,
+					target: "_TRG_"+attach.filename
+				}).append(attach.filename).appendTo(li);
+			}
+		});
+		
+		if(! imageCanvas.is(":empty")) {
+			imageCanvas.appendTo(canvas);
+		}
+		
+		if(! attachCanvas.is(":empty")) {
+			canvas.append("Attachments:");
+			attachCanvas.appendTo(canvas);
+		}
+	}	
+	
+	return canvas;
+};
+var MenuItem = function(id,title,messageText,topbarFrame) {
+	var isLoading = false;
+	var selected = false;	
+	var message = new MenuMessage(id+"Message","menuItemMessageClass",
+			messageText,topbarFrame);
+	
+	var listItem = $("<li/>").attr({"id": id});
+		
+	var aObj = $("<a/>").appendTo(listItem);
+	
+	var titleBox = $("<span/>").attr({
+		"id": id,
+		"style": "width:1%;"
+	}).appendTo(aObj);
+	
+	var refreshContainer = $("<div/>").attr({
+		"class": "refreshButtonArea",
+		"id": id,
+	})	.appendTo(aObj).hide();
+	
+	var loadingContainer = $("<div/>").attr({
+		"class": "refreshButtonArea",
+		"id": id,
+	})	.appendTo(aObj).hide();
+	
+	var refresh = $("<img/>").attr({
+		"id": id,
+		"src": "refresh.svg",
+		"class": "refreshButton"
+	})	.appendTo(refreshContainer);
+	
+	listItem.click(function() {
+		if(selected == false) {
+			eWolf.trigger("select",[id]);
+		}	
+	});
+
+	refresh.click(function() {
+		if(isLoading == false) {
+			eWolf.trigger("refresh."+id,[id]);
+		}	
+	});
+	
+	listItem.mouseover(function() {
+		message.show();
+	});
+
+	listItem.mouseout(function() {
+		message.hide();
+	});
+	
+	function updateView() {
+		var w = 145;
+		if(selected && !isLoading) {
+			refreshContainer.show();
+			w = w - 20;
+		} else {
+			refreshContainer.hide();
+		}
+		
+		if(isLoading) {
+			loadingContainer.show();
+			w = w - 20;
+		} else {
+			loadingContainer.hide();
+		}
+		
+		titleBox.text(title).shorten({width:w});
+	}	
+	
+	function select() {
+		aObj.addClass("currentMenuSelection");
+		selected = true;
+		updateView();
+	}
+
+	function unselect() {
+		aObj.removeClass("currentMenuSelection");
+		selected = false;
+		updateView();
+	}
+	
+	eWolf.bind("select."+id,function(event,eventId) {
+		if(id == eventId) {
+			select();
+		} else {
+			unselect();
+		}			
+	});
+	
+	eWolf.bind("loading."+id,function(event,eventId) {
+		if(id == eventId) {
+			isLoading = true;
+			updateView();
+			loadingContainer.spin(menuItemSpinnerOpts);
+		}	
+	});
+	
+	eWolf.bind("loadingEnd."+id,function(event,eventId) {
+		if(id == eventId) {
+			isLoading = false;
+			updateView();
+			loadingContainer.data('spinner').stop();
+		}	
+	});
+	
+	return {
+		appendTo: function(place) {
+			listItem.appendTo(place);
+			updateView();
+			return this;
+		},
+		getId : function() {
+			return id;
+		},
+		destroy: function() {
+			message.destroy();
+			listItem.remove();
+			delete this;
+		}
+	};
+	
+	return this;
+};
+
+var menuItemSpinnerOpts = {
+		  lines: 10, // The number of lines to draw
+		  length: 4, // The length of each line
+		  width: 2, // The line thickness
+		  radius: 3, // The radius of the inner circle
+		  rotate: 0, // The rotation offset
+		  color: '#000', // #rgb or #rrggbb
+		  speed: 0.8, // Rounds per second
+		  trail: 60, // Afterglow percentage
+		  shadow: false, // Whether to render a shadow
+		  hwaccel: false, // Whether to use hardware acceleration
+		  className: 'spinner', // The CSS class to assign to the spinner
+		  zIndex: 2e9, // The z-index (defaults to 2000000000)
+		  top: 0, // Top position relative to parent in px
+		  left: 0 // Left position relative to parent in px
+		};var MenuList = function(menu,id,title,topbarFrame) {
+	var items = [];
+	
+	var frame = $("<div/>").attr({
+		"class" : "menuList",
+		"id" : id+"Frame"
+	}).hide();
+	
+	$("<div/>").attr({
+		"class" : "menuListTitle",
+		"id" : id+"Title"
+	})	.append(title)
+		.appendTo(frame);
+
+	var list = $("<ul/>").attr({
+		"id" : id
+	})	.appendTo(frame);
+	
+	return {
+		addMenuItem : function(id,title) {			 
+			var menuItem = new MenuItem(id,title,
+					"Click to show "+title.toLowerCase(),topbarFrame).appendTo(list);
+			
+			items[id] = menuItem;
+			
+			if(Object.keys(items).length > 0) {
+				frame.show();
+			}
+		},
+		removeMenuItem: function(removeId) {
+			if(items[removeId] != null) {
+				items[removeId].destroy();
+				delete items[removeId];
+			}
+			
+			if(Object.keys(items).length <= 0) {
+				frame.hide();
+			}
+		},
+		appendTo : function(container) {
+			frame.appendTo(container);
+			return this;
+		}
+	};
+};var MenuMessage = function(id,itemclass,text,container) {
+	var message = null;
+	
+	return {
+		show : function() {
+			if(message == null) {
+				message = $("<div/>").attr({
+					"id": id,
+					"class": itemclass
+				}).text(text).appendTo(container);
+			} else {
+				message.show();
+			}
+		},
+		hide : function() {
+			if(message != null) {
+				message.remove();
+				message = null;
+			}
+		},
+		destroy : function() {
+			if(message != null) {
+				message.remove();
+				message = null;
+				delete this;
+			}
+		}
+	};
+};
+
+var NewMessageBox = function(id,container) {
+	var request = new PostRequestHandler(id,"/json",handleResponse,null,0);
+	
+	var box = $("<div/>").attr({
+		"class": "newMessageBoxClass"
+	}).appendTo(container).animate({
+		opacity : 0.9
+	}, 350, function() {
+		// Animation complete.
+	});
+	
+	var base = $("<table/>").appendTo(box);
+	
+	var idRaw = $("<tr/>").appendTo(base);
+	$("<td/>").append("Send to:").appendTo(idRaw);
+	
+	var userIdText = $("<input/>").attr({
+		"id": "sendToId",
+		"type": "text",
+		"placeholder": "Send to (user id)",
+		"style": "width:300px !important;"
+	});
+	
+	$("<td/>").append(userIdText).appendTo(idRaw);
+	
+	var msgRaw = $("<tr/>").appendTo(base);
+	$("<td/>").attr("style","vertical-align:text-top;").append("Message:").appendTo(msgRaw);
+	
+	var messageText = $("<textarea/>").attr({
+		"id": "textileMessage",
+		"placeholder": "Your message",
+		"style": "width:300px !important;height:300px  !important;"
+	});
+	
+	$("<td/>").append(messageText).appendTo(msgRaw);
+	
+	var attacheRaw = $("<tr/>").appendTo(base);
+	$("<td/>").attr("style","vertical-align:text-top;").append("Attachment:").appendTo(attacheRaw);
+	
+	var uploaderArea = $("<td/>").appendTo(attacheRaw);
+	
+	var files = new filedrag(uploaderArea);
+
+	var btnRaw = $("<tr/>").appendTo(base);
+	
+	$("<td/>").appendTo(btnRaw);
+	var btnBox = $("<td/>").appendTo(btnRaw);
+	
+	$("<input/>").attr({
+		"id": "sendMessageBtn",
+		"type": "button",
+		"value": "Send"
+	}).appendTo(btnBox).click(function() {
+		
+//		var uploader = new qq.FileUploaderBasic({
+//		    // path to server-side upload script
+//		    action: '/sfsupload',
+//		    params: {
+//		    	wolfpacks: "someWolfpack"
+//		    }
+//		});
+//		
+//		uploader._uploadFileList(files.getFiles());
+		
+		var msg = messageText.val().replace(/\n/g,"<br>");
+		var mailObject = {
+				text: msg,
+				attachment: [{
+					filename: "testfile.doc",
+					contentType: "document",
+					path: "http://www.google.com"
+				},
+				{
+					filename: "image.jpg",
+					contentType: "image/jpeg",
+					path: "https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"					
+				}]
+		};
+		
+		console.log(JSON.stringify(mailObject));
+		
+		request.getData({
+			sendMessage: {
+				userID: userIdText.val(),
+				message: JSON.stringify(mailObject)
+			}
+		  });
+	});
+	
+	btnBox.append("&nbsp;");
+	
+	$("<input/>").attr({
+		"id": "sabortBtn",
+		"type": "button",
+		"value": "Cancel"
+	}).appendTo(btnBox).click(function() {
+		destroySelf();
+	});
+	
+	var errorRaw = $("<tr/>").appendTo(base);
+	
+	$("<td/>").appendTo(errorRaw);
+	var errorBox = $("<td/>").appendTo(errorRaw);
+	
+	var errorMessage = $("<span/>").attr({
+		"style": "color:red;"
+	}).appendTo(errorBox);
+	
+	function handleResponse(data,postData) {
+		console.log(data);
+		if (data.sendMessage != null) {
+			if(data.sendMessage.result == "success") {
+				destroySelf();
+			} else {
+				errorMessage.html(data.sendMessage.result);
+			}
+		} else {
+			console.log("No sendMessage parameter in response");
+		}		
+	}
+	
+	function destroySelf() {
+		if(box != null) {
+			box.animate({
+				opacity : 0
+			}, 350, function() {
+				box.remove();
+				box = null;
+				delete this;
+			});;			
+		} else {
+			delete this;
+		}
+		
+	}
+
+	return {
+		destroy : function() {
+			destroySelf();
+		}
+	};
+};
+
+var NewsFeed = function (id, applicationFrame) {
+	var appContainer = new AppContainer(id,applicationFrame);
+	var frame = appContainer.getFrame();
+	var mailObject = {
+			text: "hello liran",
+			attachment: [{
+				filename: "testfile.doc",
+				contentType: "document",
+				path: "http://www.google.com"
+			},
+			{
+				filename: "image.jpg",
+				contentType: "image/jpeg",
+				path: "https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"					
+			}]
+	};
+	
+//	var msgBox = MailItem(mailObject);
+//	msgBox.appendTo(frame);
+	
+	var list = new GenericMailList("postListItem","postBox","",false)
+		.appendTo(frame);
+	
+	list.addItem("model","Model",1234,JSON.stringify(mailObject));
+
+	
+	list.addItem("cat","Cat",12345,JSON.stringify(mailObject));
+
+};var Profile = function (id,applicationFrame) {
+	var appContainer = new AppContainer(id,applicationFrame);
+	var frame = appContainer.getFrame();
+	
+	var request = new PostRequestHandler(id,"/json",handleNewData,null,3600);
+	
+	var title = $("<div/>").appendTo(frame);
+	
+	var name = $("<span/>").attr({
+		"class" : "eWolfTitle"
+	}).appendTo(title);
+	
+	title.append("&nbsp;");
+	
+	var idRow = $("<span/>").attr({
+		"class": "idBox"
+	}).appendTo(title);
+	
+	title.append("&nbsp;&nbsp;&nbsp; ");
+	
+	var wolfpacksContainer = $("<span/>").attr({
+		"class":"wolfpacksBox"
+	}).appendTo(title);	
+	
+	var wolfpackslist = null;
+	
+	new NewsFeed(id,frame);
+	
+	var profileData = null;
+	var wolfpackData = null;
+	
+	getProfileData();
+
+	function handleNewData(data,postData) {
+		console.log(data);
+		
+		if(data.profile != null) {
+			if(data.profile.result == "success") {
+				profileData = data.profile;
+				
+				name.html(new User(data.profile.id,data.profile.name));
+				idRow.html(data.profile.id);
+			} else {
+				console.log(data.profile.result);
+			}
+			
+		} else {
+			console.log("No profile parameter in response");
+		}
+		
+		if(data.wolfpacks != null) {
+			if(data.wolfpacks.result == "success") {
+				wolfpackData = data.wolfpacks;
+				
+				if(data.wolfpacks.wolfpacksList != null) {
+					if(wolfpackslist != null) {
+						 wolfpackslist.remove();
+					 }
+					 
+					 wolfpackslist = $("<span/>").appendTo(wolfpacksContainer);
+					 
+					 $.each(data.wolfpacks.wolfpacksList,function(i,pack) {
+						 wolfpackslist.append(new Wolfpack(pack));
+						 if(i != data.wolfpacks.wolfpacksList.length-1) {
+							 wolfpackslist.append(", ");
+						 }
+					 });
+				} else {
+					console.log("No wolfpacksList parameter in response");
+				}				
+			} else {
+				console.log(data.wolfpacks.result);
+			}
+			
+		} else {
+			console.log("No wolfpacks parameter in response");
+		}
+	  }
+	
+	function getProfileData() {
+		var userObj = {};
+		
+		if(id != eWolf.data("userID")) {
+			userObj.userID = id;
+		}
+		
+		request.getData({
+			profile: userObj,
+			wolfpacks: userObj
+		  });
+	}
+	
+	eWolf.bind("refresh."+id,function(event,eventId) {
+		if(id == eventId) {
+			getProfileData();
+		}
+	});
+	
+	return {
+		getID : function() {
+			if(profileData != null) {
+				return profileData.id;
+			} else {
+				return id;
+			}			
+		},
+		getName : function() {
+			if(profileData != null) {
+				return profileData.name;
+			} else {
+				return id;
+			}				
+		},
+		getWolfpacks : function() {
+			if(wolfpackData != null) {
+				return wolfpackData.wolfpacksList;
+			} else {
+				return [];
+			}			
+		},
+		isSelected : function() {
+			return appContainer.isSelected();
+		},
+		destroy : function() {
+			eWolf.unbind("refresh."+id);
+			appContainer.destroy();
+			delete this;
+		}
+	};
+};
+var BasicRequestHandler = function(id,requestAddress,handleDataFunction,onComplete,refreshIntervalSec) {	
+	return {
+		_timer: null,
+		_onPostComplete: function () {
+			if(onComplete != null) {
+				onComplete();
+			}
+
+			eWolf.trigger("loadingEnd",[id]);
+			
+			if(refreshIntervalSec > 0) {
+				timer = setTimeout("eWolf.trigger('needRefresh."+id+"'," +
+						"["+id+"])",refreshIntervalSec*1000);
+			}
+		},
+		getId : function() {
+			return id;
+		},
+		setRequestAddress : function(inputRequestAddress) {
+			requestAddress = inputRequestAddress;
+		}
+	};
+};
+
+var PostRequestHandler = function(id,requestAddress,handleDataFunction,onComplete,refreshIntervalSec) {
+	var res = new BasicRequestHandler(id,requestAddress,handleDataFunction,onComplete,refreshIntervalSec);
+	res.getData = function (data) {
+		clearTimeout(this._timer);
+		eWolf.trigger("loading",[id]);				
+		
+		$.post(	requestAddress,
+			JSON.stringify(data),
+			function(receivedData,textStatus) {
+				handleDataFunction(receivedData,/*textStatus,*/data);
+			},
+			"json").complete(this._onPostComplete);
+	};
+	
+	return res;
+};
+
+var JSONRequestHandler = function(id,requestAddress,handleDataFunction,onComplete,refreshIntervalSec) {
+	var res = new BasicRequestHandler(id,requestAddress,handleDataFunction,onComplete,refreshIntervalSec);
+	res.getData = function (data) {
+		clearTimeout(this._timer);
+		eWolf.trigger("loading",[id]);				
+		
+		$.getJSON(
+				requestAddress,
+				data,
+				function(receivedData,textStatus) {
+					handleDataFunction(receivedData,/*textStatus,*/data);
+				}).complete(this._onPostComplete);
+	};
+	
+	return res;
+};var SearchApp = function(id,menu,applicationFrame,query,searchBtn,addBtn) {
+	var menuList = menu.createNewMenuList("search","Searches");
+	var apps = new Object();
+	var lastSearch = null;
+	
+	function addSearchMenuItem(key) {
+		var app = new Profile(key,applicationFrame);
+		apps[key] = app;
+		
+		eWolf.one("loadingEnd",function(event,eventId) {
+			if(eventId == key) {
+				menuList.addMenuItem(key,app.getName());
+				eWolf.trigger("select",[key]);
+			}
+		});
+		
+	};
+	
+	function removeSearchMenuItem(key) {
+		if(apps[key] != null) {
+			apps[key].destroy();
+			delete apps[key];
+			menuList.removeMenuItem(key);
+		}
+	}
+	
+	function removeLastSearch() {
+		if(lastSearch != null) {
+			removeSearchMenuItem(lastSearch);
+			lastSearch = null;
+		}
+	}
+	
+	function searchUser(key) {
+		if(key != "") {
+			if(key != eWolf.data("userID")) {
+				removeLastSearch();
+				lastSearch = key;
+				addSearchMenuItem(key);
+			}
+		}	
+	}
+	
+	addBtn.click(function() {
+		var key = query.val();
+		if(key != "") {
+			if(key != eWolf.data("userID")) {
+				addSearchMenuItem(key,"Show "+key);
+			}
+			eWolf.trigger("select",[key]);
+		}
+	});
+	
+	searchBtn.click(function() {
+		var key = query.val();
+		searchUser(key);	
+	});
+	
+	eWolf.bind("select."+id,function(event,eventId) {
+		if(eventId != lastSearch) {
+			removeLastSearch();
+		}
+	});
+	
+	query.keyup(function(event){
+	    if(event.keyCode == 13 && query.val() != ""){
+	    	if(event.shiftKey) {
+	    		addBtn.click();
+	    	} else {
+	    		searchBtn.click();
+	    	}
+	    }
+	    
+	    if(query.val() == "") {
+	    	searchBtn.hide(200);
+	    	addBtn.hide(200);
+	    } else {
+	    	searchBtn.show(200);
+	    	addBtn.show(200);
+	    }
+	});
+		
+	
+	eWolf.bind("search",function(event,key) {
+		searchUser(key);
+	});
+
+	
+	return {
+		search: function (key) {
+			searchUser(key);
+		}
+	};
+};var ShowMore = function (frame,onClick) {
+	var element = null;
+	
+	return {
+		remove : function() {
+			if(element != null) {
+				element.remove();
+			}
+			
+			return this;
+		},
+		draw : function() {
+			this.remove();
+			
+			element = $("<div/>").attr({
+				"class": "showMoreClass"
+			}).append("Show More...").click(onClick);
+			
+			frame.append(element);
+			
+			return this;
+		}
+	};
+};var SideMenu = function(menu, mainFrame,topbarFrame) {
+	menu.data('menuObj', this);
+	mainFrame.data('menuObj', this);
+	var toggleButton = menu.children("#toggleButtons");
+
+	var hideBtn = toggleButton.children("#btnHideMenu")
+			.data('menuObj', this).click(function() {
+				hideMenu();
+			}),
+		showBtn = toggleButton.children("#btnShowMenu")
+			.data('menuObj', this).click(function() {
+				showMenu();
+			}),
+		pinBtn = toggleButton.children("#btnPin")
+			.data('menuObj', this).click(function() {
+				pinMenu();
+			}),
+		unpinBtn = toggleButton.children("#btnUnPin")
+			.data('menuObj', this).click(function() {
+				unpinMenu();
+			}),
+
+		menuLists = [];
+	
+	function showMenu() {
+		showBtn.hide();
+		menuIn();
+		mainFrameShrink();
+		hideBtn.show();
+	};
+
+	function hideMenu() {
+		hideBtn.hide();
+		menuOut();
+		mainFrameGrow();
+		showBtn.show();
+	};
+
+	function pinMenu() {
+		mainFrameShrink();
+		pinBtn.hide();
+		unpinBtn.show();
+		hideBtn.show();
+		menu.unbind("mouseover");
+		menu.unbind("mouseout");
+	};
+
+	function unpinMenu() {
+		mainFrameGrow();
+		unpinBtn.hide();
+		pinBtn.show();
+		hideBtn.hide();
+		menu.mouseover(function() {
+			menuIn();
+		});
+
+		menu.mouseout(function() {
+			menuOut();
+		});
+	};
+
+	function menuOut() {
+		menu.stop();
+
+		menu.animate({
+			opacity : 0.25,
+			left : '-175px',
+		}, 200, function() {
+			// Animation complete.
+		});
+	};
+
+	function menuIn() {
+		menu.stop();
+
+		menu.animate({
+			opacity : 0.7,
+			left : '-35px',
+		}, 200, function() {
+			// Animation complete.
+		});
+	};
+
+	function mainFrameGrow() {
+		mainFrame.stop();
+
+		mainFrame.animate({
+			left : '30px',
+			right : '0'
+		}, 200, function() {
+			eWolf.trigger("mainFrameResize",["sideMenu"]);
+		});
+	};
+
+	function mainFrameShrink() {
+		mainFrame.stop();
+
+		mainFrame.animate({
+			left : '170px',
+			right : '0'
+		}, 200, function() {
+			eWolf.trigger("mainFrameResize",["sideMenu"]);
+		});
+	};
+	
+	$(window).resize(function() {
+		eWolf.trigger("mainFrameResize",["window"]);
+	});
+	
+	return {
+		append : function(item) {
+			menu.append(item);
+		},
+		createNewMenuList : function(id, title) {
+			var menuLst = new MenuList(this,id,title,topbarFrame)
+							.appendTo(menu);
+			menuLists.push(menuLst);
+			return menuLst;
+		}
+	};
+};var User = function(id,name) {
+	return $("<span/>").attr({
+		"style": "width:1%;",
+		"class": "userBox"
+	}).text(name).click(function() {
+		eWolf.trigger("search",[id]);
+	});	
+};var Wolfpack = function(name) {
+	var box = $("<span/>").attr({
+		"style": "width:1%;",
+		"class": "userBox"
+	}).text(name).click(function() {
+		eWolf.trigger("select",["__packid__"+name]);
+	});	
+		
+	return box;
+};var Wolfpacks = function (menu,applicationFrame) {		
+	var menuList = menu.createNewMenuList("wolfpacks","Wolfpacks");
+	var request = new PostRequestHandler("wolfpacks","/json",handleWolfpacks,null,0);
+	var wolfpackList = [];
+
+	request.getData( {
+		 wolfpacks:{}
+	} );
+		
+	function addWolfpackApp(key,title) {
+		var app = new Profile(key,applicationFrame);
+		menuList.addMenuItem(key,title);
+		wolfpackList.push(app);
+	};
+	
+	function handleWolfpacks(data, postData) {
+		console.log(data);
+		
+		if(data.wolfpacks != null) {
+			if(data.wolfpacks.result == "success") {
+				if(data.wolfpacks.wolfpacksList != null) {
+					$.each(data.wolfpacks.wolfpacksList,
+							function(i,pack){
+						addWolfpackApp("__packid__"+pack, pack);
+					});
+				} else {
+					console.log("No wolfpackList parameter in response");
+				}
+				
+			} else {
+				console.log(data.wolfpacks.result);
+			}
+			
+		} else {
+			console.log("No wolfpacks parameter in response");
+		}
+	}
+	
+	return this;
+};
+
+
+
+
+jQuery.extend({
+    createUploadIframe: function(id, uri)
+	{
+			//create frame
+            var frameId = 'jUploadFrame' + id;
+            var iframeHtml = '<iframe id="' + frameId + '" name="' + frameId + '" style="position:absolute; top:-9999px; left:-9999px"';
+			if(window.ActiveXObject)
+			{
+                if(typeof uri== 'boolean'){
+					iframeHtml += ' src="' + 'javascript:false' + '"';
+
+                }
+                else if(typeof uri== 'string'){
+					iframeHtml += ' src="' + uri + '"';
+
+                }	
+			}
+			iframeHtml += ' />';
+			jQuery(iframeHtml).appendTo(document.body);
+
+            return jQuery('#' + frameId).get(0);			
+    },
+    createUploadForm: function(id, fileElementId, data)
+	{
+		//create form	
+		var formId = 'jUploadForm' + id;
+		var fileId = 'jUploadFile' + id;
+		var form = jQuery('<form  action="" method="POST" name="' + formId + '" id="' + formId + '" enctype="multipart/form-data"></form>');	
+		if(data)
+		{
+			for(var i in data)
+			{
+				jQuery('<input type="hidden" name="' + i + '" value="' + data[i] + '" />').appendTo(form);
+			}			
+		}
+		
+		jQuery('<input type="hidden" name="wolfpackName" value="StamWolfpack" />').appendTo(form);
+		
+		var oldElement = jQuery('#' + fileElementId);
+		var newElement = jQuery(oldElement).clone();
+		jQuery(oldElement).attr('id', fileId);
+		jQuery(oldElement).before(newElement);
+		jQuery(oldElement).appendTo(form);
+
+
+		
+		//set attributes
+		jQuery(form).css('position', 'absolute');
+		jQuery(form).css('top', '-1200px');
+		jQuery(form).css('left', '-1200px');
+		jQuery(form).appendTo('body');		
+		return form;
+    },
+
+    ajaxFileUpload: function(s) {
+        // TODO introduce global settings, allowing the client to modify them for all requests, not only timeout		
+        s = jQuery.extend({}, jQuery.ajaxSettings, s);
+        var id = new Date().getTime();  
+		var form = jQuery.createUploadForm(id, s.fileElementId, (typeof(s.data)=='undefined'?false:s.data));
+		var io = jQuery.createUploadIframe(id, s.secureuri);
+		var frameId = 'jUploadFrame' + id;
+		var formId = 'jUploadForm' + id;		
+        // Watch for a new set of requests
+        if ( s.global && ! jQuery.active++ )
+		{
+			jQuery.event.trigger( "ajaxStart" );
+		}            
+        var requestDone = false;
+        // Create the request object
+        var xml = {};
+        if ( s.global )
+            jQuery.event.trigger("ajaxSend", [xml, s]);
+        // Wait for a response to come back
+        var uploadCallback = function(isTimeout)
+		{			
+			var io = document.getElementById(frameId);
+            try 
+			{				
+				if(io.contentWindow)
+				{
+					 xml.responseText = io.contentWindow.document.body?io.contentWindow.document.body.innerHTML:null;
+                	 xml.responseXML = io.contentWindow.document.XMLDocument?io.contentWindow.document.XMLDocument:io.contentWindow.document;
+					 
+				}else if(io.contentDocument)
+				{
+					 xml.responseText = io.contentDocument.document.body?io.contentDocument.document.body.innerHTML:null;
+                	xml.responseXML = io.contentDocument.document.XMLDocument?io.contentDocument.document.XMLDocument:io.contentDocument.document;
+				}						
+            }catch(e)
+			{
+				jQuery.handleError(s, xml, null, e);
+			}
+            if ( xml || isTimeout == "timeout") 
+			{				
+                requestDone = true;
+                var status;
+                try {
+                    status = isTimeout != "timeout" ? "success" : "error";
+                    // Make sure that the request was successful or notmodified
+                    if ( status != "error" )
+					{
+                        // process the data (runs the xml through httpData regardless of callback)
+                        var data = jQuery.uploadHttpData( xml, s.dataType );    
+                        // If a local callback was specified, fire it and pass it the data
+                        if ( s.success )
+                            s.success( data, status );
+    
+                        // Fire the global callback
+                        if( s.global )
+                            jQuery.event.trigger( "ajaxSuccess", [xml, s] );
+                    } else
+                        jQuery.handleError(s, xml, status);
+                } catch(e) 
+				{
+                    status = "error";
+                    jQuery.handleError(s, xml, status, e);
+                }
+
+                // The request was completed
+                if( s.global )
+                    jQuery.event.trigger( "ajaxComplete", [xml, s] );
+
+                // Handle the global AJAX counter
+                if ( s.global && ! --jQuery.active )
+                    jQuery.event.trigger( "ajaxStop" );
+
+                // Process result
+                if ( s.complete )
+                    s.complete(xml, status);
+
+                jQuery(io).unbind();
+
+                setTimeout(function()
+									{	try 
+										{
+											jQuery(io).remove();
+											jQuery(form).remove();	
+											
+										} catch(e) 
+										{
+											jQuery.handleError(s, xml, null, e);
+										}									
+
+									}, 100);
+
+                xml = null;
+            }
+        };
+        // Timeout checker
+        if ( s.timeout > 0 ) 
+		{
+            setTimeout(function(){
+                // Check to see if the request is still happening
+                if( !requestDone ) uploadCallback( "timeout" );
+            }, s.timeout);
+        }
+        try 
+		{
+
+			var form = jQuery('#' + formId);
+			jQuery(form).attr('action', s.url);
+			jQuery(form).attr('method', 'POST');
+			jQuery(form).attr('target', frameId);
+            if(form.encoding)
+			{
+				jQuery(form).attr('encoding', 'multipart/form-data');      			
+            }
+            else
+			{	
+				jQuery(form).attr('enctype', 'multipart/form-data');			
+            }			
+            jQuery(form).submit();
+
+        } catch(e) 
+		{			
+            jQuery.handleError(s, xml, null, e);
+        }
+		
+		jQuery('#' + frameId).load(uploadCallback	);
+        return {abort: function () {}};	
+
+    },
+
+    uploadHttpData: function( r, type ) {
+        var data = !type;
+        data = type == "xml" || data ? r.responseXML : r.responseText;
+        // If the type is "script", eval it in global context
+        if ( type == "script" )
+            jQuery.globalEval( data );
+        // Get the JavaScript object, if JSON is used.
+        if ( type == "json" )
+            eval( "data = " + data );
+        // evaluate scripts within html
+        if ( type == "html" )
+            jQuery("<div>").html(data).evalScripts();
+
+        return data;
+    }
+});
+
+/*
+filedrag.js - HTML5 File Drag & Drop demonstration
+Featured on SitePoint.com
+Developed by Craig Buckler (@craigbuckler) of OptimalWorks.net
+*/
+var filedrag = function(uploaderArea) {
+	
+	var filesArray = [];
+
+	var fileselect = $("<input/>").attr({
+		"type": "file",
+		"id": "fileselect",
+		"name": "fileselect[]",
+		"multiple": "multiple"
+	}).appendTo(uploaderArea);
+	
+	var filedrag = $("<div/>")
+		.attr("id","filedrag")
+		.append("or drop files here")
+		.appendTo(uploaderArea);
+	
+	var filelist = $("<ul/>")
+		.attr({
+			"id":"filelist",
+			"class": "filesList"
+		}).appendTo(uploaderArea);
+
+
+	// output information
+	function Output(msg) {
+		var box = $("<input/>").attr({
+			"type": "checkbox",
+			"checked": "checked"
+		});		
+
+		$("<li/>").attr({
+			"class": "filelistItem"
+		}).append(box).append(msg).appendTo(filelist);
+	}
+	
+	// call initialization file
+	if (window.File && window.FileList && window.FileReader) {
+		Init();
+	}
+		
+	// getElementById
+	function $id(id) {
+		return document.getElementById(id);
+	}
+
+	// file drag hover
+	function FileDragHover(e) {
+		e.stopPropagation();
+		e.preventDefault();
+		e.target.className = (e.type == "dragover" ? "hover" : "");
+	}
+
+
+	// file selection
+	function FileSelectHandler(e) {
+		// cancel event and hover styling
+		FileDragHover(e);
+
+		// fetch FileList object
+		var files = e.target.files || e.dataTransfer.files;
+
+		// process all File objects
+		for (var i = 0, f; f = files[i]; i++) {
+			filesArray.push(f);
+			ParseFile(f);
+		}
+	}
+
+	// output file information
+	function ParseFile(file) {
+		Output(
+			"<strong>" + file.name +
+			"</strong> type: <strong>" + file.type +
+			"</strong> size: <strong>" + file.size +
+			"</strong> bytes"
+		);
+	}
+
+
+	// initialize
+	function Init() {
+	
+		// file select
+		fileselect[0].addEventListener("change", FileSelectHandler, false);
+
+		// is XHR2 available?
+		var xhr = new XMLHttpRequest();
+		if (xhr.upload) {
+
+			// file drop
+			filedrag[0].addEventListener("dragover", FileDragHover, false);
+			filedrag[0].addEventListener("dragleave", FileDragHover, false);
+			filedrag[0].addEventListener("drop", FileSelectHandler, false);
+			filedrag[0].style.display = "block";
+		}
+
+	}
+	
+	return {
+		getFiles: function() {
+			return files;
+		}
+	};
+};/**
+ * http://github.com/valums/file-uploader
+ * 
+ * Multiple file upload component with progress-bar, drag-and-drop. 
+ * © 2010 Andrew Valums ( andrew(at)valums.com ) 
+ * 
+ * Licensed under GNU GPL 2 or later and GNU LGPL 2 or later, see license.txt.
+ */    
+
+//
+// Helper functions
+//
+
+var qq = qq || {};
+
+/**
+ * Adds all missing properties from second obj to first obj
+ */ 
+qq.extend = function(first, second){
+    for (var prop in second){
+        first[prop] = second[prop];
+    }
+};  
+
+/**
+ * Searches for a given element in the array, returns -1 if it is not present.
+ * @param {Number} [from] The index at which to begin the search
  */
-$(document).ready(function(){new Loading($("#loadingFrame"));var a=new SideMenu($("#menu"),$("#mainFrame"),$("#topbarID"));new MainApps(a,$("#applicationFrame"));new Wolfpacks(a,$("#applicationFrame"));new SearchApp("search",a,$("#applicationFrame"),$("#txtSearchBox"),$("#btnSearch"),$("#btnAdd"));testZone()});function testZone(){$("#btnLoad").click(function(){alert("Does nothing...")})};
+qq.indexOf = function(arr, elt, from){
+    if (arr.indexOf) return arr.indexOf(elt, from);
+    
+    from = from || 0;
+    var len = arr.length;    
+    
+    if (from < 0) from += len;  
+
+    for (; from < len; from++){  
+        if (from in arr && arr[from] === elt){  
+            return from;
+        }
+    }  
+    return -1;  
+}; 
+    
+qq.getUniqueId = (function(){
+    var id = 0;
+    return function(){ return id++; };
+})();
+
+//
+// Events
+
+qq.attach = function(element, type, fn){
+    if (element.addEventListener){
+        element.addEventListener(type, fn, false);
+    } else if (element.attachEvent){
+        element.attachEvent('on' + type, fn);
+    }
+};
+qq.detach = function(element, type, fn){
+    if (element.removeEventListener){
+        element.removeEventListener(type, fn, false);
+    } else if (element.attachEvent){
+        element.detachEvent('on' + type, fn);
+    }
+};
+
+qq.preventDefault = function(e){
+    if (e.preventDefault){
+        e.preventDefault();
+    } else{
+        e.returnValue = false;
+    }
+};
+
+//
+// Node manipulations
+
+/**
+ * Insert node a before node b.
+ */
+qq.insertBefore = function(a, b){
+    b.parentNode.insertBefore(a, b);
+};
+qq.remove = function(element){
+    element.parentNode.removeChild(element);
+};
+
+qq.contains = function(parent, descendant){       
+    // compareposition returns false in this case
+    if (parent == descendant) return true;
+    
+    if (parent.contains){
+        return parent.contains(descendant);
+    } else {
+        return !!(descendant.compareDocumentPosition(parent) & 8);
+    }
+};
+
+/**
+ * Creates and returns element from html string
+ * Uses innerHTML to create an element
+ */
+qq.toElement = (function(){
+    var div = document.createElement('div');
+    return function(html){
+        div.innerHTML = html;
+        var element = div.firstChild;
+        div.removeChild(element);
+        return element;
+    };
+})();
+
+//
+// Node properties and attributes
+
+/**
+ * Sets styles for an element.
+ * Fixes opacity in IE6-8.
+ */
+qq.css = function(element, styles){
+    if (styles.opacity != null){
+        if (typeof element.style.opacity != 'string' && typeof(element.filters) != 'undefined'){
+            styles.filter = 'alpha(opacity=' + Math.round(100 * styles.opacity) + ')';
+        }
+    }
+    qq.extend(element.style, styles);
+};
+qq.hasClass = function(element, name){
+    var re = new RegExp('(^| )' + name + '( |$)');
+    return re.test(element.className);
+};
+qq.addClass = function(element, name){
+    if (!qq.hasClass(element, name)){
+        element.className += ' ' + name;
+    }
+};
+qq.removeClass = function(element, name){
+    var re = new RegExp('(^| )' + name + '( |$)');
+    element.className = element.className.replace(re, ' ').replace(/^\s+|\s+$/g, "");
+};
+qq.setText = function(element, text){
+    element.innerText = text;
+    element.textContent = text;
+};
+
+//
+// Selecting elements
+
+qq.children = function(element){
+    var children = [],
+    child = element.firstChild;
+
+    while (child){
+        if (child.nodeType == 1){
+            children.push(child);
+        }
+        child = child.nextSibling;
+    }
+
+    return children;
+};
+
+qq.getByClass = function(element, className){
+    if (element.querySelectorAll){
+        return element.querySelectorAll('.' + className);
+    }
+
+    var result = [];
+    var candidates = element.getElementsByTagName("*");
+    var len = candidates.length;
+
+    for (var i = 0; i < len; i++){
+        if (qq.hasClass(candidates[i], className)){
+            result.push(candidates[i]);
+        }
+    }
+    return result;
+};
+
+/**
+ * obj2url() takes a json-object as argument and generates
+ * a querystring. pretty much like jQuery.param()
+ * 
+ * how to use:
+ *
+ *    `qq.obj2url({a:'b',c:'d'},'http://any.url/upload?otherParam=value');`
+ *
+ * will result in:
+ *
+ *    `http://any.url/upload?otherParam=value&a=b&c=d`
+ *
+ * @param  Object JSON-Object
+ * @param  String current querystring-part
+ * @return String encoded querystring
+ */
+qq.obj2url = function(obj, temp, prefixDone){
+    var uristrings = [],
+        prefix = '&',
+        add = function(nextObj, i){
+            var nextTemp = temp 
+                ? (/\[\]$/.test(temp)) // prevent double-encoding
+                   ? temp
+                   : temp+'['+i+']'
+                : i;
+            if ((nextTemp != 'undefined') && (i != 'undefined')) {  
+                uristrings.push(
+                    (typeof nextObj === 'object') 
+                        ? qq.obj2url(nextObj, nextTemp, true)
+                        : (Object.prototype.toString.call(nextObj) === '[object Function]')
+                            ? encodeURIComponent(nextTemp) + '=' + encodeURIComponent(nextObj())
+                            : encodeURIComponent(nextTemp) + '=' + encodeURIComponent(nextObj)                                                          
+                );
+            }
+        }; 
+
+    if (!prefixDone && temp) {
+      prefix = (/\?/.test(temp)) ? (/\?$/.test(temp)) ? '' : '&' : '?';
+      uristrings.push(temp);
+      uristrings.push(qq.obj2url(obj));
+    } else if ((Object.prototype.toString.call(obj) === '[object Array]') && (typeof obj != 'undefined') ) {
+        // we wont use a for-in-loop on an array (performance)
+        for (var i = 0, len = obj.length; i < len; ++i){
+            add(obj[i], i);
+        }
+    } else if ((typeof obj != 'undefined') && (obj !== null) && (typeof obj === "object")){
+        // for anything else but a scalar, we will use for-in-loop
+        for (var i in obj){
+            add(obj[i], i);
+        }
+    } else {
+        uristrings.push(encodeURIComponent(temp) + '=' + encodeURIComponent(obj));
+    }
+
+    return uristrings.join(prefix)
+                     .replace(/^&/, '')
+                     .replace(/%20/g, '+'); 
+};
+
+//
+//
+// Uploader Classes
+//
+//
+
+var qq = qq || {};
+    
+/**
+ * Creates upload button, validates upload, but doesn't create file list or dd. 
+ */
+qq.FileUploaderBasic = function(o){
+    this._options = {
+        // set to true to see the server response
+        debug: false,
+        action: '/server/upload',
+        params: {},
+        button: null,
+        multiple: true,
+        maxConnections: 3,
+        // validation        
+        allowedExtensions: [],               
+        sizeLimit: 0,   
+        minSizeLimit: 0,                             
+        // events
+        // return false to cancel submit
+        onSubmit: function(id, fileName){},
+        onProgress: function(id, fileName, loaded, total){},
+        onComplete: function(id, fileName, responseJSON){},
+        onCancel: function(id, fileName){},
+        // messages                
+        messages: {
+            typeError: "{file} has invalid extension. Only {extensions} are allowed.",
+            sizeError: "{file} is too large, maximum file size is {sizeLimit}.",
+            minSizeError: "{file} is too small, minimum file size is {minSizeLimit}.",
+            emptyError: "{file} is empty, please select files again without it.",
+            onLeave: "The files are being uploaded, if you leave now the upload will be cancelled."            
+        },
+        showMessage: function(message){
+            alert(message);
+        }               
+    };
+    qq.extend(this._options, o);
+        
+    // number of files being uploaded
+    this._filesInProgress = 0;
+    this._handler = this._createUploadHandler(); 
+    
+    if (this._options.button){ 
+        this._button = this._createUploadButton(this._options.button);
+    }
+                        
+    this._preventLeaveInProgress();         
+};
+   
+qq.FileUploaderBasic.prototype = {
+    setParams: function(params){
+        this._options.params = params;
+    },
+    getInProgress: function(){
+        return this._filesInProgress;         
+    },
+    _createUploadButton: function(element){
+        var self = this;
+        
+        return new qq.UploadButton({
+            element: element,
+            multiple: this._options.multiple && qq.UploadHandlerXhr.isSupported(),
+            onChange: function(input){
+                self._onInputChange(input);
+            }        
+        });           
+    },    
+    _createUploadHandler: function(){
+        var self = this,
+            handlerClass;        
+        
+        if(qq.UploadHandlerXhr.isSupported()){           
+            handlerClass = 'UploadHandlerXhr';                        
+        } else {
+            handlerClass = 'UploadHandlerForm';
+        }
+
+        var handler = new qq[handlerClass]({
+            debug: this._options.debug,
+            action: this._options.action,         
+            maxConnections: this._options.maxConnections,   
+            onProgress: function(id, fileName, loaded, total){                
+                self._onProgress(id, fileName, loaded, total);
+                self._options.onProgress(id, fileName, loaded, total);                    
+            },            
+            onComplete: function(id, fileName, result){
+                self._onComplete(id, fileName, result);
+                self._options.onComplete(id, fileName, result);
+            },
+            onCancel: function(id, fileName){
+                self._onCancel(id, fileName);
+                self._options.onCancel(id, fileName);
+            }
+        });
+
+        return handler;
+    },    
+    _preventLeaveInProgress: function(){
+        var self = this;
+        
+        qq.attach(window, 'beforeunload', function(e){
+            if (!self._filesInProgress){return;}
+            
+            var e = e || window.event;
+            // for ie, ff
+            e.returnValue = self._options.messages.onLeave;
+            // for webkit
+            return self._options.messages.onLeave;             
+        });        
+    },    
+    _onSubmit: function(id, fileName){
+        this._filesInProgress++;  
+    },
+    _onProgress: function(id, fileName, loaded, total){        
+    },
+    _onComplete: function(id, fileName, result){
+        this._filesInProgress--;                 
+        if (result.error){
+            this._options.showMessage(result.error);
+        }             
+    },
+    _onCancel: function(id, fileName){
+        this._filesInProgress--;        
+    },
+    _onInputChange: function(input){
+        if (this._handler instanceof qq.UploadHandlerXhr){                
+            this._uploadFileList(input.files);                   
+        } else {             
+            if (this._validateFile(input)){                
+                this._uploadFile(input);                                    
+            }                      
+        }               
+        this._button.reset();   
+    },  
+    _uploadFileList: function(files){
+        for (var i=0; i<files.length; i++){
+            if ( !this._validateFile(files[i])){
+                return;
+            }            
+        }
+        
+        for (var i=0; i<files.length; i++){
+            this._uploadFile(files[i]);        
+        }        
+    },       
+    _uploadFile: function(fileContainer){      
+        var id = this._handler.add(fileContainer);
+        var fileName = this._handler.getName(id);
+        
+        if (this._options.onSubmit(id, fileName) !== false){
+            this._onSubmit(id, fileName);
+            this._handler.upload(id, this._options.params);
+        }
+    },      
+    _validateFile: function(file){
+        var name, size;
+        
+        if (file.value){
+            // it is a file input            
+            // get input value and remove path to normalize
+            name = file.value.replace(/.*(\/|\\)/, "");
+        } else {
+            // fix missing properties in Safari
+            name = file.fileName != null ? file.fileName : file.name;
+            size = file.fileSize != null ? file.fileSize : file.size;
+        }
+                    
+        if (! this._isAllowedExtension(name)){            
+            this._error('typeError', name);
+            return false;
+            
+        } else if (size === 0){            
+            this._error('emptyError', name);
+            return false;
+                                                     
+        } else if (size && this._options.sizeLimit && size > this._options.sizeLimit){            
+            this._error('sizeError', name);
+            return false;
+                        
+        } else if (size && size < this._options.minSizeLimit){
+            this._error('minSizeError', name);
+            return false;            
+        }
+        
+        return true;                
+    },
+    _error: function(code, fileName){
+        var message = this._options.messages[code];        
+        function r(name, replacement){ message = message.replace(name, replacement); }
+        
+        r('{file}', this._formatFileName(fileName));        
+        r('{extensions}', this._options.allowedExtensions.join(', '));
+        r('{sizeLimit}', this._formatSize(this._options.sizeLimit));
+        r('{minSizeLimit}', this._formatSize(this._options.minSizeLimit));
+        
+        this._options.showMessage(message);                
+    },
+    _formatFileName: function(name){
+        if (name.length > 33){
+            name = name.slice(0, 19) + '...' + name.slice(-13);    
+        }
+        return name;
+    },
+    _isAllowedExtension: function(fileName){
+        var ext = (-1 !== fileName.indexOf('.')) ? fileName.replace(/.*[.]/, '').toLowerCase() : '';
+        var allowed = this._options.allowedExtensions;
+        
+        if (!allowed.length){return true;}        
+        
+        for (var i=0; i<allowed.length; i++){
+            if (allowed[i].toLowerCase() == ext){ return true;}    
+        }
+        
+        return false;
+    },    
+    _formatSize: function(bytes){
+        var i = -1;                                    
+        do {
+            bytes = bytes / 1024;
+            i++;  
+        } while (bytes > 99);
+        
+        return Math.max(bytes, 0.1).toFixed(1) + ['kB', 'MB', 'GB', 'TB', 'PB', 'EB'][i];          
+    }
+};
+    
+       
+/**
+ * Class that creates upload widget with drag-and-drop and file list
+ * @inherits qq.FileUploaderBasic
+ */
+qq.FileUploader = function(o){
+    // call parent constructor
+    qq.FileUploaderBasic.apply(this, arguments);
+    
+    // additional options    
+    qq.extend(this._options, {
+        element: null,
+        // if set, will be used instead of qq-upload-list in template
+        listElement: null,
+                
+        template: '<div class="qq-uploader">' + 
+                '<div class="qq-upload-drop-area"><span>Drop files here to upload</span></div>' +
+                '<div class="qq-upload-button">Upload a file</div>' +
+                '<ul class="qq-upload-list"></ul>' + 
+             '</div>',
+
+        // template for one item in file list
+        fileTemplate: '<li>' +
+                '<span class="qq-upload-file"></span>' +
+                '<span class="qq-upload-spinner"></span>' +
+                '<span class="qq-upload-size"></span>' +
+                '<a class="qq-upload-cancel" href="#">Cancel</a>' +
+                '<span class="qq-upload-failed-text">Failed</span>' +
+            '</li>',        
+        
+        classes: {
+            // used to get elements from templates
+            button: 'qq-upload-button',
+            drop: 'qq-upload-drop-area',
+            dropActive: 'qq-upload-drop-area-active',
+            list: 'qq-upload-list',
+                        
+            file: 'qq-upload-file',
+            spinner: 'qq-upload-spinner',
+            size: 'qq-upload-size',
+            cancel: 'qq-upload-cancel',
+
+            // added to list item when upload completes
+            // used in css to hide progress spinner
+            success: 'qq-upload-success',
+            fail: 'qq-upload-fail'
+        }
+    });
+    // overwrite options with user supplied    
+    qq.extend(this._options, o);       
+
+    this._element = this._options.element;
+    this._element.innerHTML = this._options.template;        
+    this._listElement = this._options.listElement || this._find(this._element, 'list');
+    
+    this._classes = this._options.classes;
+        
+    this._button = this._createUploadButton(this._find(this._element, 'button'));        
+    
+    this._bindCancelEvent();
+    this._setupDragDrop();
+};
+
+// inherit from Basic Uploader
+qq.extend(qq.FileUploader.prototype, qq.FileUploaderBasic.prototype);
+
+qq.extend(qq.FileUploader.prototype, {
+    /**
+     * Gets one of the elements listed in this._options.classes
+     **/
+    _find: function(parent, type){                                
+        var element = qq.getByClass(parent, this._options.classes[type])[0];        
+        if (!element){
+            throw new Error('element not found ' + type);
+        }
+        
+        return element;
+    },
+    _setupDragDrop: function(){
+        var self = this,
+            dropArea = this._find(this._element, 'drop');                        
+
+        var dz = new qq.UploadDropZone({
+            element: dropArea,
+            onEnter: function(e){
+                qq.addClass(dropArea, self._classes.dropActive);
+                e.stopPropagation();
+            },
+            onLeave: function(e){
+                e.stopPropagation();
+            },
+            onLeaveNotDescendants: function(e){
+                qq.removeClass(dropArea, self._classes.dropActive);  
+            },
+            onDrop: function(e){
+                dropArea.style.display = 'none';
+                qq.removeClass(dropArea, self._classes.dropActive);
+                self._uploadFileList(e.dataTransfer.files);    
+            }
+        });
+                
+        dropArea.style.display = 'none';
+
+        qq.attach(document, 'dragenter', function(e){     
+            if (!dz._isValidFileDrag(e)) return; 
+            
+            dropArea.style.display = 'block';            
+        });                 
+        qq.attach(document, 'dragleave', function(e){
+            if (!dz._isValidFileDrag(e)) return;            
+            
+            var relatedTarget = document.elementFromPoint(e.clientX, e.clientY);
+            // only fire when leaving document out
+            if ( ! relatedTarget || relatedTarget.nodeName == "HTML"){               
+                dropArea.style.display = 'none';                                            
+            }
+        });                
+    },
+    _onSubmit: function(id, fileName){
+        qq.FileUploaderBasic.prototype._onSubmit.apply(this, arguments);
+        this._addToList(id, fileName);  
+    },
+    _onProgress: function(id, fileName, loaded, total){
+        qq.FileUploaderBasic.prototype._onProgress.apply(this, arguments);
+
+        var item = this._getItemByFileId(id);
+        var size = this._find(item, 'size');
+        size.style.display = 'inline';
+        
+        var text; 
+        if (loaded != total){
+            text = Math.round(loaded / total * 100) + '% from ' + this._formatSize(total);
+        } else {                                   
+            text = this._formatSize(total);
+        }          
+        
+        qq.setText(size, text);         
+    },
+    _onComplete: function(id, fileName, result){
+        qq.FileUploaderBasic.prototype._onComplete.apply(this, arguments);
+
+        // mark completed
+        var item = this._getItemByFileId(id);                
+        qq.remove(this._find(item, 'cancel'));
+        qq.remove(this._find(item, 'spinner'));
+        
+        if (result.success){
+            qq.addClass(item, this._classes.success);    
+        } else {
+            qq.addClass(item, this._classes.fail);
+        }         
+    },
+    _addToList: function(id, fileName){
+        var item = qq.toElement(this._options.fileTemplate);                
+        item.qqFileId = id;
+
+        var fileElement = this._find(item, 'file');        
+        qq.setText(fileElement, this._formatFileName(fileName));
+        this._find(item, 'size').style.display = 'none';        
+
+        this._listElement.appendChild(item);
+    },
+    _getItemByFileId: function(id){
+        var item = this._listElement.firstChild;        
+        
+        // there can't be txt nodes in dynamically created list
+        // and we can  use nextSibling
+        while (item){            
+            if (item.qqFileId == id) return item;            
+            item = item.nextSibling;
+        }          
+    },
+    /**
+     * delegate click event for cancel link 
+     **/
+    _bindCancelEvent: function(){
+        var self = this,
+            list = this._listElement;            
+        
+        qq.attach(list, 'click', function(e){            
+            e = e || window.event;
+            var target = e.target || e.srcElement;
+            
+            if (qq.hasClass(target, self._classes.cancel)){                
+                qq.preventDefault(e);
+               
+                var item = target.parentNode;
+                self._handler.cancel(item.qqFileId);
+                qq.remove(item);
+            }
+        });
+    }    
+});
+    
+qq.UploadDropZone = function(o){
+    this._options = {
+        element: null,  
+        onEnter: function(e){},
+        onLeave: function(e){},  
+        // is not fired when leaving element by hovering descendants   
+        onLeaveNotDescendants: function(e){},   
+        onDrop: function(e){}                       
+    };
+    qq.extend(this._options, o); 
+    
+    this._element = this._options.element;
+    
+    this._disableDropOutside();
+    this._attachEvents();   
+};
+
+qq.UploadDropZone.prototype = {
+    _disableDropOutside: function(e){
+        // run only once for all instances
+        if (!qq.UploadDropZone.dropOutsideDisabled ){
+
+            qq.attach(document, 'dragover', function(e){
+                if (e.dataTransfer){
+                    e.dataTransfer.dropEffect = 'none';
+                    e.preventDefault(); 
+                }           
+            });
+            
+            qq.UploadDropZone.dropOutsideDisabled = true; 
+        }        
+    },
+    _attachEvents: function(){
+        var self = this;              
+                  
+        qq.attach(self._element, 'dragover', function(e){
+            if (!self._isValidFileDrag(e)) return;
+            
+            var effect = e.dataTransfer.effectAllowed;
+            if (effect == 'move' || effect == 'linkMove'){
+                e.dataTransfer.dropEffect = 'move'; // for FF (only move allowed)    
+            } else {                    
+                e.dataTransfer.dropEffect = 'copy'; // for Chrome
+            }
+                                                     
+            e.stopPropagation();
+            e.preventDefault();                                                                    
+        });
+        
+        qq.attach(self._element, 'dragenter', function(e){
+            if (!self._isValidFileDrag(e)) return;
+                        
+            self._options.onEnter(e);
+        });
+        
+        qq.attach(self._element, 'dragleave', function(e){
+            if (!self._isValidFileDrag(e)) return;
+            
+            self._options.onLeave(e);
+            
+            var relatedTarget = document.elementFromPoint(e.clientX, e.clientY);                      
+            // do not fire when moving a mouse over a descendant
+            if (qq.contains(this, relatedTarget)) return;
+                        
+            self._options.onLeaveNotDescendants(e); 
+        });
+                
+        qq.attach(self._element, 'drop', function(e){
+            if (!self._isValidFileDrag(e)) return;
+            
+            e.preventDefault();
+            self._options.onDrop(e);
+        });          
+    },
+    _isValidFileDrag: function(e){
+        var dt = e.dataTransfer,
+            // do not check dt.types.contains in webkit, because it crashes safari 4            
+            isWebkit = navigator.userAgent.indexOf("AppleWebKit") > -1;                        
+
+        // dt.effectAllowed is none in Safari 5
+        // dt.types.contains check is for firefox            
+        return dt && dt.effectAllowed != 'none' && 
+            (dt.files || (!isWebkit && dt.types.contains && dt.types.contains('Files')));
+        
+    }        
+}; 
+
+qq.UploadButton = function(o){
+    this._options = {
+        element: null,  
+        // if set to true adds multiple attribute to file input      
+        multiple: false,
+        // name attribute of file input
+        name: 'file',
+        onChange: function(input){},
+        hoverClass: 'qq-upload-button-hover',
+        focusClass: 'qq-upload-button-focus'                       
+    };
+    
+    qq.extend(this._options, o);
+        
+    this._element = this._options.element;
+    
+    // make button suitable container for input
+    qq.css(this._element, {
+        position: 'relative',
+        overflow: 'hidden',
+        // Make sure browse button is in the right side
+        // in Internet Explorer
+        direction: 'ltr'
+    });   
+    
+    this._input = this._createInput();
+};
+
+qq.UploadButton.prototype = {
+    /* returns file input element */    
+    getInput: function(){
+        return this._input;
+    },
+    /* cleans/recreates the file input */
+    reset: function(){
+        if (this._input.parentNode){
+            qq.remove(this._input);    
+        }                
+        
+        qq.removeClass(this._element, this._options.focusClass);
+        this._input = this._createInput();
+    },    
+    _createInput: function(){                
+        var input = document.createElement("input");
+        
+        if (this._options.multiple){
+            input.setAttribute("multiple", "multiple");
+        }
+                
+        input.setAttribute("type", "file");
+        input.setAttribute("name", this._options.name);
+        
+        qq.css(input, {
+            position: 'absolute',
+            // in Opera only 'browse' button
+            // is clickable and it is located at
+            // the right side of the input
+            right: 0,
+            top: 0,
+            fontFamily: 'Arial',
+            // 4 persons reported this, the max values that worked for them were 243, 236, 236, 118
+            fontSize: '118px',
+            margin: 0,
+            padding: 0,
+            cursor: 'pointer',
+            opacity: 0
+        });
+        
+        this._element.appendChild(input);
+
+        var self = this;
+        qq.attach(input, 'change', function(){
+            self._options.onChange(input);
+        });
+                
+        qq.attach(input, 'mouseover', function(){
+            qq.addClass(self._element, self._options.hoverClass);
+        });
+        qq.attach(input, 'mouseout', function(){
+            qq.removeClass(self._element, self._options.hoverClass);
+        });
+        qq.attach(input, 'focus', function(){
+            qq.addClass(self._element, self._options.focusClass);
+        });
+        qq.attach(input, 'blur', function(){
+            qq.removeClass(self._element, self._options.focusClass);
+        });
+
+        // IE and Opera, unfortunately have 2 tab stops on file input
+        // which is unacceptable in our case, disable keyboard access
+        if (window.attachEvent){
+            // it is IE or Opera
+            input.setAttribute('tabIndex', "-1");
+        }
+
+        return input;            
+    }        
+};
+
+/**
+ * Class for uploading files, uploading itself is handled by child classes
+ */
+qq.UploadHandlerAbstract = function(o){
+    this._options = {
+        debug: false,
+        action: '/upload.php',
+        // maximum number of concurrent uploads        
+        maxConnections: 999,
+        onProgress: function(id, fileName, loaded, total){},
+        onComplete: function(id, fileName, response){},
+        onCancel: function(id, fileName){}
+    };
+    qq.extend(this._options, o);    
+    
+    this._queue = [];
+    // params for files in queue
+    this._params = [];
+};
+qq.UploadHandlerAbstract.prototype = {
+    log: function(str){
+        if (this._options.debug && window.console) console.log('[uploader] ' + str);        
+    },
+    /**
+     * Adds file or file input to the queue
+     * @returns id
+     **/    
+    add: function(file){},
+    /**
+     * Sends the file identified by id and additional query params to the server
+     */
+    upload: function(id, params){
+        var len = this._queue.push(id);
+
+        var copy = {};        
+        qq.extend(copy, params);
+        this._params[id] = copy;        
+                
+        // if too many active uploads, wait...
+        if (len <= this._options.maxConnections){               
+            this._upload(id, this._params[id]);
+        }
+    },
+    /**
+     * Cancels file upload by id
+     */
+    cancel: function(id){
+        this._cancel(id);
+        this._dequeue(id);
+    },
+    /**
+     * Cancells all uploads
+     */
+    cancelAll: function(){
+        for (var i=0; i<this._queue.length; i++){
+            this._cancel(this._queue[i]);
+        }
+        this._queue = [];
+    },
+    /**
+     * Returns name of the file identified by id
+     */
+    getName: function(id){},
+    /**
+     * Returns size of the file identified by id
+     */          
+    getSize: function(id){},
+    /**
+     * Returns id of files being uploaded or
+     * waiting for their turn
+     */
+    getQueue: function(){
+        return this._queue;
+    },
+    /**
+     * Actual upload method
+     */
+    _upload: function(id){},
+    /**
+     * Actual cancel method
+     */
+    _cancel: function(id){},     
+    /**
+     * Removes element from queue, starts upload of next
+     */
+    _dequeue: function(id){
+        var i = qq.indexOf(this._queue, id);
+        this._queue.splice(i, 1);
+                
+        var max = this._options.maxConnections;
+        
+        if (this._queue.length >= max && i < max){
+            var nextId = this._queue[max-1];
+            this._upload(nextId, this._params[nextId]);
+        }
+    }        
+};
+
+/**
+ * Class for uploading files using form and iframe
+ * @inherits qq.UploadHandlerAbstract
+ */
+qq.UploadHandlerForm = function(o){
+    qq.UploadHandlerAbstract.apply(this, arguments);
+       
+    this._inputs = {};
+};
+// @inherits qq.UploadHandlerAbstract
+qq.extend(qq.UploadHandlerForm.prototype, qq.UploadHandlerAbstract.prototype);
+
+qq.extend(qq.UploadHandlerForm.prototype, {
+    add: function(fileInput){
+        fileInput.setAttribute('name', 'qqfile');
+        var id = 'qq-upload-handler-iframe' + qq.getUniqueId();       
+        
+        this._inputs[id] = fileInput;
+        
+        // remove file input from DOM
+        if (fileInput.parentNode){
+            qq.remove(fileInput);
+        }
+                
+        return id;
+    },
+    getName: function(id){
+        // get input value and remove path to normalize
+        return this._inputs[id].value.replace(/.*(\/|\\)/, "");
+    },    
+    _cancel: function(id){
+        this._options.onCancel(id, this.getName(id));
+        
+        delete this._inputs[id];        
+
+        var iframe = document.getElementById(id);
+        if (iframe){
+            // to cancel request set src to something else
+            // we use src="javascript:false;" because it doesn't
+            // trigger ie6 prompt on https
+            iframe.setAttribute('src', 'javascript:false;');
+
+            qq.remove(iframe);
+        }
+    },     
+    _upload: function(id, params){                        
+        var input = this._inputs[id];
+        
+        if (!input){
+            throw new Error('file with passed id was not added, or already uploaded or cancelled');
+        }                
+
+        var fileName = this.getName(id);
+                
+        var iframe = this._createIframe(id);
+        var form = this._createForm(iframe, params);
+        form.appendChild(input);
+
+        var self = this;
+        this._attachLoadEvent(iframe, function(){                                 
+            self.log('iframe loaded');
+            
+            var response = self._getIframeContentJSON(iframe);
+
+            self._options.onComplete(id, fileName, response);
+            self._dequeue(id);
+            
+            delete self._inputs[id];
+            // timeout added to fix busy state in FF3.6
+            setTimeout(function(){
+                qq.remove(iframe);
+            }, 1);
+        });
+
+        form.submit();        
+        qq.remove(form);        
+        
+        return id;
+    }, 
+    _attachLoadEvent: function(iframe, callback){
+        qq.attach(iframe, 'load', function(){
+            // when we remove iframe from dom
+            // the request stops, but in IE load
+            // event fires
+            if (!iframe.parentNode){
+                return;
+            }
+
+            // fixing Opera 10.53
+            if (iframe.contentDocument &&
+                iframe.contentDocument.body &&
+                iframe.contentDocument.body.innerHTML == "false"){
+                // In Opera event is fired second time
+                // when body.innerHTML changed from false
+                // to server response approx. after 1 sec
+                // when we upload file with iframe
+                return;
+            }
+
+            callback();
+        });
+    },
+    /**
+     * Returns json object received by iframe from server.
+     */
+    _getIframeContentJSON: function(iframe){
+        // iframe.contentWindow.document - for IE<7
+        var doc = iframe.contentDocument ? iframe.contentDocument: iframe.contentWindow.document,
+            response;
+        
+        this.log("converting iframe's innerHTML to JSON");
+        this.log("innerHTML = " + doc.body.innerHTML);
+                        
+        try {
+            response = eval("(" + doc.body.innerHTML + ")");
+        } catch(err){
+            response = {};
+        }        
+
+        return response;
+    },
+    /**
+     * Creates iframe with unique name
+     */
+    _createIframe: function(id){
+        // We can't use following code as the name attribute
+        // won't be properly registered in IE6, and new window
+        // on form submit will open
+        // var iframe = document.createElement('iframe');
+        // iframe.setAttribute('name', id);
+
+        var iframe = qq.toElement('<iframe src="javascript:false;" name="' + id + '" />');
+        // src="javascript:false;" removes ie6 prompt on https
+
+        iframe.setAttribute('id', id);
+
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+
+        return iframe;
+    },
+    /**
+     * Creates form, that will be submitted to iframe
+     */
+    _createForm: function(iframe, params){
+        // We can't use the following code in IE6
+        // var form = document.createElement('form');
+        // form.setAttribute('method', 'post');
+        // form.setAttribute('enctype', 'multipart/form-data');
+        // Because in this case file won't be attached to request
+        var form = qq.toElement('<form method="post" enctype="multipart/form-data"></form>');
+
+        var queryString = qq.obj2url(params, this._options.action);
+
+        form.setAttribute('action', queryString);
+        form.setAttribute('target', iframe.name);
+        form.style.display = 'none';
+        document.body.appendChild(form);
+
+        return form;
+    }
+});
+
+/**
+ * Class for uploading files using xhr
+ * @inherits qq.UploadHandlerAbstract
+ */
+qq.UploadHandlerXhr = function(o){
+    qq.UploadHandlerAbstract.apply(this, arguments);
+
+    this._files = [];
+    this._xhrs = [];
+    
+    // current loaded size in bytes for each file 
+    this._loaded = [];
+};
+
+// static method
+qq.UploadHandlerXhr.isSupported = function(){
+    var input = document.createElement('input');
+    input.type = 'file';        
+    
+    return (
+        'multiple' in input &&
+        typeof File != "undefined" &&
+        typeof (new XMLHttpRequest()).upload != "undefined" );       
+};
+
+// @inherits qq.UploadHandlerAbstract
+qq.extend(qq.UploadHandlerXhr.prototype, qq.UploadHandlerAbstract.prototype)
+
+qq.extend(qq.UploadHandlerXhr.prototype, {
+    /**
+     * Adds file to the queue
+     * Returns id to use with upload, cancel
+     **/    
+    add: function(file){
+        if (!(file instanceof File)){
+            throw new Error('Passed obj in not a File (in qq.UploadHandlerXhr)');
+        }
+                
+        return this._files.push(file) - 1;        
+    },
+    getName: function(id){        
+        var file = this._files[id];
+        // fix missing name in Safari 4
+        return file.fileName != null ? file.fileName : file.name;       
+    },
+    getSize: function(id){
+        var file = this._files[id];
+        return file.fileSize != null ? file.fileSize : file.size;
+    },    
+    /**
+     * Returns uploaded bytes for file identified by id 
+     */    
+    getLoaded: function(id){
+        return this._loaded[id] || 0; 
+    },
+    /**
+     * Sends the file identified by id and additional query params to the server
+     * @param {Object} params name-value string pairs
+     */    
+    _upload: function(id, params){
+        var file = this._files[id],
+            name = this.getName(id),
+            size = this.getSize(id);
+                
+        this._loaded[id] = 0;
+                                
+        var xhr = this._xhrs[id] = new XMLHttpRequest();
+        var self = this;
+                                        
+        xhr.upload.onprogress = function(e){
+            if (e.lengthComputable){
+                self._loaded[id] = e.loaded;
+                self._options.onProgress(id, name, e.loaded, e.total);
+            }
+        };
+
+        xhr.onreadystatechange = function(){            
+            if (xhr.readyState == 4){
+                self._onComplete(id, xhr);                    
+            }
+        };
+
+        // build query string
+        params = params || {};
+        params['qqfile'] = name;
+        var queryString = qq.obj2url(params, this._options.action);
+
+        xhr.open("POST", queryString, true);
+        xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+        xhr.setRequestHeader("X-File-Name", encodeURIComponent(name));
+        xhr.setRequestHeader("Content-Type", "application/octet-stream");
+        xhr.send(file);
+    },
+    _onComplete: function(id, xhr){
+        // the request was aborted/cancelled
+        if (!this._files[id]) return;
+        
+        var name = this.getName(id);
+        var size = this.getSize(id);
+        
+        this._options.onProgress(id, name, size, size);
+                
+        if (xhr.status == 200){
+            this.log("xhr - server response received");
+            this.log("responseText = " + xhr.responseText);
+                        
+            var response;
+                    
+            try {
+                response = eval("(" + xhr.responseText + ")");
+            } catch(err){
+                response = {};
+            }
+            
+            this._options.onComplete(id, name, response);
+                        
+        } else {                   
+            this._options.onComplete(id, name, {});
+        }
+                
+        this._files[id] = null;
+        this._xhrs[id] = null;    
+        this._dequeue(id);                    
+    },
+    _cancel: function(id){
+        this._options.onCancel(id, this.getName(id));
+        
+        this._files[id] = null;
+        
+        if (this._xhrs[id]){
+            this._xhrs[id].abort();
+            this._xhrs[id] = null;                                   
+        }
+    }
+});/**
+ * Version: 1.0 Alpha-1 
+ * Build Date: 13-Nov-2007
+ * Copyright (c) 2006-2007, Coolite Inc. (http://www.coolite.com/). All rights reserved.
+ * License: Licensed under The MIT License. See license.txt and http://www.datejs.com/license/. 
+ * Website: http://www.datejs.com/ or http://www.coolite.com/datejs/
+ */
+Date.CultureInfo={name:"en-US",englishName:"English (United States)",nativeName:"English (United States)",dayNames:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],abbreviatedDayNames:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],shortestDayNames:["Su","Mo","Tu","We","Th","Fr","Sa"],firstLetterDayNames:["S","M","T","W","T","F","S"],monthNames:["January","February","March","April","May","June","July","August","September","October","November","December"],abbreviatedMonthNames:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],amDesignator:"AM",pmDesignator:"PM",firstDayOfWeek:0,twoDigitYearMax:2029,dateElementOrder:"mdy",formatPatterns:{shortDate:"M/d/yyyy",longDate:"dddd, MMMM dd, yyyy",shortTime:"h:mm tt",longTime:"h:mm:ss tt",fullDateTime:"dddd, MMMM dd, yyyy h:mm:ss tt",sortableDateTime:"yyyy-MM-ddTHH:mm:ss",universalSortableDateTime:"yyyy-MM-dd HH:mm:ssZ",rfc1123:"ddd, dd MMM yyyy HH:mm:ss GMT",monthDay:"MMMM dd",yearMonth:"MMMM, yyyy"},regexPatterns:{jan:/^jan(uary)?/i,feb:/^feb(ruary)?/i,mar:/^mar(ch)?/i,apr:/^apr(il)?/i,may:/^may/i,jun:/^jun(e)?/i,jul:/^jul(y)?/i,aug:/^aug(ust)?/i,sep:/^sep(t(ember)?)?/i,oct:/^oct(ober)?/i,nov:/^nov(ember)?/i,dec:/^dec(ember)?/i,sun:/^su(n(day)?)?/i,mon:/^mo(n(day)?)?/i,tue:/^tu(e(s(day)?)?)?/i,wed:/^we(d(nesday)?)?/i,thu:/^th(u(r(s(day)?)?)?)?/i,fri:/^fr(i(day)?)?/i,sat:/^sa(t(urday)?)?/i,future:/^next/i,past:/^last|past|prev(ious)?/i,add:/^(\+|after|from)/i,subtract:/^(\-|before|ago)/i,yesterday:/^yesterday/i,today:/^t(oday)?/i,tomorrow:/^tomorrow/i,now:/^n(ow)?/i,millisecond:/^ms|milli(second)?s?/i,second:/^sec(ond)?s?/i,minute:/^min(ute)?s?/i,hour:/^h(ou)?rs?/i,week:/^w(ee)?k/i,month:/^m(o(nth)?s?)?/i,day:/^d(ays?)?/i,year:/^y((ea)?rs?)?/i,shortMeridian:/^(a|p)/i,longMeridian:/^(a\.?m?\.?|p\.?m?\.?)/i,timezone:/^((e(s|d)t|c(s|d)t|m(s|d)t|p(s|d)t)|((gmt)?\s*(\+|\-)\s*\d\d\d\d?)|gmt)/i,ordinalSuffix:/^\s*(st|nd|rd|th)/i,timeContext:/^\s*(\:|a|p)/i},abbreviatedTimeZoneStandard:{GMT:"-000",EST:"-0400",CST:"-0500",MST:"-0600",PST:"-0700"},abbreviatedTimeZoneDST:{GMT:"-000",EDT:"-0500",CDT:"-0600",MDT:"-0700",PDT:"-0800"}};
+Date.getMonthNumberFromName=function(name){var n=Date.CultureInfo.monthNames,m=Date.CultureInfo.abbreviatedMonthNames,s=name.toLowerCase();for(var i=0;i<n.length;i++){if(n[i].toLowerCase()==s||m[i].toLowerCase()==s){return i;}}
+return-1;};Date.getDayNumberFromName=function(name){var n=Date.CultureInfo.dayNames,m=Date.CultureInfo.abbreviatedDayNames,o=Date.CultureInfo.shortestDayNames,s=name.toLowerCase();for(var i=0;i<n.length;i++){if(n[i].toLowerCase()==s||m[i].toLowerCase()==s){return i;}}
+return-1;};Date.isLeapYear=function(year){return(((year%4===0)&&(year%100!==0))||(year%400===0));};Date.getDaysInMonth=function(year,month){return[31,(Date.isLeapYear(year)?29:28),31,30,31,30,31,31,30,31,30,31][month];};Date.getTimezoneOffset=function(s,dst){return(dst||false)?Date.CultureInfo.abbreviatedTimeZoneDST[s.toUpperCase()]:Date.CultureInfo.abbreviatedTimeZoneStandard[s.toUpperCase()];};Date.getTimezoneAbbreviation=function(offset,dst){var n=(dst||false)?Date.CultureInfo.abbreviatedTimeZoneDST:Date.CultureInfo.abbreviatedTimeZoneStandard,p;for(p in n){if(n[p]===offset){return p;}}
+return null;};Date.prototype.clone=function(){return new Date(this.getTime());};Date.prototype.compareTo=function(date){if(isNaN(this)){throw new Error(this);}
+if(date instanceof Date&&!isNaN(date)){return(this>date)?1:(this<date)?-1:0;}else{throw new TypeError(date);}};Date.prototype.equals=function(date){return(this.compareTo(date)===0);};Date.prototype.between=function(start,end){var t=this.getTime();return t>=start.getTime()&&t<=end.getTime();};Date.prototype.addMilliseconds=function(value){this.setMilliseconds(this.getMilliseconds()+value);return this;};Date.prototype.addSeconds=function(value){return this.addMilliseconds(value*1000);};Date.prototype.addMinutes=function(value){return this.addMilliseconds(value*60000);};Date.prototype.addHours=function(value){return this.addMilliseconds(value*3600000);};Date.prototype.addDays=function(value){return this.addMilliseconds(value*86400000);};Date.prototype.addWeeks=function(value){return this.addMilliseconds(value*604800000);};Date.prototype.addMonths=function(value){var n=this.getDate();this.setDate(1);this.setMonth(this.getMonth()+value);this.setDate(Math.min(n,this.getDaysInMonth()));return this;};Date.prototype.addYears=function(value){return this.addMonths(value*12);};Date.prototype.add=function(config){if(typeof config=="number"){this._orient=config;return this;}
+var x=config;if(x.millisecond||x.milliseconds){this.addMilliseconds(x.millisecond||x.milliseconds);}
+if(x.second||x.seconds){this.addSeconds(x.second||x.seconds);}
+if(x.minute||x.minutes){this.addMinutes(x.minute||x.minutes);}
+if(x.hour||x.hours){this.addHours(x.hour||x.hours);}
+if(x.month||x.months){this.addMonths(x.month||x.months);}
+if(x.year||x.years){this.addYears(x.year||x.years);}
+if(x.day||x.days){this.addDays(x.day||x.days);}
+return this;};Date._validate=function(value,min,max,name){if(typeof value!="number"){throw new TypeError(value+" is not a Number.");}else if(value<min||value>max){throw new RangeError(value+" is not a valid value for "+name+".");}
+return true;};Date.validateMillisecond=function(n){return Date._validate(n,0,999,"milliseconds");};Date.validateSecond=function(n){return Date._validate(n,0,59,"seconds");};Date.validateMinute=function(n){return Date._validate(n,0,59,"minutes");};Date.validateHour=function(n){return Date._validate(n,0,23,"hours");};Date.validateDay=function(n,year,month){return Date._validate(n,1,Date.getDaysInMonth(year,month),"days");};Date.validateMonth=function(n){return Date._validate(n,0,11,"months");};Date.validateYear=function(n){return Date._validate(n,1,9999,"seconds");};Date.prototype.set=function(config){var x=config;if(!x.millisecond&&x.millisecond!==0){x.millisecond=-1;}
+if(!x.second&&x.second!==0){x.second=-1;}
+if(!x.minute&&x.minute!==0){x.minute=-1;}
+if(!x.hour&&x.hour!==0){x.hour=-1;}
+if(!x.day&&x.day!==0){x.day=-1;}
+if(!x.month&&x.month!==0){x.month=-1;}
+if(!x.year&&x.year!==0){x.year=-1;}
+if(x.millisecond!=-1&&Date.validateMillisecond(x.millisecond)){this.addMilliseconds(x.millisecond-this.getMilliseconds());}
+if(x.second!=-1&&Date.validateSecond(x.second)){this.addSeconds(x.second-this.getSeconds());}
+if(x.minute!=-1&&Date.validateMinute(x.minute)){this.addMinutes(x.minute-this.getMinutes());}
+if(x.hour!=-1&&Date.validateHour(x.hour)){this.addHours(x.hour-this.getHours());}
+if(x.month!==-1&&Date.validateMonth(x.month)){this.addMonths(x.month-this.getMonth());}
+if(x.year!=-1&&Date.validateYear(x.year)){this.addYears(x.year-this.getFullYear());}
+if(x.day!=-1&&Date.validateDay(x.day,this.getFullYear(),this.getMonth())){this.addDays(x.day-this.getDate());}
+if(x.timezone){this.setTimezone(x.timezone);}
+if(x.timezoneOffset){this.setTimezoneOffset(x.timezoneOffset);}
+return this;};Date.prototype.clearTime=function(){this.setHours(0);this.setMinutes(0);this.setSeconds(0);this.setMilliseconds(0);return this;};Date.prototype.isLeapYear=function(){var y=this.getFullYear();return(((y%4===0)&&(y%100!==0))||(y%400===0));};Date.prototype.isWeekday=function(){return!(this.is().sat()||this.is().sun());};Date.prototype.getDaysInMonth=function(){return Date.getDaysInMonth(this.getFullYear(),this.getMonth());};Date.prototype.moveToFirstDayOfMonth=function(){return this.set({day:1});};Date.prototype.moveToLastDayOfMonth=function(){return this.set({day:this.getDaysInMonth()});};Date.prototype.moveToDayOfWeek=function(day,orient){var diff=(day-this.getDay()+7*(orient||+1))%7;return this.addDays((diff===0)?diff+=7*(orient||+1):diff);};Date.prototype.moveToMonth=function(month,orient){var diff=(month-this.getMonth()+12*(orient||+1))%12;return this.addMonths((diff===0)?diff+=12*(orient||+1):diff);};Date.prototype.getDayOfYear=function(){return Math.floor((this-new Date(this.getFullYear(),0,1))/86400000);};Date.prototype.getWeekOfYear=function(firstDayOfWeek){var y=this.getFullYear(),m=this.getMonth(),d=this.getDate();var dow=firstDayOfWeek||Date.CultureInfo.firstDayOfWeek;var offset=7+1-new Date(y,0,1).getDay();if(offset==8){offset=1;}
+var daynum=((Date.UTC(y,m,d,0,0,0)-Date.UTC(y,0,1,0,0,0))/86400000)+1;var w=Math.floor((daynum-offset+7)/7);if(w===dow){y--;var prevOffset=7+1-new Date(y,0,1).getDay();if(prevOffset==2||prevOffset==8){w=53;}else{w=52;}}
+return w;};Date.prototype.isDST=function(){console.log('isDST');return this.toString().match(/(E|C|M|P)(S|D)T/)[2]=="D";};Date.prototype.getTimezone=function(){return Date.getTimezoneAbbreviation(this.getUTCOffset,this.isDST());};Date.prototype.setTimezoneOffset=function(s){var here=this.getTimezoneOffset(),there=Number(s)*-6/10;this.addMinutes(there-here);return this;};Date.prototype.setTimezone=function(s){return this.setTimezoneOffset(Date.getTimezoneOffset(s));};Date.prototype.getUTCOffset=function(){var n=this.getTimezoneOffset()*-10/6,r;if(n<0){r=(n-10000).toString();return r[0]+r.substr(2);}else{r=(n+10000).toString();return"+"+r.substr(1);}};Date.prototype.getDayName=function(abbrev){return abbrev?Date.CultureInfo.abbreviatedDayNames[this.getDay()]:Date.CultureInfo.dayNames[this.getDay()];};Date.prototype.getMonthName=function(abbrev){return abbrev?Date.CultureInfo.abbreviatedMonthNames[this.getMonth()]:Date.CultureInfo.monthNames[this.getMonth()];};Date.prototype._toString=Date.prototype.toString;Date.prototype.toString=function(format){var self=this;var p=function p(s){return(s.toString().length==1)?"0"+s:s;};return format?format.replace(/dd?d?d?|MM?M?M?|yy?y?y?|hh?|HH?|mm?|ss?|tt?|zz?z?/g,function(format){switch(format){case"hh":return p(self.getHours()<13?self.getHours():(self.getHours()-12));case"h":return self.getHours()<13?self.getHours():(self.getHours()-12);case"HH":return p(self.getHours());case"H":return self.getHours();case"mm":return p(self.getMinutes());case"m":return self.getMinutes();case"ss":return p(self.getSeconds());case"s":return self.getSeconds();case"yyyy":return self.getFullYear();case"yy":return self.getFullYear().toString().substring(2,4);case"dddd":return self.getDayName();case"ddd":return self.getDayName(true);case"dd":return p(self.getDate());case"d":return self.getDate().toString();case"MMMM":return self.getMonthName();case"MMM":return self.getMonthName(true);case"MM":return p((self.getMonth()+1));case"M":return self.getMonth()+1;case"t":return self.getHours()<12?Date.CultureInfo.amDesignator.substring(0,1):Date.CultureInfo.pmDesignator.substring(0,1);case"tt":return self.getHours()<12?Date.CultureInfo.amDesignator:Date.CultureInfo.pmDesignator;case"zzz":case"zz":case"z":return"";}}):this._toString();};
+Date.now=function(){return new Date();};Date.today=function(){return Date.now().clearTime();};Date.prototype._orient=+1;Date.prototype.next=function(){this._orient=+1;return this;};Date.prototype.last=Date.prototype.prev=Date.prototype.previous=function(){this._orient=-1;return this;};Date.prototype._is=false;Date.prototype.is=function(){this._is=true;return this;};Number.prototype._dateElement="day";Number.prototype.fromNow=function(){var c={};c[this._dateElement]=this;return Date.now().add(c);};Number.prototype.ago=function(){var c={};c[this._dateElement]=this*-1;return Date.now().add(c);};(function(){var $D=Date.prototype,$N=Number.prototype;var dx=("sunday monday tuesday wednesday thursday friday saturday").split(/\s/),mx=("january february march april may june july august september october november december").split(/\s/),px=("Millisecond Second Minute Hour Day Week Month Year").split(/\s/),de;var df=function(n){return function(){if(this._is){this._is=false;return this.getDay()==n;}
+return this.moveToDayOfWeek(n,this._orient);};};for(var i=0;i<dx.length;i++){$D[dx[i]]=$D[dx[i].substring(0,3)]=df(i);}
+var mf=function(n){return function(){if(this._is){this._is=false;return this.getMonth()===n;}
+return this.moveToMonth(n,this._orient);};};for(var j=0;j<mx.length;j++){$D[mx[j]]=$D[mx[j].substring(0,3)]=mf(j);}
+var ef=function(j){return function(){if(j.substring(j.length-1)!="s"){j+="s";}
+return this["add"+j](this._orient);};};var nf=function(n){return function(){this._dateElement=n;return this;};};for(var k=0;k<px.length;k++){de=px[k].toLowerCase();$D[de]=$D[de+"s"]=ef(px[k]);$N[de]=$N[de+"s"]=nf(de);}}());Date.prototype.toJSONString=function(){return this.toString("yyyy-MM-ddThh:mm:ssZ");};Date.prototype.toShortDateString=function(){return this.toString(Date.CultureInfo.formatPatterns.shortDatePattern);};Date.prototype.toLongDateString=function(){return this.toString(Date.CultureInfo.formatPatterns.longDatePattern);};Date.prototype.toShortTimeString=function(){return this.toString(Date.CultureInfo.formatPatterns.shortTimePattern);};Date.prototype.toLongTimeString=function(){return this.toString(Date.CultureInfo.formatPatterns.longTimePattern);};Date.prototype.getOrdinal=function(){switch(this.getDate()){case 1:case 21:case 31:return"st";case 2:case 22:return"nd";case 3:case 23:return"rd";default:return"th";}};
+(function(){Date.Parsing={Exception:function(s){this.message="Parse error at '"+s.substring(0,10)+" ...'";}};var $P=Date.Parsing;var _=$P.Operators={rtoken:function(r){return function(s){var mx=s.match(r);if(mx){return([mx[0],s.substring(mx[0].length)]);}else{throw new $P.Exception(s);}};},token:function(s){return function(s){return _.rtoken(new RegExp("^\s*"+s+"\s*"))(s);};},stoken:function(s){return _.rtoken(new RegExp("^"+s));},until:function(p){return function(s){var qx=[],rx=null;while(s.length){try{rx=p.call(this,s);}catch(e){qx.push(rx[0]);s=rx[1];continue;}
+break;}
+return[qx,s];};},many:function(p){return function(s){var rx=[],r=null;while(s.length){try{r=p.call(this,s);}catch(e){return[rx,s];}
+rx.push(r[0]);s=r[1];}
+return[rx,s];};},optional:function(p){return function(s){var r=null;try{r=p.call(this,s);}catch(e){return[null,s];}
+return[r[0],r[1]];};},not:function(p){return function(s){try{p.call(this,s);}catch(e){return[null,s];}
+throw new $P.Exception(s);};},ignore:function(p){return p?function(s){var r=null;r=p.call(this,s);return[null,r[1]];}:null;},product:function(){var px=arguments[0],qx=Array.prototype.slice.call(arguments,1),rx=[];for(var i=0;i<px.length;i++){rx.push(_.each(px[i],qx));}
+return rx;},cache:function(rule){var cache={},r=null;return function(s){try{r=cache[s]=(cache[s]||rule.call(this,s));}catch(e){r=cache[s]=e;}
+if(r instanceof $P.Exception){throw r;}else{return r;}};},any:function(){var px=arguments;return function(s){var r=null;for(var i=0;i<px.length;i++){if(px[i]==null){continue;}
+try{r=(px[i].call(this,s));}catch(e){r=null;}
+if(r){return r;}}
+throw new $P.Exception(s);};},each:function(){var px=arguments;return function(s){var rx=[],r=null;for(var i=0;i<px.length;i++){if(px[i]==null){continue;}
+try{r=(px[i].call(this,s));}catch(e){throw new $P.Exception(s);}
+rx.push(r[0]);s=r[1];}
+return[rx,s];};},all:function(){var px=arguments,_=_;return _.each(_.optional(px));},sequence:function(px,d,c){d=d||_.rtoken(/^\s*/);c=c||null;if(px.length==1){return px[0];}
+return function(s){var r=null,q=null;var rx=[];for(var i=0;i<px.length;i++){try{r=px[i].call(this,s);}catch(e){break;}
+rx.push(r[0]);try{q=d.call(this,r[1]);}catch(ex){q=null;break;}
+s=q[1];}
+if(!r){throw new $P.Exception(s);}
+if(q){throw new $P.Exception(q[1]);}
+if(c){try{r=c.call(this,r[1]);}catch(ey){throw new $P.Exception(r[1]);}}
+return[rx,(r?r[1]:s)];};},between:function(d1,p,d2){d2=d2||d1;var _fn=_.each(_.ignore(d1),p,_.ignore(d2));return function(s){var rx=_fn.call(this,s);return[[rx[0][0],r[0][2]],rx[1]];};},list:function(p,d,c){d=d||_.rtoken(/^\s*/);c=c||null;return(p instanceof Array?_.each(_.product(p.slice(0,-1),_.ignore(d)),p.slice(-1),_.ignore(c)):_.each(_.many(_.each(p,_.ignore(d))),px,_.ignore(c)));},set:function(px,d,c){d=d||_.rtoken(/^\s*/);c=c||null;return function(s){var r=null,p=null,q=null,rx=null,best=[[],s],last=false;for(var i=0;i<px.length;i++){q=null;p=null;r=null;last=(px.length==1);try{r=px[i].call(this,s);}catch(e){continue;}
+rx=[[r[0]],r[1]];if(r[1].length>0&&!last){try{q=d.call(this,r[1]);}catch(ex){last=true;}}else{last=true;}
+if(!last&&q[1].length===0){last=true;}
+if(!last){var qx=[];for(var j=0;j<px.length;j++){if(i!=j){qx.push(px[j]);}}
+p=_.set(qx,d).call(this,q[1]);if(p[0].length>0){rx[0]=rx[0].concat(p[0]);rx[1]=p[1];}}
+if(rx[1].length<best[1].length){best=rx;}
+if(best[1].length===0){break;}}
+if(best[0].length===0){return best;}
+if(c){try{q=c.call(this,best[1]);}catch(ey){throw new $P.Exception(best[1]);}
+best[1]=q[1];}
+return best;};},forward:function(gr,fname){return function(s){return gr[fname].call(this,s);};},replace:function(rule,repl){return function(s){var r=rule.call(this,s);return[repl,r[1]];};},process:function(rule,fn){return function(s){var r=rule.call(this,s);return[fn.call(this,r[0]),r[1]];};},min:function(min,rule){return function(s){var rx=rule.call(this,s);if(rx[0].length<min){throw new $P.Exception(s);}
+return rx;};}};var _generator=function(op){return function(){var args=null,rx=[];if(arguments.length>1){args=Array.prototype.slice.call(arguments);}else if(arguments[0]instanceof Array){args=arguments[0];}
+if(args){for(var i=0,px=args.shift();i<px.length;i++){args.unshift(px[i]);rx.push(op.apply(null,args));args.shift();return rx;}}else{return op.apply(null,arguments);}};};var gx="optional not ignore cache".split(/\s/);for(var i=0;i<gx.length;i++){_[gx[i]]=_generator(_[gx[i]]);}
+var _vector=function(op){return function(){if(arguments[0]instanceof Array){return op.apply(null,arguments[0]);}else{return op.apply(null,arguments);}};};var vx="each any all".split(/\s/);for(var j=0;j<vx.length;j++){_[vx[j]]=_vector(_[vx[j]]);}}());(function(){var flattenAndCompact=function(ax){var rx=[];for(var i=0;i<ax.length;i++){if(ax[i]instanceof Array){rx=rx.concat(flattenAndCompact(ax[i]));}else{if(ax[i]){rx.push(ax[i]);}}}
+return rx;};Date.Grammar={};Date.Translator={hour:function(s){return function(){this.hour=Number(s);};},minute:function(s){return function(){this.minute=Number(s);};},second:function(s){return function(){this.second=Number(s);};},meridian:function(s){return function(){this.meridian=s.slice(0,1).toLowerCase();};},timezone:function(s){return function(){var n=s.replace(/[^\d\+\-]/g,"");if(n.length){this.timezoneOffset=Number(n);}else{this.timezone=s.toLowerCase();}};},day:function(x){var s=x[0];return function(){this.day=Number(s.match(/\d+/)[0]);};},month:function(s){return function(){this.month=((s.length==3)?Date.getMonthNumberFromName(s):(Number(s)-1));};},year:function(s){return function(){var n=Number(s);this.year=((s.length>2)?n:(n+(((n+2000)<Date.CultureInfo.twoDigitYearMax)?2000:1900)));};},rday:function(s){return function(){switch(s){case"yesterday":this.days=-1;break;case"tomorrow":this.days=1;break;case"today":this.days=0;break;case"now":this.days=0;this.now=true;break;}};},finishExact:function(x){x=(x instanceof Array)?x:[x];var now=new Date();this.year=now.getFullYear();this.month=now.getMonth();this.day=1;this.hour=0;this.minute=0;this.second=0;for(var i=0;i<x.length;i++){if(x[i]){x[i].call(this);}}
+this.hour=(this.meridian=="p"&&this.hour<13)?this.hour+12:this.hour;if(this.day>Date.getDaysInMonth(this.year,this.month)){throw new RangeError(this.day+" is not a valid value for days.");}
+var r=new Date(this.year,this.month,this.day,this.hour,this.minute,this.second);if(this.timezone){r.set({timezone:this.timezone});}else if(this.timezoneOffset){r.set({timezoneOffset:this.timezoneOffset});}
+return r;},finish:function(x){x=(x instanceof Array)?flattenAndCompact(x):[x];if(x.length===0){return null;}
+for(var i=0;i<x.length;i++){if(typeof x[i]=="function"){x[i].call(this);}}
+if(this.now){return new Date();}
+var today=Date.today();var method=null;var expression=!!(this.days!=null||this.orient||this.operator);if(expression){var gap,mod,orient;orient=((this.orient=="past"||this.operator=="subtract")?-1:1);if(this.weekday){this.unit="day";gap=(Date.getDayNumberFromName(this.weekday)-today.getDay());mod=7;this.days=gap?((gap+(orient*mod))%mod):(orient*mod);}
+if(this.month){this.unit="month";gap=(this.month-today.getMonth());mod=12;this.months=gap?((gap+(orient*mod))%mod):(orient*mod);this.month=null;}
+if(!this.unit){this.unit="day";}
+if(this[this.unit+"s"]==null||this.operator!=null){if(!this.value){this.value=1;}
+if(this.unit=="week"){this.unit="day";this.value=this.value*7;}
+this[this.unit+"s"]=this.value*orient;}
+return today.add(this);}else{if(this.meridian&&this.hour){this.hour=(this.hour<13&&this.meridian=="p")?this.hour+12:this.hour;}
+if(this.weekday&&!this.day){this.day=(today.addDays((Date.getDayNumberFromName(this.weekday)-today.getDay()))).getDate();}
+if(this.month&&!this.day){this.day=1;}
+return today.set(this);}}};var _=Date.Parsing.Operators,g=Date.Grammar,t=Date.Translator,_fn;g.datePartDelimiter=_.rtoken(/^([\s\-\.\,\/\x27]+)/);g.timePartDelimiter=_.stoken(":");g.whiteSpace=_.rtoken(/^\s*/);g.generalDelimiter=_.rtoken(/^(([\s\,]|at|on)+)/);var _C={};g.ctoken=function(keys){var fn=_C[keys];if(!fn){var c=Date.CultureInfo.regexPatterns;var kx=keys.split(/\s+/),px=[];for(var i=0;i<kx.length;i++){px.push(_.replace(_.rtoken(c[kx[i]]),kx[i]));}
+fn=_C[keys]=_.any.apply(null,px);}
+return fn;};g.ctoken2=function(key){return _.rtoken(Date.CultureInfo.regexPatterns[key]);};g.h=_.cache(_.process(_.rtoken(/^(0[0-9]|1[0-2]|[1-9])/),t.hour));g.hh=_.cache(_.process(_.rtoken(/^(0[0-9]|1[0-2])/),t.hour));g.H=_.cache(_.process(_.rtoken(/^([0-1][0-9]|2[0-3]|[0-9])/),t.hour));g.HH=_.cache(_.process(_.rtoken(/^([0-1][0-9]|2[0-3])/),t.hour));g.m=_.cache(_.process(_.rtoken(/^([0-5][0-9]|[0-9])/),t.minute));g.mm=_.cache(_.process(_.rtoken(/^[0-5][0-9]/),t.minute));g.s=_.cache(_.process(_.rtoken(/^([0-5][0-9]|[0-9])/),t.second));g.ss=_.cache(_.process(_.rtoken(/^[0-5][0-9]/),t.second));g.hms=_.cache(_.sequence([g.H,g.mm,g.ss],g.timePartDelimiter));g.t=_.cache(_.process(g.ctoken2("shortMeridian"),t.meridian));g.tt=_.cache(_.process(g.ctoken2("longMeridian"),t.meridian));g.z=_.cache(_.process(_.rtoken(/^(\+|\-)?\s*\d\d\d\d?/),t.timezone));g.zz=_.cache(_.process(_.rtoken(/^(\+|\-)\s*\d\d\d\d/),t.timezone));g.zzz=_.cache(_.process(g.ctoken2("timezone"),t.timezone));g.timeSuffix=_.each(_.ignore(g.whiteSpace),_.set([g.tt,g.zzz]));g.time=_.each(_.optional(_.ignore(_.stoken("T"))),g.hms,g.timeSuffix);g.d=_.cache(_.process(_.each(_.rtoken(/^([0-2]\d|3[0-1]|\d)/),_.optional(g.ctoken2("ordinalSuffix"))),t.day));g.dd=_.cache(_.process(_.each(_.rtoken(/^([0-2]\d|3[0-1])/),_.optional(g.ctoken2("ordinalSuffix"))),t.day));g.ddd=g.dddd=_.cache(_.process(g.ctoken("sun mon tue wed thu fri sat"),function(s){return function(){this.weekday=s;};}));g.M=_.cache(_.process(_.rtoken(/^(1[0-2]|0\d|\d)/),t.month));g.MM=_.cache(_.process(_.rtoken(/^(1[0-2]|0\d)/),t.month));g.MMM=g.MMMM=_.cache(_.process(g.ctoken("jan feb mar apr may jun jul aug sep oct nov dec"),t.month));g.y=_.cache(_.process(_.rtoken(/^(\d\d?)/),t.year));g.yy=_.cache(_.process(_.rtoken(/^(\d\d)/),t.year));g.yyy=_.cache(_.process(_.rtoken(/^(\d\d?\d?\d?)/),t.year));g.yyyy=_.cache(_.process(_.rtoken(/^(\d\d\d\d)/),t.year));_fn=function(){return _.each(_.any.apply(null,arguments),_.not(g.ctoken2("timeContext")));};g.day=_fn(g.d,g.dd);g.month=_fn(g.M,g.MMM);g.year=_fn(g.yyyy,g.yy);g.orientation=_.process(g.ctoken("past future"),function(s){return function(){this.orient=s;};});g.operator=_.process(g.ctoken("add subtract"),function(s){return function(){this.operator=s;};});g.rday=_.process(g.ctoken("yesterday tomorrow today now"),t.rday);g.unit=_.process(g.ctoken("minute hour day week month year"),function(s){return function(){this.unit=s;};});g.value=_.process(_.rtoken(/^\d\d?(st|nd|rd|th)?/),function(s){return function(){this.value=s.replace(/\D/g,"");};});g.expression=_.set([g.rday,g.operator,g.value,g.unit,g.orientation,g.ddd,g.MMM]);_fn=function(){return _.set(arguments,g.datePartDelimiter);};g.mdy=_fn(g.ddd,g.month,g.day,g.year);g.ymd=_fn(g.ddd,g.year,g.month,g.day);g.dmy=_fn(g.ddd,g.day,g.month,g.year);g.date=function(s){return((g[Date.CultureInfo.dateElementOrder]||g.mdy).call(this,s));};g.format=_.process(_.many(_.any(_.process(_.rtoken(/^(dd?d?d?|MM?M?M?|yy?y?y?|hh?|HH?|mm?|ss?|tt?|zz?z?)/),function(fmt){if(g[fmt]){return g[fmt];}else{throw Date.Parsing.Exception(fmt);}}),_.process(_.rtoken(/^[^dMyhHmstz]+/),function(s){return _.ignore(_.stoken(s));}))),function(rules){return _.process(_.each.apply(null,rules),t.finishExact);});var _F={};var _get=function(f){return _F[f]=(_F[f]||g.format(f)[0]);};g.formats=function(fx){if(fx instanceof Array){var rx=[];for(var i=0;i<fx.length;i++){rx.push(_get(fx[i]));}
+return _.any.apply(null,rx);}else{return _get(fx);}};g._formats=g.formats(["yyyy-MM-ddTHH:mm:ss","ddd, MMM dd, yyyy H:mm:ss tt","ddd MMM d yyyy HH:mm:ss zzz","d"]);g._start=_.process(_.set([g.date,g.time,g.expression],g.generalDelimiter,g.whiteSpace),t.finish);g.start=function(s){try{var r=g._formats.call({},s);if(r[1].length===0){return r;}}catch(e){}
+return g._start.call({},s);};}());Date._parse=Date.parse;Date.parse=function(s){var r=null;if(!s){return null;}
+try{r=Date.Grammar.start.call({},s);}catch(e){return null;}
+return((r[1].length===0)?r[0]:null);};Date.getParseFunction=function(fx){var fn=Date.Grammar.formats(fx);return function(s){var r=null;try{r=fn.call({},s);}catch(e){return null;}
+return((r[1].length===0)?r[0]:null);};};Date.parseExact=function(s,fx){return Date.getParseFunction(fx)(s);};
+{ // a dummy block, so I can collapse all the meta stuff in the editor
+
+/*
+ * Shorten, a jQuery plugin to automatically shorten text to fit in a block or a pre-set width and configure how the text ends.
+ * Copyright (C) 2009-2011  Marc Diethelm
+ * License: (GPL 3, http://www.gnu.org/licenses/gpl-3.0.txt) see license.txt
+ */
+
+
+/****************************************************************************
+This jQuery plugin automatically shortens text to fit in a block or pre-set width while you can configure how the text ends. The default is an ellipsis  ("…", &hellip;, Unicode: 2026) but you can use anything you want, including markup.
+
+This is achieved using either of two methods: First the the text width of the 'selected' element (eg. span or div) is measured using Canvas or by placing it inside a temporary table cell. If it's too big to big to fit in the element's parent block it is shortened and measured again until it (and the appended ellipsis or text) fits inside the block. A tooltip on the 'selected' element displays the full original text.
+
+If the browser supports truncating text with CSS ('text-overflow:ellipsis') then that is used (but only if the text to append is the default ellipsis). http://www.w3.org/TR/2003/CR-css3-text-20030514/#text-overflow-props
+
+If the text is truncated by the plugin any markup in the text will be stripped (eg: "<a" starts stripping, "< a" does not). This behaviour is dictated by the jQuery .text(val) method. The appended text may contain HTML however (a link or span for example).
+
+
+Usage Example ('selecting' a div with an id of "element"):
+
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+<script type="text/javascript" src="jquery.shorten.js"></script>
+<script type="text/javascript">
+    $(function() {
+        $("#element").shorten();
+    });
+</script>
+
+
+By default the plugin will use the parent block's width as the maximum width and an ellipsis as appended text when the text is truncated.
+
+There are three ways of configuring the plugin:
+
+1) Passing a configuration hash as the plugin's argument, eg:
+
+.shorten({
+    width: 300,
+    tail: ' <a href="#">more</a>',
+    tooltip: false
+});
+
+2) Using two optional arguments (deprecated!):
+width = the desired pixel width, integer
+tail = text/html to append when truncating
+
+3) By changing the plugin defaults, eg:
+
+
+$.fn.shorten.defaults.tail = ' <a href="#">more</a>';
+
+
+Notes:
+
+There is no default width (unless you create one).
+
+You may want to set the element's CSS to {visibility:hidden;} so it won't
+initially flash at full width in slow browsers.
+
+jQuery < 1.4.4: Shorten doesn't work for elements who's parents have display:none, because .width() is broken. (Returns negative values)
+http://bugs.jquery.com/ticket/7225
+Workarounds:
+- Use jQuery 1.4.4+
+- Supply a target width in options.
+- Use better timing: Don't use display:none when shortening (maybe you can use visibility:hidden). Or shorten after changing display.
+
+Only supports ltr text for now.
+
+Tested with jQuery 1.3+
+
+
+Based on a creation by M. David Green (www.mdavidgreen.com) in 2009.
+
+Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
+
+****************************************************************************/
+}
+
+
+(function ($) {
+
+	//var $c = console;
+	var
+		_native = false,
+		is_canvasTextSupported,
+		measureContext, // canvas context or table cell
+		measureText, // function that measures text width
+		info_identifier = "shorten-info",
+		options_identifier = "shorten-options";
+
+	$.fn.shorten = function() {
+
+		var userOptions = {},
+			args = arguments, // for better minification
+			func = args.callee // dito; and shorter than $.fn.shorten
+
+		if ( args.length ) {
+
+			if ( args[0].constructor == Object ) {
+				userOptions = args[0];
+			} else if ( args[0] == "options" ) {
+				return $(this).eq(0).data(options_identifier);
+			} else {
+				userOptions = {
+					width: parseInt(args[0]),
+					tail: args[1]
+				}
+			}
+		}
+
+		this.css("visibility","hidden"); // Hide the element(s) while manipulating them
+
+		// apply options vs. defaults
+		var options = $.extend({}, func.defaults, userOptions);
+
+
+		/**
+		 * HERE WE GO!
+		 **/
+		return this.each(function () {
+
+			var
+				$this = $(this),
+				text = $this.text(),
+				numChars = text.length,
+				targetWidth,
+				tailText = $("<span/>").html(options.tail).text(), // convert html to text
+				tailWidth,
+				info = {
+					shortened: false,
+					textOverflow: false
+				}
+
+			if ($this.css("float") != "none") {
+				targetWidth = options.width || $this.width(); // this let's correctly shorten text in floats, but fucks up the rest
+			} else {
+				targetWidth = options.width || $this.parent().width();
+			}
+
+			if (targetWidth < 0) { // jQuery versions < 1.4.4 return negative values for .width() if display:none is used.
+				//$c.log("nonsense target width ", targetWidth);
+				return true;
+			}
+
+			$this.data(options_identifier, options);
+
+			// for consistency with the text-overflow method (which requires these properties), but not actually neccessary.
+			//this.style.display = "block";
+			//this.style.overflow = "hidden"; // firefox: a floated li will cause the ul to have a "bottom padding" if this is set.
+			this.style.whiteSpace = "nowrap";
+
+			// decide on a method for measuring text width
+			if ( is_canvasTextSupported ) {
+				//$c.log("canvas");
+				measureContext = measureText_initCanvas.call( this );
+				measureText = measureText_canvas;
+
+			} else {
+				//$c.log("table")
+				measureContext = measureText_initTable.call( this );
+				measureText = measureText_table;
+			}
+
+			var origLength = measureText.call( this, text, measureContext );
+
+			if ( origLength < targetWidth ) {
+				//$c.log("nothing to do");
+				$this.text( text );
+				this.style.visibility = "visible";
+
+				$this.data(info_identifier, info);
+
+				return true;
+			}
+
+			if ( options.tooltip ) {
+				this.setAttribute("title", text);
+			}
+
+			/**
+			 * If browser implements text-overflow:ellipsis in CSS and tail is &hellip;/Unicode 8230/(…), use it!
+			 * In this case we're doing the measurement above to determine if we need the tooltip.
+			 **/
+			if ( func._native && !userOptions.width ) {
+				//$c.log("css ellipsis");
+				var rendered_tail = $("<span>"+options.tail+"</span>").text(); // render tail to find out if it's the ellipsis character.
+
+				if ( rendered_tail.length == 1 && rendered_tail.charCodeAt(0) == 8230 ) {
+
+					$this.text( text );
+
+					// the following three properties are needed for text-overflow to work (tested in Chrome).
+					// for consistency now I need to set this everywhere... which probably interferes with users' layout...
+					//this.style.whiteSpace = "nowrap";
+					this.style.overflow = "hidden";
+					//this.style.display = "block";
+
+					this.style[func._native] = "ellipsis";
+					this.style.visibility = "visible";
+
+					info.shortened = true;
+					info.textOverflow = "ellipsis";
+					$this.data(info_identifier, info);
+
+					return true;
+				}
+			}
+
+			tailWidth = measureText.call( this, tailText, measureContext ); // convert html to text and measure it
+			targetWidth = targetWidth - tailWidth;
+
+				//$c.log(text +" + "+ tailText);
+
+			/**
+			 * Before we start removing characters one by one, let's try to be more intelligent about this:
+			 * If the original string is longer than targetWidth by at least 15% (for safety), then shorten it
+			 * to targetWidth + 15% (and re-measure for safety). If the resulting text still is too long (as expected),
+			 * use that for further shortening. Else use the original text. This saves a lot of time for text that is
+			 * much longer than the desired width.
+			 */
+			var safeGuess = targetWidth * 1.15; // add 15% to targetWidth for safety before making the cut.
+
+			if ( origLength - safeGuess > 0 ) { // if it's safe to cut, do it.
+
+				var cut_ratio = safeGuess / origLength,
+					num_guessText_chars = Math.ceil( numChars * cut_ratio ),
+					// looking good: shorten and measure
+					guessText = text.substring(0, num_guessText_chars),
+					guessTextLength = measureText.call( this, guessText, measureContext );
+
+					//$c.info("safe guess: remove " + (numChars - num_guessText_chars) +" chars");
+
+				if ( guessTextLength > targetWidth ) { // make sure it's not too short!
+					text = guessText;
+					numChars = text.length;
+				}
+			}
+
+			// Remove characters one by one until text width <= targetWidth
+				//var count = 0;
+			do {
+				numChars--;
+				text = text.substring(0, numChars);
+					//count++;
+			} while ( measureText.call( this, text, measureContext ) >= targetWidth );
+
+			$this.html( $.trim( $("<span/>").text(text).html() ) + options.tail );
+			this.style.visibility = "visible";
+				//$c.info(count + " normal truncating cycles...")
+				//$c.log("----------------------------------------------------------------------");
+
+			info.shortened = true;
+			$this.data(info_identifier, info);
+
+			return true;
+		});
+
+		return true;
+
+	};
+
+
+
+	var css = document.documentElement.style;
+
+	if ( "textOverflow" in css ) {
+		_native = "textOverflow";
+	} else if ( "OTextOverflow" in css ) {
+		_native = "OTextOverflow";
+	}
+
+		// test for canvas support
+
+	if ( typeof Modernizr != 'undefined' && Modernizr.canvastext ) { // if Modernizr has tested for this already use that.
+		is_canvasTextSupported = Modernizr.canvastext;
+	} else {
+		var canvas = document.createElement("canvas");
+		is_canvasTextSupported = !!(canvas.getContext && canvas.getContext("2d") && (typeof canvas.getContext("2d").fillText === 'function'));
+	}
+	
+	$.fn.shorten._is_canvasTextSupported = is_canvasTextSupported;
+	$.fn.shorten._native = _native;
+
+
+
+	function measureText_initCanvas()
+	{
+		var $this = $(this);
+		var canvas = document.createElement("canvas");
+			//scanvas.setAttribute("width", 500); canvas.setAttribute("height", 40);
+		ctx = canvas.getContext("2d");
+		$this.html( canvas );
+
+		/* the rounding is experimental. it fixes a problem with a font size specified as 0.7em which resulted in a computed size of 11.2px.
+		  without rounding the measured font was too small. even with rounding the result differs slightly from the table method's results. */
+		// Get the current text style. This string uses the same syntax as the CSS font specifier. The order matters!
+		ctx.font = $this.css("font-style") +" "+ $this.css("font-variant") +" "+ $this.css("font-weight") +" "+ Math.ceil(parseFloat($this.css("font-size"))) +"px "+ $this.css("font-family");
+
+		return ctx;
+	}
+
+	// measurement using canvas
+	function measureText_canvas( text, ctx )
+	{
+			//ctx.fillStyle = "red"; ctx.fillRect (0, 0, 500, 40);
+			//ctx.fillStyle = "black"; ctx.fillText(text, 0, 12);
+
+		return ctx.measureText(text).width; // crucial, fast but called too often
+	};
+
+	function measureText_initTable()
+	{
+		var css = "padding:0; margin:0; border:none; font:inherit;";
+		var $table = $('<table style="'+ css +'width:auto;zoom:1;position:absolute;"><tr style="'+ css +'"><td style="'+ css +'white-space:nowrap;"></td></tr></table>');
+		$td = $("td", $table);
+
+		$(this).html( $table );
+
+		return $td;
+	};
+
+	// measurement using table
+	function measureText_table( text, $td )
+	{
+		$td.text( text );
+
+		return $td.width(); // crucial but expensive
+	};
+
+
+	$.fn.shorten.defaults = {
+		tail: "&hellip;",
+		tooltip: true
+	};
+
+})(jQuery);//fgnass.github.com/spin.js#v1.2.5
+(function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);var eWolfMaster = new function() {
+};
+
+var eWolf = $(eWolfMaster);
+
+$(document).ready(function () {
+	getUserInformation();
+});
+
+function getUserInformation() {
+	var request = new PostRequestHandler("eWolf","/json",handleNewData,null,0);
+
+	function handleNewData(data, postData) {
+		console.log(data);
+		if (data.profile != null) {
+			if (data.profile.result == "success") {
+				document.title = "eWolf - " + data.profile.name;
+				
+				eWolf.data('userID',data.profile.id);
+				eWolf.data('userName',data.profile.name);
+				
+				InitEWolf();
+			} else {
+				console.log(data.profile.result);
+			}
+
+		} else {
+			console.log("No profile parameter in response");
+		}
+	}
+	
+	request.getData({
+		profile: {}
+	  });
+}
+
+function InitEWolf() {
+	new Loading($("#loadingFrame"));
+	var sideMenu = new SideMenu($("#menu"),$("#mainFrame"),$("#topbarID"));
+	
+	var applicationFrame = $("#applicationFrame");
+	
+	var menuList = sideMenu.createNewMenuList("mainapps","Main");
+	
+	menuList.addMenuItem(eWolf.data("userID"),"My Profile");
+	new Profile(eWolf.data("userID"),applicationFrame);
+	
+	menuList.addMenuItem("news_feed","News Feed");
+	new NewsFeed("news_feed",applicationFrame);
+	
+	menuList.addMenuItem("messages","Messages");
+	new Inbox("messages",applicationFrame);
+	
+	new Wolfpacks(sideMenu,applicationFrame);
+	
+	new SearchApp("search",sideMenu,applicationFrame,
+			$("#txtSearchBox"),$("#btnSearch"),$("#btnAdd"));
+	
+	
+	testZone();
+	
+	
+	//eWolf.trigger("select",["news_feed"]);
+}
+
+function testZone() {
+	$("#btnLoad").click(function() {
+		alert("Does nothing...");
+	});
+}

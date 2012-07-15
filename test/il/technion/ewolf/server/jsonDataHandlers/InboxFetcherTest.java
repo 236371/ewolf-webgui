@@ -169,8 +169,8 @@ public class InboxFetcherTest {
 		JsonElement params = setInboxParams(null, null, null, null);
 		InboxResponse obj = ((InboxResponse)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
 		for (int i=0; i<10; i++) {
-			InboxMessage im = obj.messageList.get(i);
-			Assert.assertEquals(im.message,"msg " + (9-i) + " from user3");
+			InboxMessage im = obj.mailList.get(i);
+			Assert.assertEquals(im.mail,"msg " + (9-i) + " from user3");
 			Assert.assertEquals(im.senderID, uid3.toString());
 		}
 		
@@ -294,8 +294,8 @@ public class InboxFetcherTest {
 		JsonElement params = setInboxParams(null, null, null, uid1.toString());
 		InboxResponse obj = ((InboxResponse)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
 		for (int i=0; i<10; i++) {
-			InboxMessage im = obj.messageList.get(i);
-			Assert.assertEquals(im.message,"msg " + (9-i) + " from user1");
+			InboxMessage im = obj.mailList.get(i);
+			Assert.assertEquals(im.mail,"msg " + (9-i) + " from user1");
 			Assert.assertEquals(im.senderID, uid1.toString());
 		}
 		
@@ -413,13 +413,13 @@ public class InboxFetcherTest {
 		InboxResponse obj = ((InboxResponse)injectors.get(1).getInstance(InboxFetcher.class)
 				.handleData(params));
 		for (int i=0; i<10; i++) {
-			InboxMessage im = obj.messageList.get(i);
-			Assert.assertEquals(im.message,"msg " + (9-i) + " from user3");
+			InboxMessage im = obj.mailList.get(i);
+			Assert.assertEquals(im.mail,"msg " + (9-i) + " from user3");
 			Assert.assertEquals(im.senderID, uid3.toString());
 		}
 		for (int i=10; i<20; i++) {
-			InboxMessage im = obj.messageList.get(i);
-			Assert.assertEquals(im.message,"msg " + (19-i) + " from user1");
+			InboxMessage im = obj.mailList.get(i);
+			Assert.assertEquals(im.mail,"msg " + (19-i) + " from user1");
 			Assert.assertEquals(im.senderID, uid1.toString());
 		}
 		
@@ -529,10 +529,10 @@ public class InboxFetcherTest {
 		Assert.assertEquals(20, inbox.size());
 		JsonElement params = setInboxParams(5, null, null, uid1.toString());
 		InboxResponse obj = ((InboxResponse)injectors.get(1).getInstance(InboxFetcher.class).handleData(params));
-		Assert.assertEquals(obj.messageList.size(), 5);
+		Assert.assertEquals(obj.mailList.size(), 5);
 		for (int i=0; i<5; i++) {
-			InboxMessage im = obj.messageList.get(i);
-			Assert.assertEquals(im.message,"msg " + (9-i) + " from user1");
+			InboxMessage im = obj.mailList.get(i);
+			Assert.assertEquals(im.mail,"msg " + (9-i) + " from user1");
 			Assert.assertEquals(im.senderID, uid1.toString());
 		}	
 	}
@@ -647,10 +647,10 @@ public class InboxFetcherTest {
 		JsonElement params = setInboxParams(5, timestamps[20], timestamps[18], null);
 		InboxResponse obj = ((InboxResponse)injectors.get(1).getInstance(InboxFetcher.class)
 				.handleData(params));
-		Assert.assertEquals(obj.messageList.size(), 2);
+		Assert.assertEquals(obj.mailList.size(), 2);
 		for (int i=0; i<2; i++) {
-			InboxMessage im = obj.messageList.get(i);
-			Assert.assertEquals(im.message,"msg " + (9-i) + " from user3");
+			InboxMessage im = obj.mailList.get(i);
+			Assert.assertEquals(im.mail,"msg " + (9-i) + " from user3");
 			Assert.assertEquals(im.senderID, uid3.toString());
 		}
 	}

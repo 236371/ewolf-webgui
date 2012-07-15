@@ -193,11 +193,11 @@ public class NewsFeedFetcherTest {
 		
 		JsonElement params = setNewsFeedParams("user", null, uid1.toString(), null, null, null);
 		NewsFeedResponse obj = ((NewsFeedResponse)injectors.get(1).getInstance(NewsFeedFetcher.class).handleData(params));
-		Assert.assertEquals(obj.postList.size(), 10);
+		Assert.assertEquals(obj.mailList.size(), 10);
 		for (int i=0; i<10; i++) {
-			PostData post = obj.postList.get(i);
+			PostData post = obj.mailList.get(i);
 			Assert.assertEquals(uid1.toString(), post.senderID);
-			Assert.assertEquals("post " + (9-i), post.post);
+			Assert.assertEquals("post " + (9-i), post.mail);
 		}
 
 	}
