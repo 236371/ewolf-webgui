@@ -39,13 +39,13 @@ public class EwolfAccountCreator {
 				.setName("sharedFolder");
 		//TODO make separate group?
 		WolfPack sharedSocialGroup = socialGroupsManager
-				.createSocialGroup(DEFAULT_WOLFPACK);
+				.findOrCreateSocialGroup(DEFAULT_WOLFPACK);
 		rootFolder.append(sharedFolder, sharedSocialGroup.getGroup());
 	}
 	
 	private void createWall() throws Exception {
 		WolfPack wallReadersSocialGroup = socialGroupsManager
-			.createSocialGroup(DEFAULT_WOLFPACK);
+			.findOrCreateSocialGroup(DEFAULT_WOLFPACK);
 		
 		SFSFile wallFolder = socialFS.getSFSFileFactory()
 			.createNewFolder()
