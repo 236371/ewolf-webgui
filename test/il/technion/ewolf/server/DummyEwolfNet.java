@@ -14,10 +14,16 @@ import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.msg.ContentMessage;
+import il.technion.ewolf.msg.PokeMessage;
 import il.technion.ewolf.msg.SocialMail;
+import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
 import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
+import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher;
+import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher.PostData;
+import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcherTest;
+import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher.NewsFeedResponse;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.SocialFSCreatorModule;
@@ -29,6 +35,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.google.gson.JsonElement;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
@@ -123,12 +130,22 @@ public class DummyEwolfNet {
 		String strUid2 = profile2.getUserId().toString();
 		WolfPackLeader sgm2 = inj2.getInstance(WolfPackLeader.class);
 		SocialNetwork sn2 = inj2.getInstance(SocialNetwork.class);
-		TextPost textPost2 = inj2.getInstance(TextPost.class);
 		
 		//user1
 		Injector inj1 = server1.itsInjector;
 		SocialFS sfs1 = inj1.getInstance(SocialFS.class);
 		Profile profile1 = sfs1.getCredentials().getProfile();
+		SocialMail sm1 = inj1.getInstance(SocialMail.class);
+
+		//user2 creates wolfpacks
+		WolfPack friends = sgm2.findOrCreateSocialGroup("friends").addMember(profile1);
+		//user1 SHOULDN't get posts to enemies
+		WolfPack enemies = sgm2.findOrCreateSocialGroup("enemies");
+
+		sgm2.findSocialGroup("wall-readers").addMember(profile1);
+		List<SocialMessage> inbox = sm1.readInbox();
+		((PokeMessage)inbox.get(0)).accept();
+		((PokeMessage)inbox.get(1)).accept();
 		
 		//send messages from user2 to user1
 		ContentMessage[] messages = new ContentMessage[5];
@@ -141,24 +158,33 @@ public class DummyEwolfNet {
 		}
 		
 		//post messages to user1
-		WolfPack friends = sgm2.findOrCreateSocialGroup("friends").addMember(profile1);
-		//user1 SHOULDN't get posts to enemies 
-		WolfPack enemies = sgm2.findOrCreateSocialGroup("enemies");
-
-		sgm2.findSocialGroup("wall-readers").addMember(profile1);
 		
-		Post[] posts = new Post[5];
+		Post[] posts = new Post[3];
 		//send posts to friends
-		for (int j=0; j<5; j++) {				 
-			posts[j] = textPost2.setText("Post to friends: post " + j + "from " + strUid2);
+		for (int j=0; j<3; j++) {
+			String post = "{\"text\":\""+
+					strUid2 + ": post to friends: post " + j +
+					"\",\"attachment\":[{\"filename\":\"testfile.doc\",\"contentType\":\"document\",\"path\":\"http://www.google.com\"},{\"filename\":\"israel.jpg\",\"contentType\":\"image/jpeg\",\"path\":\"https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif\"},{\"filename\":\"spain.jpg\",\"contentType\":\"image/jpeg\",\"path\":\"https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/sp-lgflag.gif\"}]}";
+			posts[j] = inj2.getInstance(TextPost.class).setText(post);
 			sn2.getWall().publish(posts[j], friends);
 		}
 		//send posts to enemies (main user SHOULDN't get them)
-		for (int j=0; j<5; j++) {				 
-			posts[j] = textPost2.setText("Post to enemies: post " + j + "from " + strUid2);
-			sn2.getWall().publish(posts[j], enemies);
+		Post[] posts2 = new Post[3];
+		for (int j=0; j<3; j++) {
+			String post = "{\"text\":\""+
+					strUid2 + ": post to enemies: post " + j +
+					"\",\"attachment\":[{\"filename\":\"testfile.doc\",\"contentType\":\"document\",\"path\":\"http://www.google.com\"},{\"filename\":\"israel.jpg\",\"contentType\":\"image/jpeg\",\"path\":\"https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif\"},{\"filename\":\"spain.jpg\",\"contentType\":\"image/jpeg\",\"path\":\"https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/sp-lgflag.gif\"}]}";
+			posts2[j] = inj2.getInstance(TextPost.class).setText(post);
+			sn2.getWall().publish(posts2[j], enemies);
 		}
 		
+		Thread.sleep(2000);
 		System.out.println("Server test is ready...");
+
+		JsonElement params = NewsFeedFetcherTest.setNewsFeedParams("user", null, strUid2, null, null, null);
+		NewsFeedResponse nfr = (NewsFeedResponse)inj1.getInstance(NewsFeedFetcher.class).handleData(params);
+		for (PostData p : nfr.mailList) {
+			System.out.println(p);
+		}
 	}
 }

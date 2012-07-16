@@ -88,6 +88,15 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		public int compareTo(PostData o) {
 			return -Long.signum(this.timestamp - o.timestamp); //"-" for ordering from newer posts to older
 		}
+
+		public String toString() {
+			return "PostData " +
+					"( itemID: " + itemID +
+					", senderID: " + senderID +
+					", senderName: " + senderName +
+					", timestamp: " + timestamp.toString() +
+					", mail: \"" + mail + "\" )";
+		}
 	}
 	
 	public static class NewsFeedResponse extends EWolfResponse {
