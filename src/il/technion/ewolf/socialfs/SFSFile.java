@@ -282,8 +282,7 @@ public class SFSFile extends Signable implements KeyHolder {
 		int i=0;
 		while (i < subFilesKeys.length) {
 			try {
-				$.add(getSubFiles(i));
-				++i;
+				$.add(getSubFiles(i++));
 			} catch (FileNotFoundException e) {
 				break;
 			} catch (CouldNotDecryptException e) {
