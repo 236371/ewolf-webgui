@@ -28,7 +28,7 @@ public class InboxFetcher implements JsonDataHandler {
 		this.smail = smail;
 	}
 
-	private class JsonReqInboxParams {
+	private static class JsonReqInboxParams {
 		//The max amount of messages to retrieve.
 		Integer maxMessages;
 		//Time in milliseconds since 1970, to retrieve messages older than this date.
@@ -45,7 +45,7 @@ public class InboxFetcher implements JsonDataHandler {
 		}
 	}
 
-	class InboxMessage implements Comparable<InboxMessage>{
+	static class InboxMessage implements Comparable<InboxMessage>{
 		String itemID;
 		String senderID;
 		String senderName;
@@ -58,7 +58,7 @@ public class InboxFetcher implements JsonDataHandler {
 		}
 	}
 
-	class InboxResponse extends EWolfResponse {
+	static class InboxResponse extends EWolfResponse {
 		List<InboxMessage> mailList;
 
 		public InboxResponse(List<InboxMessage> lst) {

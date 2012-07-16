@@ -28,13 +28,13 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		this.textPost = textPost;
 	}
 	
-	private class JsonReqPostToNewsFeedParams {
+	private static class JsonReqPostToNewsFeedParams {
 		String wolfpackName;
 		//post text
 		String post;
 	}
 
-	class PostToNewsFeedResponse extends EWolfResponse {
+	static class PostToNewsFeedResponse extends EWolfResponse {
 		public PostToNewsFeedResponse(String result) {
 			super(result);
 		}

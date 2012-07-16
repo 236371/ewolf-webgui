@@ -41,7 +41,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 
 	private static final String POST_OWNER_NOT_FOUND_MESSAGE = "Not found";
 
-	private class JsonReqNewsFeedParams {
+	private static class JsonReqNewsFeedParams {
 		//Request type: "user" or "wolfpack"
 		String newsOf;
 		/* The wolfpackName field will be ignored if "newsOf == user",
@@ -69,7 +69,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		Long newerThan;
 	}
 
-	class PostData implements Comparable<PostData>{
+	public static class PostData implements Comparable<PostData>{
 		String itemID;
 		String senderID;
 		String senderName;
@@ -90,8 +90,8 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		}
 	}
 	
-	class NewsFeedResponse extends EWolfResponse {
-		List<PostData> mailList;
+	public static class NewsFeedResponse extends EWolfResponse {
+		public List<PostData> mailList;
 		
 		public NewsFeedResponse(List<PostData> postList) {
 			this.mailList = postList;

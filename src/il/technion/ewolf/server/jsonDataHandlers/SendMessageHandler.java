@@ -26,13 +26,13 @@ public class SendMessageHandler implements JsonDataHandler {
 		this.userIDFactory = userIDFactory;
 	}
 
-	private class JsonReqSendMessageParams {
+	private static class JsonReqSendMessageParams {
 		String userID;
 		//message text
 		String message;
 	}
 
-	class SendMessageResponse extends EWolfResponse {
+	static class SendMessageResponse extends EWolfResponse {
 		public SendMessageResponse(String result) {
 			super(result);
 		}

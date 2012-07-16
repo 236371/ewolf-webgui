@@ -28,12 +28,12 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 		this.userIDFactory = userIDFactory;
 	}
 
-	private class JsonReqAddWolfpackMemberParams {
+	private static class JsonReqAddWolfpackMemberParams {
 		String wolfpackName;
 		String userID;
 	}
 
-	class AddWolfpackMemberResponse extends EWolfResponse {
+	static class AddWolfpackMemberResponse extends EWolfResponse {
 		public AddWolfpackMemberResponse(String result) {
 			super(result);
 		}

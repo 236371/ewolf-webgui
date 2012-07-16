@@ -30,13 +30,13 @@ public class WolfpacksFetcher implements JsonDataHandler {
 		this.userIDFactory = userIDFactory;
 	}
 
-	private class JsonReqWolfpacksParams {
+	private static class JsonReqWolfpacksParams {
 //		If userID field wasn't sent with the request then the response
 //			list of wolfpack names will be for "logged in" user
 		String userID;
 	}
 
-	class WolfpacksResponse extends EWolfResponse {
+	static class WolfpacksResponse extends EWolfResponse {
 		List<String> wolfpacksList;
 
 		public WolfpacksResponse(List<String> lst) {

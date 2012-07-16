@@ -23,7 +23,7 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		this.socialGroupsManager = socialGroupsManager;
 	}
 
-	class ProfileData {
+	static class ProfileData {
 		String name;
 		String id;
 	
@@ -33,7 +33,7 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		}
 	}
 
-	class WolfpackMembersResponse extends EWolfResponse {
+	static class WolfpackMembersResponse extends EWolfResponse {
 		List<ProfileData> membersList;
 		public WolfpackMembersResponse(List<ProfileData> lst) {
 			this.membersList = lst;
@@ -44,7 +44,7 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		}
 	}
 
-	private class JsonReqWolfpackMembersParams {
+	private static class JsonReqWolfpackMembersParams {
 //		If wolfpackName field wasn't sent with the request then
 //		the response list will contain all the members of all the "logged in" user wolfpacks
 		String wolfpackName;

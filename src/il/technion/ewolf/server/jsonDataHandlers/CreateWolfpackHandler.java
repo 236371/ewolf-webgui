@@ -16,11 +16,11 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 		this.socialGroupsManager = socialGroupsManager;
 	}
 	
-	private class JsonReqCreateWolfpackParams {
+	private static class JsonReqCreateWolfpackParams {
 		String wolfpackName;
 	}
 
-	class CreateWolfpackResponse extends EWolfResponse {
+	static class CreateWolfpackResponse extends EWolfResponse {
 		public CreateWolfpackResponse(String result) {
 			super(result);
 		}

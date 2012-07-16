@@ -22,7 +22,7 @@ public class ProfileFetcher implements JsonDataHandler {
 	}
 	
 	@SuppressWarnings("unused")
-	class ProfileResponse extends EWolfResponse {
+	static class ProfileResponse extends EWolfResponse {
 		private String name;
 		private String id;
 	
@@ -36,7 +36,7 @@ public class ProfileFetcher implements JsonDataHandler {
 		}
 	}
 
-	private class JsonReqProfileParams {
+	private static class JsonReqProfileParams {
 //		If userID field wasn't sent with the request then
 //			the response will be for "logged in" user
 		String userID;
