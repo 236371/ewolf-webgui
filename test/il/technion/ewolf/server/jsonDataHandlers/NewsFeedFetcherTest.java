@@ -48,7 +48,7 @@ public class NewsFeedFetcherTest {
 	private static final int BASE_PORT = 10000;
 	private List<Injector> injectors = new LinkedList<Injector>();
 	
-	class JsonReqNewsFeedParams {
+	static class JsonReqNewsFeedParams {
 		String newsOf;
 		String wolfpackName;
 		String userID;
@@ -66,7 +66,7 @@ public class NewsFeedFetcherTest {
 		injectors.clear();
 	}
 	
-	private JsonElement setNewsFeedParams(String newsOf, String wolfpackName, String userID,
+	public static JsonElement setNewsFeedParams(String newsOf, String wolfpackName, String userID,
 			Integer maxMessages, Long olderThan, Long newerThan) {
 
 		JsonReqNewsFeedParams params = new JsonReqNewsFeedParams();
@@ -172,6 +172,9 @@ public class NewsFeedFetcherTest {
 		WolfPack osn1Friends = sgm1
 				.findOrCreateSocialGroup("friends")
 				.addMember(profile2);
+
+		WolfPack osn1Enemies = sgm1
+				.findOrCreateSocialGroup("enemies");
 		sgm1
 		.findSocialGroup("wall-readers")
 		.addMember(profile2);
@@ -185,19 +188,26 @@ public class NewsFeedFetcherTest {
 		
 		// osn1 creates 10 posts
 		Post[] posts = new Post[10];
-		for (int i=0; i<10; i++) {
+		for (int i=0; i<4; i++) {
 			posts[i] = injectors.get(0).getInstance(TextPost.class).setText("post " + i);
 			osn1.getWall().publish(posts[i], osn1Friends);
+		}
+		Thread.sleep(1000);
+		Post[] posts2 = new Post[10];
+		for (int i=0; i<4; i++) {
+			posts2[i] = injectors.get(0).getInstance(TextPost.class)
+					.setText("SHOULDN'T GET: post " + i);
+			osn1.getWall().publish(posts2[i], osn1Enemies);
 		}
 		Thread.sleep(1000);
 		
 		JsonElement params = setNewsFeedParams("user", null, uid1.toString(), null, null, null);
 		NewsFeedResponse obj = ((NewsFeedResponse)injectors.get(1).getInstance(NewsFeedFetcher.class).handleData(params));
-		Assert.assertEquals(obj.mailList.size(), 10);
-		for (int i=0; i<10; i++) {
+		Assert.assertEquals(obj.mailList.size(), 4);
+		for (int i=0; i<4; i++) {
 			PostData post = obj.mailList.get(i);
 			Assert.assertEquals(uid1.toString(), post.senderID);
-			Assert.assertEquals("post " + (9-i), post.mail);
+			Assert.assertEquals("post " + (3-i), post.mail);
 		}
 
 	}
