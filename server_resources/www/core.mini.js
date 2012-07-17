@@ -5,8 +5,8 @@ var AppContainer = function(id,container) {
 		var frame = $("<div/>").attr({
 			"id": id+"ApplicationFrame",
 			"class": "applicationContainer"
-		})	.hide(0)
-			.appendTo(container);
+		})	.appendTo(container)
+			.hide(0);
 		
 		eWolf.bind("select."+id,function(event,eventId) {
 			if(id == eventId) {				
@@ -134,14 +134,15 @@ var AppContainer = function(id,container) {
 	};
 	
 	return this;
-};var GenericMailList = function(id,mailType,serverSettings,
+};var GenericMailList = function(mailType,request,serverSettings,
 		listClass,msgBoxClass,preMessageTitle,allowShrink) {
 	var newestDate = null;
 	var oldestDate = null;
 	
 	var lastItem = null;
-	
-	var request = new PostRequestHandler(id,"/json",handleNewData,null,60);	
+
+	request.register(getData,new eWolfResonseHandler(mailType,
+			["mailList"],handleNewData));	
 	
 	var frame = $("<span/>");
 	
@@ -150,43 +151,24 @@ var AppContainer = function(id,container) {
 	}).appendTo(frame);
 	
 	var showMore = new ShowMore(frame,function() {
-		_updateFromServer(true);
+		request.request(_updateFromServer (true),handleNewData);
 	}).draw();
 	
-	eWolf.bind("refresh."+id,function(event,eventId) {
-		if(id == eventId) {
-			_updateFromServer(false);
-		}
-	});
-	
-	function handleNewData(data, parameters) {
-		console.log(data);
+	function handleNewData(data, textStatus, parameters) {
+		$.each(data.mailList, function(j, mailItem) {
+			_addItem(mailItem.senderID,mailItem.senderName,
+					mailItem.timestamp, mailItem.mail);
+		});
 		
-		var item = data[mailType];
-
-		if (item != null) {
-			if(item.result == "success") {
-				if(item.mailList != null) {
-					$.each(item.mailList, function(j, mailItem) {
-						_addItem(mailItem.senderID,mailItem.senderName,
-								mailItem.timestamp, mailItem.mail);
-					});
-					
-					if (parameters[mailType].newerThan == null &&
-							item.mailList.length < parameters[mailType].maxMessages) {
-						showMore.remove();
-					}
-					
-				} else {
-					console.log("No mailList parameter in response");
-				}				
-			} else {
-				console.log(item.result);
-			}
-		} else {
-			console.log("No " + mailType + " parameter in response");
-		}
+		if (parameters[mailType].newerThan == null &&
+				data.mailList.length < parameters[mailType].maxMessages) {
+			showMore.remove();
+		}		
 	}
+	
+	function getData () {
+		return _updateFromServer(false);
+	} 
 	
 	function _updateFromServer (getOlder) {		
 		var data = {};
@@ -201,7 +183,7 @@ var AppContainer = function(id,container) {
 		var postData = {};
 		postData[mailType] = data;
 		
-		request.getData(postData);
+		return postData;
 	}
 	
 	function _addItem (senderID,senderName,timestamp,mail) {
@@ -248,12 +230,30 @@ var AppContainer = function(id,container) {
 			return newestDate;
 		},
 		updateFromServer: function (getOlder) {		
-			return _updateFromServer(getOlder);
+			request.requestAll();
+			return this;
 		}
 	};
+};
+
+var NewsFeedList = function (request,serverSettings) {
+	$.extend(serverSettings,{maxMessages:15});
+	
+	return new GenericMailList("newsFeed",request,serverSettings,
+			"postListItem","postBox","",false);
+};
+
+var InboxList = function (request,serverSettings) {	
+	$.extend(serverSettings,{maxMessages:20});
+	
+	return new GenericMailList("inbox",request,serverSettings,
+			"messageListItem","messageBox", ">> ",true);
 };var Inbox = function (id,applicationFrame) {
 	var appContainer = new AppContainer(id,applicationFrame);
 	var frame = appContainer.getFrame();
+	
+	var request = new PostRequestHandler(id,"/json",60)
+		.listenToRefresh();
 	
 	var titleDiv = $("<div/>").attr({
 		"class" : "eWolfTitle"
@@ -268,8 +268,7 @@ var AppContainer = function(id,container) {
 		new NewMessageBox("__newmessage__"+id,frame);
 	});
 	
-	new GenericMailList(id,"inbox",{maxMessages:2},"messageListItem",
-			"messageBox", ">> ",true).appendTo(frame);	
+	new InboxList(request,{}).appendTo(frame);
 	
 	return {
 		getId : function() {
@@ -749,43 +748,39 @@ var NewMessageBox = function(id,container) {
 	};
 };
 
-var NewsFeed = function (id, applicationFrame) {
-	var appContainer = new AppContainer(id,applicationFrame);
-	var frame = appContainer.getFrame();
-	var mailObject = {
-			text: "hello liran",
-			attachment: [{
-				filename: "testfile.doc",
-				contentType: "document",
-				path: "http://www.google.com"
-			},
-			{
-				filename: "image.jpg",
-				contentType: "image/jpeg",
-				path: "https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"					
-			}]
-	};
-	
-//	var msgBox = MailItem(mailObject);
-//	msgBox.appendTo(frame);
-	
-	var list = new GenericMailList("postListItem","postBox","",false)
-		.appendTo(frame);
-	
-	list.addItem("model","Model",1234,JSON.stringify(mailObject));
-
-	
-	list.addItem("cat","Cat",12345,JSON.stringify(mailObject));
-
-};var Profile = function (id,applicationFrame) {
+var Profile = function (id,name,applicationFrame) {
 	var appContainer = new AppContainer(id,applicationFrame);
 	var frame = appContainer.getFrame();
 	
-	var request = new PostRequestHandler(id,"/json",handleNewData,null,3600);
+	var waitingForName = [];
+	
+	var userObj = {};
+	
+	if(id != eWolf.data("userID")) {
+		userObj.userID = id;
+	}
+	
+	var newsFeedObj = {
+			newsOf:"user"
+		};
+	$.extend(newsFeedObj,userObj);
+	
+	var handleProfileResonse = new eWolfResonseHandler("profile",
+			["id","name"],handleProfileData);
+	
+	var request = new PostRequestHandler(id,"/json",60)
+		.listenToRefresh()
+		.register(getProfileData,handleProfileResonse)
+		.register(geWolfpacksData,new eWolfResonseHandler("wolfpacks",
+				["wolfpacksList"],handleWolfpacksData));
+	
+	if(name == null) {
+		request.request(getProfileData(),handleProfileResonse);
+	}		
 	
 	var title = $("<div/>").appendTo(frame);
 	
-	var name = $("<span/>").attr({
+	var nameTitle = $("<span/>").attr({
 		"class" : "eWolfTitle"
 	}).appendTo(title);
 	
@@ -803,77 +798,48 @@ var NewsFeed = function (id, applicationFrame) {
 	
 	var wolfpackslist = null;
 	
-	new NewsFeed(id,frame);
+	new NewsFeedList(request,newsFeedObj).appendTo(frame);
 	
 	var profileData = null;
 	var wolfpackData = null;
 	
-	getProfileData();
-
-	function handleNewData(data,postData) {
-		console.log(data);
+	function handleProfileData(data, textStatus, postData) {
+		nameTitle.html(new User(data.id,data.name));
+		idRow.html(data.id);
 		
-		if(data.profile != null) {
-			if(data.profile.result == "success") {
-				profileData = data.profile;
-				
-				name.html(new User(data.profile.id,data.profile.name));
-				idRow.html(data.profile.id);
-			} else {
-				console.log(data.profile.result);
-			}
-			
-		} else {
-			console.log("No profile parameter in response");
-		}
+		name = data.name;
 		
-		if(data.wolfpacks != null) {
-			if(data.wolfpacks.result == "success") {
-				wolfpackData = data.wolfpacks;
-				
-				if(data.wolfpacks.wolfpacksList != null) {
-					if(wolfpackslist != null) {
-						 wolfpackslist.remove();
-					 }
-					 
-					 wolfpackslist = $("<span/>").appendTo(wolfpacksContainer);
-					 
-					 $.each(data.wolfpacks.wolfpacksList,function(i,pack) {
-						 wolfpackslist.append(new Wolfpack(pack));
-						 if(i != data.wolfpacks.wolfpacksList.length-1) {
-							 wolfpackslist.append(", ");
-						 }
-					 });
-				} else {
-					console.log("No wolfpacksList parameter in response");
-				}				
-			} else {
-				console.log(data.wolfpacks.result);
-			}
-			
-		} else {
-			console.log("No wolfpacks parameter in response");
+		while(waitingForName.length > 0) {
+			waitingForName.pop()(name);
 		}
 	  }
 	
-	function getProfileData() {
-		var userObj = {};
-		
-		if(id != eWolf.data("userID")) {
-			userObj.userID = id;
-		}
-		
-		request.getData({
+	function handleWolfpacksData(data, textStatus, postData) {		
+		if(wolfpackslist != null) {
+			 wolfpackslist.remove();
+		 }
+		 
+		 wolfpackslist = $("<span/>").appendTo(wolfpacksContainer);
+		 
+		 $.each(data.wolfpacksList,function(i,pack) {
+			 wolfpackslist.append(new Wolfpack(pack));
+			 if(i != data.wolfpacksList.length-1) {
+				 wolfpackslist.append(", ");
+			 }
+		 });				
+	  }
+	
+	function getProfileData() {		
+		return {
 			profile: userObj,
-			wolfpacks: userObj
-		  });
+		  };
 	}
 	
-	eWolf.bind("refresh."+id,function(event,eventId) {
-		if(id == eventId) {
-			getProfileData();
-		}
-	});
+	function geWolfpacksData() {
+		return {
+			wolfpacks: userObj
+		  };
+	}
 	
 	return {
 		getID : function() {
@@ -900,6 +866,15 @@ var NewsFeed = function (id, applicationFrame) {
 		isSelected : function() {
 			return appContainer.isSelected();
 		},
+		onReceiveName: function(nameHandler) {
+			if(name != null) {
+				nameHandler(name);
+			} else {
+				waitingForName.push(nameHandler);
+			}
+			
+			return this;
+		},		
 		destroy : function() {
 			eWolf.unbind("refresh."+id);
 			appContainer.destroy();
@@ -907,59 +882,108 @@ var NewsFeed = function (id, applicationFrame) {
 		}
 	};
 };
-var BasicRequestHandler = function(id,requestAddress,handleDataFunction,onComplete,refreshIntervalSec) {	
-	return {
-		_timer: null,
-		_onPostComplete: function () {
-			if(onComplete != null) {
-				onComplete();
-			}
+var BasicRequestHandler = function(id,requestAddress,refreshIntervalSec) {
+	
+	var observersRequestFunction = [];
+	var observersHandleDataFunction = [];
+	var timer = null;
+	
+	function trigger() {
+		eWolf.trigger('needRefresh.'+id,[id]);
+	}
+	
+	function onPostComplete () {
+		eWolf.trigger("loadingEnd",[id]);
+		
+		if(refreshIntervalSec > 0) {
+			clearTimeout(timer);
+			timer = setTimeout(trigger,refreshIntervalSec*1000);
+		}
+	}
+	
+	var _makeRequest = function(address,data,success) {
+		// Not implemented
+	};	
 
-			eWolf.trigger("loadingEnd",[id]);
-			
-			if(refreshIntervalSec > 0) {
-				timer = setTimeout("eWolf.trigger('needRefresh."+id+"'," +
-						"["+id+"])",refreshIntervalSec*1000);
-			}
-		},
+	
+	return {		
 		getId : function() {
 			return id;
 		},
 		setRequestAddress : function(inputRequestAddress) {
 			requestAddress = inputRequestAddress;
+			return this;
+		},
+		_makeRequest: function (address,data,success) {
+			// Not implemented
+		},
+		request: function(data,handleDataFunction) {
+			clearTimeout(timer);
+			eWolf.trigger("loading",[id]);
+			
+			this._makeRequest(requestAddress,data,
+				function(receivedData,textStatus) {
+					handleDataFunction(receivedData,textStatus,data);
+				}).complete(onPostComplete);
+			
+			return this;
+		},
+		requestAll: function() {
+			var data = {};
+			
+			$.each(observersRequestFunction, function(i, func) {
+				var res = func();
+				
+				if(res != null) {
+					$.extend(data,res);
+				}				
+			});
+			
+			this.request(data,function(receivedData,textStatus,data) {
+				$.each(observersHandleDataFunction, function(i, func) {
+					func(receivedData,textStatus,data);			
+				});
+			});
+			
+			return this;
+		},
+		register: function(requestFunction,handleDataFunction) {
+			if(requestFunction != null && handleDataFunction != null) {
+				observersRequestFunction.push(requestFunction);
+				observersHandleDataFunction.push(handleDataFunction);
+			}
+			
+			return this;
+		},
+		listenToRefresh: function() {
+			var req = this;
+			eWolf.bind("refresh."+id,function(event,eventId) {
+				if(id == eventId) {
+					req.requestAll();
+				}
+			});
+			
+			return this;
 		}
+		
 	};
 };
 
-var PostRequestHandler = function(id,requestAddress,handleDataFunction,onComplete,refreshIntervalSec) {
-	var res = new BasicRequestHandler(id,requestAddress,handleDataFunction,onComplete,refreshIntervalSec);
-	res.getData = function (data) {
-		clearTimeout(this._timer);
-		eWolf.trigger("loading",[id]);				
-		
-		$.post(	requestAddress,
-			JSON.stringify(data),
-			function(receivedData,textStatus) {
-				handleDataFunction(receivedData,/*textStatus,*/data);
-			},
-			"json").complete(this._onPostComplete);
+var PostRequestHandler = function(id,requestAddress,refreshIntervalSec) {
+	var res = new BasicRequestHandler(id,requestAddress,refreshIntervalSec);
+	
+	res._makeRequest = function (address,data,success) {
+		return $.post(address,JSON.stringify(data),success,"json");
 	};
 	
 	return res;
 };
 
-var JSONRequestHandler = function(id,requestAddress,handleDataFunction,onComplete,refreshIntervalSec) {
-	var res = new BasicRequestHandler(id,requestAddress,handleDataFunction,onComplete,refreshIntervalSec);
-	res.getData = function (data) {
-		clearTimeout(this._timer);
-		eWolf.trigger("loading",[id]);				
-		
-		$.getJSON(
-				requestAddress,
-				data,
-				function(receivedData,textStatus) {
-					handleDataFunction(receivedData,/*textStatus,*/data);
-				}).complete(this._onPostComplete);
+var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
+	var res = new BasicRequestHandler(id,requestAddress,refreshIntervalSec);
+	
+	res._makeRequest = function (address,data,success) {		
+		return $.getJSON(address,data,success);
 	};
 	
 	return res;
@@ -969,16 +993,12 @@ var JSONRequestHandler = function(id,requestAddress,handleDataFunction,onComplet
 	var lastSearch = null;
 	
 	function addSearchMenuItem(key) {
-		var app = new Profile(key,applicationFrame);
-		apps[key] = app;
-		
-		eWolf.one("loadingEnd",function(event,eventId) {
-			if(eventId == key) {
-				menuList.addMenuItem(key,app.getName());
+		var app = new Profile(key,null,applicationFrame)
+			.onReceiveName(function(name) {
+				menuList.addMenuItem(key,name);
 				eWolf.trigger("select",[key]);
-			}
-		});
-		
+			});
+		apps[key] = app;		
 	};
 	
 	function removeSearchMenuItem(key) {
@@ -1211,34 +1231,102 @@ var JSONRequestHandler = function(id,requestAddress,handleDataFunction,onComplet
 		"style": "width:1%;",
 		"class": "userBox"
 	}).text(name).click(function() {
-		eWolf.trigger("select",["__packid__"+name]);
+		eWolf.trigger("select",["__pack__"+name]);
 	});	
 		
 	return box;
-};var Wolfpacks = function (menu,applicationFrame) {		
-	var menuList = menu.createNewMenuList("wolfpacks","Wolfpacks");
-	var request = new PostRequestHandler("wolfpacks","/json",handleWolfpacks,null,0);
-	var wolfpackList = [];
-
-	request.getData( {
-		 wolfpacks:{}
-	} );
+};var WolfpackPage = function (id,wolfpackName,applicationFrame) {
+	var appContainer = new AppContainer(id,applicationFrame);
+	var frame = appContainer.getFrame();
+	
+	var request = new PostRequestHandler(id,"/json",60)
+		.listenToRefresh()
+		.register(getWolfpacksMembersData,
+				new eWolfResonseHandler("wolfpackMembers",
+						["membersList"],handleWolfpacksMembersData));
 		
-	function addWolfpackApp(key,title) {
-		var app = new Profile(key,applicationFrame);
-		menuList.addMenuItem(key,title);
+	var title = $("<div/>").appendTo(frame);
+	
+	$("<span/>").attr({
+		"class" : "eWolfTitle"
+	}).append(new Wolfpack(wolfpackName)).appendTo(title);
+	
+	title.append("&nbsp;&nbsp;&nbsp; ");
+	
+	var members = $("<span/>").appendTo(title);	
+	
+	new NewsFeedList(request,{
+		newsOf:"wolfpack",
+		wolfpackName:wolfpackName
+	}).appendTo(frame);
+	
+	var membersList = null;
+	
+	function getWolfpacksMembersData() {
+		return {
+			wolfpackMembers: {
+				wolfpackName: wolfpackName
+			}
+		};
+	}
+	
+	function handleWolfpacksMembersData(data, textStatus, postData) {
+		list = data.membersList;
+
+		if (membersList != null) {
+			membersList.remove();
+		}
+
+		membersList = $("<span/>").appendTo(members);
+
+		$.each(list, function(i, member) {
+			membersList.append(new User(member.id, member.name));
+			if (i != list.length - 1) {
+				membersList.append(", ");
+			}
+		});
+	}
+	
+	return {
+		getID : function() {
+			return id;			
+		},
+		getName : function() {
+			return wolfpackName;			
+		},
+		isSelected : function() {
+			return appContainer.isSelected();
+		},
+		destroy : function() {
+			appContainer.destroy();
+			delete this;
+		}
+	};
+};
+var Wolfpacks = function (menu,request,applicationFrame) {		
+	var wolfpackList = [];
+	
+	var menuList = menu.createNewMenuList("wolfpacks","Wolfpacks");
+	
+	request.register(function() {
+		return {
+			 wolfpacks:{}
+		};
+	},handleWolfpacks);
+		
+	function addWolfpackApp(pack) {
+		var app = new WolfpackPage("__pack__"+pack,pack,applicationFrame);
+		menuList.addMenuItem("__pack__"+pack,pack);
 		wolfpackList.push(app);
 	};
 	
-	function handleWolfpacks(data, postData) {
-		console.log(data);
-		
+	function handleWolfpacks(data, textStatus, postData) {		
 		if(data.wolfpacks != null) {
 			if(data.wolfpacks.result == "success") {
 				if(data.wolfpacks.wolfpacksList != null) {
 					$.each(data.wolfpacks.wolfpacksList,
 							function(i,pack){
-						addWolfpackApp("__packid__"+pack, pack);
+						addWolfpackApp(pack);
 					});
 				} else {
 					console.log("No wolfpackList parameter in response");
@@ -1258,208 +1346,96 @@ var JSONRequestHandler = function(id,requestAddress,handleDataFunction,onComplet
 
 
 
+var eWolfResonseHandler = function(category, requiredFields, handler) {
+	return function(data, textStatus, postData) {
+		if (data[category] != null) {
+			if (data[category].result == "success") {
+				var valid = true;
+				$.each(requiredFields, function(i, field) {
+					if (field == null) {
+						console.log("No field: \"" + field + "\" in response");
+						valid = false;
+						return false;
+					}
+				});
 
-jQuery.extend({
-    createUploadIframe: function(id, uri)
-	{
-			//create frame
-            var frameId = 'jUploadFrame' + id;
-            var iframeHtml = '<iframe id="' + frameId + '" name="' + frameId + '" style="position:absolute; top:-9999px; left:-9999px"';
-			if(window.ActiveXObject)
-			{
-                if(typeof uri== 'boolean'){
-					iframeHtml += ' src="' + 'javascript:false' + '"';
-
-                }
-                else if(typeof uri== 'string'){
-					iframeHtml += ' src="' + uri + '"';
-
-                }	
+				if (valid) {
+					handler(data[category], textStatus, postData);
+				}
+			} else {
+				console.log("Response unsuccesssful: " + data[category].result);
 			}
-			iframeHtml += ' />';
-			jQuery(iframeHtml).appendTo(document.body);
 
-            return jQuery('#' + frameId).get(0);			
-    },
-    createUploadForm: function(id, fileElementId, data)
-	{
-		//create form	
-		var formId = 'jUploadForm' + id;
-		var fileId = 'jUploadFile' + id;
-		var form = jQuery('<form  action="" method="POST" name="' + formId + '" id="' + formId + '" enctype="multipart/form-data"></form>');	
-		if(data)
-		{
-			for(var i in data)
-			{
-				jQuery('<input type="hidden" name="' + i + '" value="' + data[i] + '" />').appendTo(form);
-			}			
+		} else {
+			console.log("No category: \"" + category + "\" in response");
 		}
-		
-		jQuery('<input type="hidden" name="wolfpackName" value="StamWolfpack" />').appendTo(form);
-		
-		var oldElement = jQuery('#' + fileElementId);
-		var newElement = jQuery(oldElement).clone();
-		jQuery(oldElement).attr('id', fileId);
-		jQuery(oldElement).before(newElement);
-		jQuery(oldElement).appendTo(form);
+	};
+};var eWolfMaster = new function() {
+};
 
+var eWolf = $(eWolfMaster);
 
-		
-		//set attributes
-		jQuery(form).css('position', 'absolute');
-		jQuery(form).css('top', '-1200px');
-		jQuery(form).css('left', '-1200px');
-		jQuery(form).appendTo('body');		
-		return form;
-    },
-
-    ajaxFileUpload: function(s) {
-        // TODO introduce global settings, allowing the client to modify them for all requests, not only timeout		
-        s = jQuery.extend({}, jQuery.ajaxSettings, s);
-        var id = new Date().getTime();  
-		var form = jQuery.createUploadForm(id, s.fileElementId, (typeof(s.data)=='undefined'?false:s.data));
-		var io = jQuery.createUploadIframe(id, s.secureuri);
-		var frameId = 'jUploadFrame' + id;
-		var formId = 'jUploadForm' + id;		
-        // Watch for a new set of requests
-        if ( s.global && ! jQuery.active++ )
-		{
-			jQuery.event.trigger( "ajaxStart" );
-		}            
-        var requestDone = false;
-        // Create the request object
-        var xml = {};
-        if ( s.global )
-            jQuery.event.trigger("ajaxSend", [xml, s]);
-        // Wait for a response to come back
-        var uploadCallback = function(isTimeout)
-		{			
-			var io = document.getElementById(frameId);
-            try 
-			{				
-				if(io.contentWindow)
-				{
-					 xml.responseText = io.contentWindow.document.body?io.contentWindow.document.body.innerHTML:null;
-                	 xml.responseXML = io.contentWindow.document.XMLDocument?io.contentWindow.document.XMLDocument:io.contentWindow.document;
-					 
-				}else if(io.contentDocument)
-				{
-					 xml.responseText = io.contentDocument.document.body?io.contentDocument.document.body.innerHTML:null;
-                	xml.responseXML = io.contentDocument.document.XMLDocument?io.contentDocument.document.XMLDocument:io.contentDocument.document;
-				}						
-            }catch(e)
-			{
-				jQuery.handleError(s, xml, null, e);
-			}
-            if ( xml || isTimeout == "timeout") 
-			{				
-                requestDone = true;
-                var status;
-                try {
-                    status = isTimeout != "timeout" ? "success" : "error";
-                    // Make sure that the request was successful or notmodified
-                    if ( status != "error" )
-					{
-                        // process the data (runs the xml through httpData regardless of callback)
-                        var data = jQuery.uploadHttpData( xml, s.dataType );    
-                        // If a local callback was specified, fire it and pass it the data
-                        if ( s.success )
-                            s.success( data, status );
-    
-                        // Fire the global callback
-                        if( s.global )
-                            jQuery.event.trigger( "ajaxSuccess", [xml, s] );
-                    } else
-                        jQuery.handleError(s, xml, status);
-                } catch(e) 
-				{
-                    status = "error";
-                    jQuery.handleError(s, xml, status, e);
-                }
-
-                // The request was completed
-                if( s.global )
-                    jQuery.event.trigger( "ajaxComplete", [xml, s] );
-
-                // Handle the global AJAX counter
-                if ( s.global && ! --jQuery.active )
-                    jQuery.event.trigger( "ajaxStop" );
-
-                // Process result
-                if ( s.complete )
-                    s.complete(xml, status);
-
-                jQuery(io).unbind();
-
-                setTimeout(function()
-									{	try 
-										{
-											jQuery(io).remove();
-											jQuery(form).remove();	
-											
-										} catch(e) 
-										{
-											jQuery.handleError(s, xml, null, e);
-										}									
-
-									}, 100);
-
-                xml = null;
-            }
-        };
-        // Timeout checker
-        if ( s.timeout > 0 ) 
-		{
-            setTimeout(function(){
-                // Check to see if the request is still happening
-                if( !requestDone ) uploadCallback( "timeout" );
-            }, s.timeout);
-        }
-        try 
-		{
-
-			var form = jQuery('#' + formId);
-			jQuery(form).attr('action', s.url);
-			jQuery(form).attr('method', 'POST');
-			jQuery(form).attr('target', frameId);
-            if(form.encoding)
-			{
-				jQuery(form).attr('encoding', 'multipart/form-data');      			
-            }
-            else
-			{	
-				jQuery(form).attr('enctype', 'multipart/form-data');			
-            }			
-            jQuery(form).submit();
-
-        } catch(e) 
-		{			
-            jQuery.handleError(s, xml, null, e);
-        }
-		
-		jQuery('#' + frameId).load(uploadCallback	);
-        return {abort: function () {}};	
-
-    },
-
-    uploadHttpData: function( r, type ) {
-        var data = !type;
-        data = type == "xml" || data ? r.responseXML : r.responseText;
-        // If the type is "script", eval it in global context
-        if ( type == "script" )
-            jQuery.globalEval( data );
-        // Get the JavaScript object, if JSON is used.
-        if ( type == "json" )
-            eval( "data = " + data );
-        // evaluate scripts within html
-        if ( type == "html" )
-            jQuery("<div>").html(data).evalScripts();
-
-        return data;
-    }
+$(document).ready(function () {
+	new Loading($("#loadingFrame"));
+	
+	eWolf.sideMenu = new SideMenu($("#menu"),$("#mainFrame"),$("#topbarID"));	
+	eWolf.applicationFrame = $("#applicationFrame");	
+	eWolf.mainApps = eWolf.sideMenu.createNewMenuList("mainapps","Main");
+	
+	getUserInformation();
 });
 
-/*
+function getUserInformation() {
+	var request = new PostRequestHandler("eWolf","/json",0)
+		.register(function() {
+			return {
+				profile: {}
+			}
+		},new eWolfResonseHandler("profile",
+					["id","name"],handleProfileData))	
+		.register(function() {
+			return {
+				wolfpacks: {}
+			}
+		},new eWolfResonseHandler("profile",
+				["id","name"],handleProfileData));
+	
+	function handleProfileData(data, textStatus, postData) {
+		document.title = "eWolf - " + data.name;
+			
+		eWolf.data('userID',data.id);
+		eWolf.data('userName',data.name);
+			
+		InitEWolf();			
+	}
+	
+	new Wolfpacks(sideMenu,applicationFrame);
+}
+
+function InitEWolf() {
+		
+	eWolf.mainApps.addMenuItem(eWolf.data("userID"),"My Profile");
+	new Profile(eWolf.data("userID"),eWolf.data('userName'),eWolf.applicationFrame);
+	
+//	menuList.addMenuItem("news_feed","News Feed");
+//	new NewsFeed("news_feed",applicationFrame);
+	
+	eWolf.mainApps.addMenuItem("messages","Messages");
+	new Inbox("messages",eWolf.applicationFrame);
+	
+	new SearchApp("search",eWolf.sideMenu,eWolf.applicationFrame,
+			$("#txtSearchBox"),$("#btnSearch"),$("#btnAdd"));
+	
+	
+	testZone();	
+	//eWolf.trigger("select",["news_feed"]);
+}
+
+function testZone() {
+	$("#btnLoad").click(function() {
+		alert("Does nothing...");
+	});
+}/*
 filedrag.js - HTML5 File Drag & Drop demonstration
 Featured on SitePoint.com
 Developed by Craig Buckler (@craigbuckler) of OptimalWorks.net
@@ -3253,73 +3229,4 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 	};
 
 })(jQuery);//fgnass.github.com/spin.js#v1.2.5
-(function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);var eWolfMaster = new function() {
-};
-
-var eWolf = $(eWolfMaster);
-
-$(document).ready(function () {
-	getUserInformation();
-});
-
-function getUserInformation() {
-	var request = new PostRequestHandler("eWolf","/json",handleNewData,null,0);
-
-	function handleNewData(data, postData) {
-		console.log(data);
-		if (data.profile != null) {
-			if (data.profile.result == "success") {
-				document.title = "eWolf - " + data.profile.name;
-				
-				eWolf.data('userID',data.profile.id);
-				eWolf.data('userName',data.profile.name);
-				
-				InitEWolf();
-			} else {
-				console.log(data.profile.result);
-			}
-
-		} else {
-			console.log("No profile parameter in response");
-		}
-	}
-	
-	request.getData({
-		profile: {}
-	  });
-}
-
-function InitEWolf() {
-	new Loading($("#loadingFrame"));
-	var sideMenu = new SideMenu($("#menu"),$("#mainFrame"),$("#topbarID"));
-	
-	var applicationFrame = $("#applicationFrame");
-	
-	var menuList = sideMenu.createNewMenuList("mainapps","Main");
-	
-	menuList.addMenuItem(eWolf.data("userID"),"My Profile");
-	new Profile(eWolf.data("userID"),applicationFrame);
-	
-	menuList.addMenuItem("news_feed","News Feed");
-	new NewsFeed("news_feed",applicationFrame);
-	
-	menuList.addMenuItem("messages","Messages");
-	new Inbox("messages",applicationFrame);
-	
-	new Wolfpacks(sideMenu,applicationFrame);
-	
-	new SearchApp("search",sideMenu,applicationFrame,
-			$("#txtSearchBox"),$("#btnSearch"),$("#btnAdd"));
-	
-	
-	testZone();
-	
-	
-	//eWolf.trigger("select",["news_feed"]);
-}
-
-function testZone() {
-	$("#btnLoad").click(function() {
-		alert("Does nothing...");
-	});
-}
+(function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);
