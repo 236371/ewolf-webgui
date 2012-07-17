@@ -1312,7 +1312,8 @@ var Wolfpacks = function (menu,request,applicationFrame) {
 		return {
 			 wolfpacks:{}
 		};
-	},handleWolfpacks);
+	},new eWolfResonseHandler("wolfpacks",
+			["wolfpacksList"],handleWolfpacks));
 		
 	function addWolfpackApp(pack) {
 		var app = new WolfpackPage("__pack__"+pack,pack,applicationFrame);
@@ -1320,25 +1321,11 @@ var Wolfpacks = function (menu,request,applicationFrame) {
 		wolfpackList.push(app);
 	};
 	
-	function handleWolfpacks(data, textStatus, postData) {		
-		if(data.wolfpacks != null) {
-			if(data.wolfpacks.result == "success") {
-				if(data.wolfpacks.wolfpacksList != null) {
-					$.each(data.wolfpacks.wolfpacksList,
-							function(i,pack){
-						addWolfpackApp(pack);
-					});
-				} else {
-					console.log("No wolfpackList parameter in response");
-				}
-				
-			} else {
-				console.log(data.wolfpacks.result);
-			}
-			
-		} else {
-			console.log("No wolfpacks parameter in response");
-		}
+	function handleWolfpacks(data, textStatus, postData) {
+		$.each(data.wolfpacksList,
+				function(i,pack){
+			addWolfpackApp(pack);
+		});			
 	}
 	
 	return this;
@@ -1390,15 +1377,12 @@ function getUserInformation() {
 		.register(function() {
 			return {
 				profile: {}
-			}
+			};
 		},new eWolfResonseHandler("profile",
-					["id","name"],handleProfileData))	
-		.register(function() {
-			return {
-				wolfpacks: {}
-			}
-		},new eWolfResonseHandler("profile",
-				["id","name"],handleProfileData));
+					["id","name"],handleProfileData));
+	
+	new Wolfpacks(eWolf.sideMenu,request,eWolf.applicationFrame);
+	request.requestAll();
 	
 	function handleProfileData(data, textStatus, postData) {
 		document.title = "eWolf - " + data.name;
@@ -1407,9 +1391,7 @@ function getUserInformation() {
 		eWolf.data('userName',data.name);
 			
 		InitEWolf();			
-	}
-	
-	new Wolfpacks(sideMenu,applicationFrame);
+	}	
 }
 
 function InitEWolf() {
