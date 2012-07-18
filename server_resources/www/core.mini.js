@@ -1,67 +1,4 @@
-var AppContainer = function(id,container) {
-		var selected = false;
-		var needRefresh = true;
-		
-		var frame = $("<div/>").attr({
-			"id": id+"ApplicationFrame",
-			"class": "applicationContainer"
-		})	.appendTo(container)
-			.hide(0);
-		
-		eWolf.bind("select."+id,function(event,eventId) {
-			if(id == eventId) {				
-				frame.show(0);
-				frame.animate({
-					opacity : 1,
-				}, 700, function() {
-				});
-				
-				selected = true;
-				if(needRefresh) {
-					eWolf.trigger("refresh",[id]);
-				}
-			} else {
-				frame.animate({
-					opacity : 0,
-				}, 300, function() {
-					frame.hide(0);
-				});
-				
-				selected = false;
-			}			
-		});
-		
-		eWolf.bind("refresh."+id,function(event,eventId) {	
-			if(id == eventId) {
-				needRefresh = false;
-			}
-		});
-		
-		eWolf.bind("needRefresh."+id,function(event,eventId) {
-			needRefresh = true;
-			
-			if(selected) {
-				eWolf.trigger("refresh."+id,[id]);
-			}
-		});
-		
-		return {
-			getFrame : function() {
-				return frame;
-			},
-			getId : function() {
-				return id;
-			},
-			isSelected : function() {
-				return selected;
-			},
-			destroy : function() {
-				eWolf.unbind("select."+id);
-				frame.remove();
-				delete this;
-			}
-		};
-};var GenericItem = function(senderID,senderName,timestamp,mail,
+var GenericItem = function(senderID,senderName,timestamp,mail,
 		listClass,msgBoxClass,preMessageTitle,allowShrink) {
 	
 	var dateFormat = "dd/MM/yyyy (HH:mm)";
@@ -141,7 +78,7 @@ var AppContainer = function(id,container) {
 	
 	var lastItem = null;
 
-	request.register(getData,new eWolfResonseHandler(mailType,
+	request.register(getData,new ResonseHandler(mailType,
 			["mailList"],handleNewData));	
 	
 	var frame = $("<span/>");
@@ -248,43 +185,7 @@ var InboxList = function (request,serverSettings) {
 	
 	return new GenericMailList("inbox",request,serverSettings,
 			"messageListItem","messageBox", ">> ",true);
-};var Inbox = function (id,applicationFrame) {
-	var appContainer = new AppContainer(id,applicationFrame);
-	var frame = appContainer.getFrame();
-	
-	var request = new PostRequestHandler(id,"/json",60)
-		.listenToRefresh();
-	
-	var titleDiv = $("<div/>").attr({
-		"class" : "eWolfTitle"
-	})	.append("Inbox")
-		.appendTo(frame);
-	
-	$("<input/>").attr({
-		"type": "button",
-		"value": "New Message...",
-		"class": "newMessageBotton"
-	}).appendTo(titleDiv).click(function() {
-		new NewMessageBox("__newmessage__"+id,frame);
-	});
-	
-	new InboxList(request,{}).appendTo(frame);
-	
-	return {
-		getId : function() {
-			return id;
-		},
-		isSelected : function() {
-			return appContainer.isSelected();
-		},
-		destroy : function() {
-			eWolf.unbind("refresh."+id);
-			appContainer.destroy();
-			delete this;
-		}
-	};
-};
-var Loading = function(indicator) {
+};var Loading = function(indicator) {
 	var loadingCount = 0;
 	
 	function startLoading() {
@@ -748,140 +649,6 @@ var NewMessageBox = function(id,container) {
 	};
 };
 
-var Profile = function (id,name,applicationFrame) {
-	var appContainer = new AppContainer(id,applicationFrame);
-	var frame = appContainer.getFrame();
-	
-	var waitingForName = [];
-	
-	var userObj = {};
-	
-	if(id != eWolf.data("userID")) {
-		userObj.userID = id;
-	}
-	
-	var newsFeedObj = {
-			newsOf:"user"
-		};
-	$.extend(newsFeedObj,userObj);
-	
-	var handleProfileResonse = new eWolfResonseHandler("profile",
-			["id","name"],handleProfileData);
-	
-	var request = new PostRequestHandler(id,"/json",60)
-		.listenToRefresh()
-		.register(getProfileData,handleProfileResonse)
-		.register(geWolfpacksData,new eWolfResonseHandler("wolfpacks",
-				["wolfpacksList"],handleWolfpacksData));
-	
-	if(name == null) {
-		request.request(getProfileData(),handleProfileResonse);
-	}		
-	
-	var title = $("<div/>").appendTo(frame);
-	
-	var nameTitle = $("<span/>").attr({
-		"class" : "eWolfTitle"
-	}).appendTo(title);
-	
-	title.append("&nbsp;");
-	
-	var idRow = $("<span/>").attr({
-		"class": "idBox"
-	}).appendTo(title);
-	
-	title.append("&nbsp;&nbsp;&nbsp; ");
-	
-	var wolfpacksContainer = $("<span/>").attr({
-		"class":"wolfpacksBox"
-	}).appendTo(title);	
-	
-	var wolfpackslist = null;
-	
-	new NewsFeedList(request,newsFeedObj).appendTo(frame);
-	
-	var profileData = null;
-	var wolfpackData = null;
-	
-	function handleProfileData(data, textStatus, postData) {
-		nameTitle.html(new User(data.id,data.name));
-		idRow.html(data.id);
-		
-		name = data.name;
-		
-		while(waitingForName.length > 0) {
-			waitingForName.pop()(name);
-		}
-	  }
-	
-	function handleWolfpacksData(data, textStatus, postData) {		
-		if(wolfpackslist != null) {
-			 wolfpackslist.remove();
-		 }
-		 
-		 wolfpackslist = $("<span/>").appendTo(wolfpacksContainer);
-		 
-		 $.each(data.wolfpacksList,function(i,pack) {
-			 wolfpackslist.append(new Wolfpack(pack));
-			 if(i != data.wolfpacksList.length-1) {
-				 wolfpackslist.append(", ");
-			 }
-		 });				
-	  }
-	
-	function getProfileData() {		
-		return {
-			profile: userObj,
-		  };
-	}
-	
-	function geWolfpacksData() {
-		return {
-			wolfpacks: userObj
-		  };
-	}
-	
-	return {
-		getID : function() {
-			if(profileData != null) {
-				return profileData.id;
-			} else {
-				return id;
-			}			
-		},
-		getName : function() {
-			if(profileData != null) {
-				return profileData.name;
-			} else {
-				return id;
-			}				
-		},
-		getWolfpacks : function() {
-			if(wolfpackData != null) {
-				return wolfpackData.wolfpacksList;
-			} else {
-				return [];
-			}			
-		},
-		isSelected : function() {
-			return appContainer.isSelected();
-		},
-		onReceiveName: function(nameHandler) {
-			if(name != null) {
-				nameHandler(name);
-			} else {
-				waitingForName.push(nameHandler);
-			}
-			
-			return this;
-		},		
-		destroy : function() {
-			eWolf.unbind("refresh."+id);
-			appContainer.destroy();
-			delete this;
-		}
-	};
-};
 var BasicRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 	
 	var observersRequestFunction = [];
@@ -987,93 +754,28 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 	};
 	
 	return res;
-};var SearchApp = function(id,menu,applicationFrame,query,searchBtn,addBtn) {
-	var menuList = menu.createNewMenuList("search","Searches");
-	var apps = new Object();
-	var lastSearch = null;
-	
-	function addSearchMenuItem(key) {
-		var app = new Profile(key,null,applicationFrame)
-			.onReceiveName(function(name) {
-				menuList.addMenuItem(key,name);
-				eWolf.trigger("select",[key]);
-			});
-		apps[key] = app;		
-	};
-	
-	function removeSearchMenuItem(key) {
-		if(apps[key] != null) {
-			apps[key].destroy();
-			delete apps[key];
-			menuList.removeMenuItem(key);
-		}
-	}
-	
-	function removeLastSearch() {
-		if(lastSearch != null) {
-			removeSearchMenuItem(lastSearch);
-			lastSearch = null;
-		}
-	}
-	
-	function searchUser(key) {
-		if(key != "") {
-			if(key != eWolf.data("userID")) {
-				removeLastSearch();
-				lastSearch = key;
-				addSearchMenuItem(key);
-			}
-		}	
-	}
-	
-	addBtn.click(function() {
-		var key = query.val();
-		if(key != "") {
-			if(key != eWolf.data("userID")) {
-				addSearchMenuItem(key,"Show "+key);
-			}
-			eWolf.trigger("select",[key]);
-		}
-	});
-	
-	searchBtn.click(function() {
-		var key = query.val();
-		searchUser(key);	
-	});
-	
-	eWolf.bind("select."+id,function(event,eventId) {
-		if(eventId != lastSearch) {
-			removeLastSearch();
-		}
-	});
-	
-	query.keyup(function(event){
-	    if(event.keyCode == 13 && query.val() != ""){
-	    	if(event.shiftKey) {
-	    		addBtn.click();
-	    	} else {
-	    		searchBtn.click();
-	    	}
-	    }
-	    
-	    if(query.val() == "") {
-	    	searchBtn.hide(200);
-	    	addBtn.hide(200);
-	    } else {
-	    	searchBtn.show(200);
-	    	addBtn.show(200);
-	    }
-	});
-		
-	
-	eWolf.bind("search",function(event,key) {
-		searchUser(key);
-	});
+};var ResonseHandler = function(category, requiredFields, handler) {
+	return function(data, textStatus, postData) {
+		if (data[category] != null) {
+			if (data[category].result == "success") {
+				var valid = true;
+				$.each(requiredFields, function(i, field) {
+					if (field == null) {
+						console.log("No field: \"" + field + "\" in response");
+						valid = false;
+						return false;
+					}
+				});
 
-	
-	return {
-		search: function (key) {
-			searchUser(key);
+				if (valid) {
+					handler(data[category], textStatus, postData);
+				}
+			} else {
+				console.log("Response unsuccesssful: " + data[category].result);
+			}
+
+		} else {
+			console.log("No category: \"" + category + "\" in response");
 		}
 	};
 };var ShowMore = function (frame,onClick) {
@@ -1235,75 +937,7 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 	});	
 		
 	return box;
-};var WolfpackPage = function (id,wolfpackName,applicationFrame) {
-	var appContainer = new AppContainer(id,applicationFrame);
-	var frame = appContainer.getFrame();
-	
-	var request = new PostRequestHandler(id,"/json",60)
-		.listenToRefresh()
-		.register(getWolfpacksMembersData,
-				new eWolfResonseHandler("wolfpackMembers",
-						["membersList"],handleWolfpacksMembersData));
-		
-	var title = $("<div/>").appendTo(frame);
-	
-	$("<span/>").attr({
-		"class" : "eWolfTitle"
-	}).append(new Wolfpack(wolfpackName)).appendTo(title);
-	
-	title.append("&nbsp;&nbsp;&nbsp; ");
-	
-	var members = $("<span/>").appendTo(title);	
-	
-	new NewsFeedList(request,{
-		newsOf:"wolfpack",
-		wolfpackName:wolfpackName
-	}).appendTo(frame);
-	
-	var membersList = null;
-	
-	function getWolfpacksMembersData() {
-		return {
-			wolfpackMembers: {
-				wolfpackName: wolfpackName
-			}
-		};
-	}
-	
-	function handleWolfpacksMembersData(data, textStatus, postData) {
-		list = data.membersList;
-
-		if (membersList != null) {
-			membersList.remove();
-		}
-
-		membersList = $("<span/>").appendTo(members);
-
-		$.each(list, function(i, member) {
-			membersList.append(new User(member.id, member.name));
-			if (i != list.length - 1) {
-				membersList.append(", ");
-			}
-		});
-	}
-	
-	return {
-		getID : function() {
-			return id;			
-		},
-		getName : function() {
-			return wolfpackName;			
-		},
-		isSelected : function() {
-			return appContainer.isSelected();
-		},
-		destroy : function() {
-			appContainer.destroy();
-			delete this;
-		}
-	};
-};
-var Wolfpacks = function (menu,request,applicationFrame) {		
+};var Wolfpacks = function (menu,request,applicationFrame) {		
 	var wolfpackList = [];
 	
 	var menuList = menu.createNewMenuList("wolfpacks","Wolfpacks");
@@ -1312,7 +946,7 @@ var Wolfpacks = function (menu,request,applicationFrame) {
 		return {
 			 wolfpacks:{}
 		};
-	},new eWolfResonseHandler("wolfpacks",
+	},new ResonseHandler("wolfpacks",
 			["wolfpacksList"],handleWolfpacks));
 		
 	function addWolfpackApp(pack) {
@@ -1333,31 +967,7 @@ var Wolfpacks = function (menu,request,applicationFrame) {
 
 
 
-var eWolfResonseHandler = function(category, requiredFields, handler) {
-	return function(data, textStatus, postData) {
-		if (data[category] != null) {
-			if (data[category].result == "success") {
-				var valid = true;
-				$.each(requiredFields, function(i, field) {
-					if (field == null) {
-						console.log("No field: \"" + field + "\" in response");
-						valid = false;
-						return false;
-					}
-				});
-
-				if (valid) {
-					handler(data[category], textStatus, postData);
-				}
-			} else {
-				console.log("Response unsuccesssful: " + data[category].result);
-			}
-
-		} else {
-			console.log("No category: \"" + category + "\" in response");
-		}
-	};
-};var eWolfMaster = new function() {
+var eWolfMaster = new function() {
 };
 
 var eWolf = $(eWolfMaster);
@@ -1378,7 +988,7 @@ function getUserInformation() {
 			return {
 				profile: {}
 			};
-		},new eWolfResonseHandler("profile",
+		},new ResonseHandler("profile",
 					["id","name"],handleProfileData));
 	
 	new Wolfpacks(eWolf.sideMenu,request,eWolf.applicationFrame);
@@ -3211,4 +2821,393 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 	};
 
 })(jQuery);//fgnass.github.com/spin.js#v1.2.5
-(function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);
+(function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);var AppContainer = function(id,container) {
+		var selected = false;
+		var needRefresh = true;
+		
+		var frame = $("<div/>").attr({
+			"id": id+"ApplicationFrame",
+			"class": "applicationContainer"
+		})	.appendTo(container)
+			.hide(0);
+		
+		eWolf.bind("select."+id,function(event,eventId) {
+			if(id == eventId) {				
+				frame.show(0);
+				frame.animate({
+					opacity : 1,
+				}, 700, function() {
+				});
+				
+				selected = true;
+				if(needRefresh) {
+					eWolf.trigger("refresh",[id]);
+				}
+			} else {
+				frame.animate({
+					opacity : 0,
+				}, 300, function() {
+					frame.hide(0);
+				});
+				
+				selected = false;
+			}			
+		});
+		
+		eWolf.bind("refresh."+id,function(event,eventId) {	
+			if(id == eventId) {
+				needRefresh = false;
+			}
+		});
+		
+		eWolf.bind("needRefresh."+id,function(event,eventId) {
+			needRefresh = true;
+			
+			if(selected) {
+				eWolf.trigger("refresh."+id,[id]);
+			}
+		});
+		
+		return {
+			getFrame : function() {
+				return frame;
+			},
+			getId : function() {
+				return id;
+			},
+			isSelected : function() {
+				return selected;
+			},
+			destroy : function() {
+				eWolf.unbind("select."+id);
+				frame.remove();
+				delete this;
+			}
+		};
+};var Inbox = function (id,applicationFrame) {
+	var appContainer = new AppContainer(id,applicationFrame);
+	var frame = appContainer.getFrame();
+	
+	var request = new PostRequestHandler(id,"/json",60)
+		.listenToRefresh();
+	
+	var titleDiv = $("<div/>").attr({
+		"class" : "eWolfTitle"
+	})	.append("Inbox")
+		.appendTo(frame);
+	
+	$("<input/>").attr({
+		"type": "button",
+		"value": "New Message...",
+		"class": "newMessageBotton"
+	}).appendTo(titleDiv).click(function() {
+		new NewMessageBox("__newmessage__"+id,frame);
+	});
+	
+	new InboxList(request,{}).appendTo(frame);
+	
+	return {
+		getId : function() {
+			return id;
+		},
+		isSelected : function() {
+			return appContainer.isSelected();
+		},
+		destroy : function() {
+			eWolf.unbind("refresh."+id);
+			appContainer.destroy();
+			delete this;
+		}
+	};
+};
+var Profile = function (id,name,applicationFrame) {
+	var appContainer = new AppContainer(id,applicationFrame);
+	var frame = appContainer.getFrame();
+	
+	var waitingForName = [];
+	
+	var userObj = {};
+	
+	if(id != eWolf.data("userID")) {
+		userObj.userID = id;
+	}
+	
+	var newsFeedObj = {
+			newsOf:"user"
+		};
+	$.extend(newsFeedObj,userObj);
+	
+	var handleProfileResonse = new ResonseHandler("profile",
+			["id","name"],handleProfileData);
+	
+	var request = new PostRequestHandler(id,"/json",60)
+		.listenToRefresh()
+		.register(getProfileData,handleProfileResonse)
+		.register(geWolfpacksData,new ResonseHandler("wolfpacks",
+				["wolfpacksList"],handleWolfpacksData));
+	
+	if(name == null) {
+		request.request(getProfileData(),handleProfileResonse);
+	}		
+	
+	var title = $("<div/>").appendTo(frame);
+	
+	var nameTitle = $("<span/>").attr({
+		"class" : "eWolfTitle"
+	}).appendTo(title);
+	
+	title.append("&nbsp;");
+	
+	var idRow = $("<span/>").attr({
+		"class": "idBox"
+	}).appendTo(title);
+	
+	title.append("&nbsp;&nbsp;&nbsp; ");
+	
+	var wolfpacksContainer = $("<span/>").attr({
+		"class":"wolfpacksBox"
+	}).appendTo(title);	
+	
+	var wolfpackslist = null;
+	
+	new NewsFeedList(request,newsFeedObj).appendTo(frame);
+	
+	var profileData = null;
+	var wolfpackData = null;
+	
+	function handleProfileData(data, textStatus, postData) {
+		nameTitle.html(new User(data.id,data.name));
+		idRow.html(data.id);
+		
+		name = data.name;
+		
+		while(waitingForName.length > 0) {
+			waitingForName.pop()(name);
+		}
+	  }
+	
+	function handleWolfpacksData(data, textStatus, postData) {		
+		if(wolfpackslist != null) {
+			 wolfpackslist.remove();
+		 }
+		 
+		 wolfpackslist = $("<span/>").appendTo(wolfpacksContainer);
+		 
+		 $.each(data.wolfpacksList,function(i,pack) {
+			 wolfpackslist.append(new Wolfpack(pack));
+			 if(i != data.wolfpacksList.length-1) {
+				 wolfpackslist.append(", ");
+			 }
+		 });				
+	  }
+	
+	function getProfileData() {		
+		return {
+			profile: userObj,
+		  };
+	}
+	
+	function geWolfpacksData() {
+		return {
+			wolfpacks: userObj
+		  };
+	}
+	
+	return {
+		getID : function() {
+			if(profileData != null) {
+				return profileData.id;
+			} else {
+				return id;
+			}			
+		},
+		getName : function() {
+			if(profileData != null) {
+				return profileData.name;
+			} else {
+				return id;
+			}				
+		},
+		getWolfpacks : function() {
+			if(wolfpackData != null) {
+				return wolfpackData.wolfpacksList;
+			} else {
+				return [];
+			}			
+		},
+		isSelected : function() {
+			return appContainer.isSelected();
+		},
+		onReceiveName: function(nameHandler) {
+			if(name != null) {
+				nameHandler(name);
+			} else {
+				waitingForName.push(nameHandler);
+			}
+			
+			return this;
+		},		
+		destroy : function() {
+			eWolf.unbind("refresh."+id);
+			appContainer.destroy();
+			delete this;
+		}
+	};
+};
+var SearchApp = function(id,menu,applicationFrame,query,searchBtn,addBtn) {
+	var menuList = menu.createNewMenuList("search","Searches");
+	var apps = new Object();
+	var lastSearch = null;
+	
+	function addSearchMenuItem(key) {
+		var app = new Profile(key,null,applicationFrame)
+			.onReceiveName(function(name) {
+				menuList.addMenuItem(key,name);
+				eWolf.trigger("select",[key]);
+			});
+		apps[key] = app;		
+	};
+	
+	function removeSearchMenuItem(key) {
+		if(apps[key] != null) {
+			apps[key].destroy();
+			delete apps[key];
+			menuList.removeMenuItem(key);
+		}
+	}
+	
+	function removeLastSearch() {
+		if(lastSearch != null) {
+			removeSearchMenuItem(lastSearch);
+			lastSearch = null;
+		}
+	}
+	
+	function searchUser(key) {
+		if(key != "") {
+			if(key != eWolf.data("userID")) {
+				removeLastSearch();
+				lastSearch = key;
+				addSearchMenuItem(key);
+			}
+		}	
+	}
+	
+	addBtn.click(function() {
+		var key = query.val();
+		if(key != "") {
+			if(key != eWolf.data("userID")) {
+				addSearchMenuItem(key,"Show "+key);
+			}
+			eWolf.trigger("select",[key]);
+		}
+	});
+	
+	searchBtn.click(function() {
+		var key = query.val();
+		searchUser(key);	
+	});
+	
+	eWolf.bind("select."+id,function(event,eventId) {
+		if(eventId != lastSearch) {
+			removeLastSearch();
+		}
+	});
+	
+	query.keyup(function(event){
+	    if(event.keyCode == 13 && query.val() != ""){
+	    	if(event.shiftKey) {
+	    		addBtn.click();
+	    	} else {
+	    		searchBtn.click();
+	    	}
+	    }
+	    
+	    if(query.val() == "") {
+	    	searchBtn.hide(200);
+	    	addBtn.hide(200);
+	    } else {
+	    	searchBtn.show(200);
+	    	addBtn.show(200);
+	    }
+	});
+		
+	
+	eWolf.bind("search",function(event,key) {
+		searchUser(key);
+	});
+
+	
+	return {
+		search: function (key) {
+			searchUser(key);
+		}
+	};
+};var WolfpackPage = function (id,wolfpackName,applicationFrame) {
+	var appContainer = new AppContainer(id,applicationFrame);
+	var frame = appContainer.getFrame();
+	
+	var request = new PostRequestHandler(id,"/json",60)
+		.listenToRefresh()
+		.register(getWolfpacksMembersData,
+				new ResonseHandler("wolfpackMembers",
+						["membersList"],handleWolfpacksMembersData));
+		
+	var title = $("<div/>").appendTo(frame);
+	
+	$("<span/>").attr({
+		"class" : "eWolfTitle"
+	}).append(new Wolfpack(wolfpackName)).appendTo(title);
+	
+	title.append("&nbsp;&nbsp;&nbsp; ");
+	
+	var members = $("<span/>").appendTo(title);	
+	
+	new NewsFeedList(request,{
+		newsOf:"wolfpack",
+		wolfpackName:wolfpackName
+	}).appendTo(frame);
+	
+	var membersList = null;
+	
+	function getWolfpacksMembersData() {
+		return {
+			wolfpackMembers: {
+				wolfpackName: wolfpackName
+			}
+		};
+	}
+	
+	function handleWolfpacksMembersData(data, textStatus, postData) {
+		list = data.membersList;
+
+		if (membersList != null) {
+			membersList.remove();
+		}
+
+		membersList = $("<span/>").appendTo(members);
+
+		$.each(list, function(i, member) {
+			membersList.append(new User(member.id, member.name));
+			if (i != list.length - 1) {
+				membersList.append(", ");
+			}
+		});
+	}
+	
+	return {
+		getID : function() {
+			return id;			
+		},
+		getName : function() {
+			return wolfpackName;			
+		},
+		isSelected : function() {
+			return appContainer.isSelected();
+		},
+		destroy : function() {
+			appContainer.destroy();
+			delete this;
+		}
+	};
+};
