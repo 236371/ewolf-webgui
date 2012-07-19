@@ -145,9 +145,6 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
-		} catch (WallNotFound e) {
-			e.printStackTrace();
-			return new NewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_NOT_FOUND);
@@ -188,7 +185,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return lst;
 	}
 
-	private List<Post> fetchPostsForWolfpack(String socialGroupName) throws FileNotFoundException, WallNotFound {
+	private List<Post> fetchPostsForWolfpack(String socialGroupName) throws FileNotFoundException {
 		List<WolfPack> wolfpacks = new ArrayList<WolfPack>();
 		if (socialGroupName==null) {
 			wolfpacks = socialGroupsManager.getAllSocialGroups();
@@ -210,7 +207,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return fetchPostsForProfiles(profiles);
 	}
 
-	private List<Post> fetchPostsForUser(String strUid) throws FileNotFoundException, WallNotFound, ProfileNotFoundException {
+	private List<Post> fetchPostsForUser(String strUid) throws FileNotFoundException, ProfileNotFoundException {
 		Profile profile;
 		if (strUid==null) {
 			profile = socialFS.getCredentials().getProfile();
@@ -224,10 +221,14 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return fetchPostsForProfiles(profiles);
 	}
 
-	private List<Post> fetchPostsForProfiles(Set<Profile> profiles) throws FileNotFoundException, WallNotFound {
+	private List<Post> fetchPostsForProfiles(Set<Profile> profiles) throws FileNotFoundException {
 		List<Post> posts = new ArrayList<Post>();
 		for (Profile profile: profiles) {
-			posts.addAll(snet.getWall(profile).getAllPosts());
+			try {
+				posts.addAll(snet.getWall(profile).getAllPosts());
+			} catch (WallNotFound e) {
+				e.printStackTrace();
+			}
 		}		
 		return posts;
 	}
