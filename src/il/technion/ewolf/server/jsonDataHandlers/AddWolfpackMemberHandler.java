@@ -79,6 +79,8 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 		}
 		try {
 			socialGroup.addMember(profile);
+			//TODO check if allowed to add member several times
+			socialGroupsManager.findSocialGroup("wall-readers").addMember(profile);
 		} catch (GroupNotFoundException e) {
 			e.printStackTrace();
 			return new AddWolfpackMemberResponse(RES_INTERNAL_SERVER_ERROR);
