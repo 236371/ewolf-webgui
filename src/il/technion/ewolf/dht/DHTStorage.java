@@ -38,5 +38,5 @@ public interface DHTStorage {
 	 */
 	public void setDHTName(String name);
 		
-	
+	public void destroy();
 }

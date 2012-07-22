@@ -183,6 +183,7 @@ public class KadServer implements Runnable {
 	 * @param kadServerThread
 	 */
 	public void shutdown(Thread kadServerThread) {
+		System.out.println("KadServer shutdown");
 		isActive.set(false);
 		sockProvider.get().close();
 		kadServerThread.interrupt();

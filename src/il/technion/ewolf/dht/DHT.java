@@ -30,6 +30,8 @@ public interface DHT {
 	 */
 	public DHT create();
 
+	public void destroy();
+
 	/**
 	 * put data into the dht mapped with tags
 	 * @param data the data to be inserted

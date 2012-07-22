@@ -155,7 +155,12 @@ public class AgeLimitedDHTStorage implements DHTStorage {
 		}, checkInterval, checkInterval);
 		return this;
 	}
-	
+
+	@Override
+	public void destroy() {
+		timer.cancel();
+	}
+
 	private void removeOldEntries(Set<Entry> entries, Collection<Entry> toReinsert) {
 		if (dhtName == null)
 			throw new IllegalStateException("missing dht name for this storage");

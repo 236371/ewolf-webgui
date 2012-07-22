@@ -83,6 +83,12 @@ public class SimpleDHT implements DHT {
 		return this;
 	}
 
+	@Override
+	public void destroy() {
+		storage.destroy();
+		// TODO probably, destroy other network-related things
+	}
+
 	public void put(Serializable data, String ... tags) {
 		put(kbr.getKeyFactory().create(tags), data);
 	}

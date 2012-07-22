@@ -62,4 +62,9 @@ public class SimpleDHTStorage implements DHTStorage {
 	public void setDHTName(String name) {
 		// nothing to do
 	}
+
+	@Override
+	public void destroy() {
+		// no op
+	}
 }
