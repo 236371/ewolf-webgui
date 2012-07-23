@@ -29,6 +29,7 @@ import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -123,7 +124,9 @@ public class EwolfServer {
 				new HttpConnectorModule()
 					.setProperty("httpconnector.net.port", port),
 
-				new SimpleDHTModule(),
+				new SimpleDHTModule()
+					//TODO temporary property - replicating bug workaround
+					.setProperty("dht.storage.checkInterval", ""+TimeUnit.HOURS.toMillis(1)),
 					
 				new ChunKeeperModule(),
 				
