@@ -1,191 +1,4 @@
-var GenericItem = function(senderID,senderName,timestamp,mail,
-		listClass,msgBoxClass,preMessageTitle,allowShrink) {
-	
-	var dateFormat = "dd/MM/yyyy (HH:mm)";
-		
-	var itemSpan = $("<span/>");
-	
-	var listItem = $("<li/>").attr({
-		"class": listClass
-	}).appendTo(itemSpan);
-	
-	var preMessageBox = $("<span/>").attr({
-		"style": "width:1%;",
-		"class": "preMessageBox"
-	}).append(preMessageTitle).appendTo(listItem);	
-	
-	var senderBox = new User(senderID,senderName).appendTo(listItem);
-	
-	var itsTime = new Date(timestamp);
-	
-	var timestampBox = $("<span/>").attr({
-		"class": "timestampBox"
-	}).append(itsTime.toString(dateFormat)).appendTo(listItem);
-		
-	var itsMessage = $("<li/>").attr({
-		 "class": msgBoxClass
-	 })	.append(MailItem(JSON.parse(mail)))
-	 	.insertAfter(listItem);
-	
-	if(allowShrink) {
-		itsMessage.hide();
-		
-		listItem.click(function() {		
-			itsMessage.toggle();
-		});
-	}	
-	
-	function updateView() {
-		var w = listItem.width()-timestampBox.width()-preMessageBox.width()-20;		
-		senderBox.text(senderName).shorten({width:w});
-	}	
-	
-	eWolf.bind("mainFrameResize", function(event,eventId) {
-		updateView();
-	});
-	
-	return {
-		appendTo: function(place) {
-			itemSpan.appendTo(place);
-			updateView();
-			return this;
-		},
-		prependTo: function(place) {
-			itemSpan.prependTo(place);
-			updateView();
-			return this;
-		},
-		insertAfter: function(place) {
-			itemSpan.insertAfter(place);
-			updateView();
-			return this;
-		},
-		getListItem : function() {
-			return itemSpan;
-		},
-		destroy: function() {
-			message.destroy();
-			itemSpan.remove();
-			delete this;
-		}
-	};
-	
-	return this;
-};var GenericMailList = function(mailType,request,serverSettings,
-		listClass,msgBoxClass,preMessageTitle,allowShrink) {
-	var newestDate = null;
-	var oldestDate = null;
-	
-	var lastItem = null;
-
-	request.register(getData,new ResonseHandler(mailType,
-			["mailList"],handleNewData));	
-	
-	var frame = $("<span/>");
-	
-	var list = $("<ul/>").attr({
-		"class" : "messageList"
-	}).appendTo(frame);
-	
-	var showMore = new ShowMore(frame,function() {
-		request.request(_updateFromServer (true),handleNewData);
-	}).draw();
-	
-	function handleNewData(data, textStatus, parameters) {
-		$.each(data.mailList, function(j, mailItem) {
-			_addItem(mailItem.senderID,mailItem.senderName,
-					mailItem.timestamp, mailItem.mail);
-		});
-		
-		if (parameters[mailType].newerThan == null &&
-				data.mailList.length < parameters[mailType].maxMessages) {
-			showMore.remove();
-		}		
-	}
-	
-	function getData () {
-		return _updateFromServer(false);
-	} 
-	
-	function _updateFromServer (getOlder) {		
-		var data = {};
-		$.extend(data,serverSettings);
-		
-		if(getOlder && newestDate != null && oldestDate != null) {
-			data.olderThan = oldestDate-1;
-		} else if(newestDate != null) {
-			data.newerThan = newestDate+1;
-		}		
-		
-		var postData = {};
-		postData[mailType] = data;
-		
-		return postData;
-	}
-	
-	function _addItem (senderID,senderName,timestamp,mail) {
-		 var obj = new GenericItem(senderID,senderName,timestamp,mail,
-				 listClass,msgBoxClass,preMessageTitle,allowShrink);
-		 
-		var appended = false;
-		 
-		if(oldestDate == null || timestamp - oldestDate < 0) {
-			 oldestDate = timestamp;
-			 obj.appendTo(list);
-			 appended = true;
-		}
-		
-		if(newestDate == null || timestamp - newestDate > 0) {
-			newestDate = timestamp;
-			if(!appended) {
-				obj.prependTo(list);
-				appended = true;
-			}
-		}
-		
-		if(!appended) {
-			obj.insertAfter(lastItem.getListItem());
-		}
-		
-		lastItem = obj;
-		
-		return obj;
-	}
-	
-	return {
-		appendTo: function (canvas) {
-			frame.appendTo(canvas);
-			return this;
-		},
-		addItem: function (senderID,senderName,timestamp,mail) {
-			return _addItem (senderID,senderName,timestamp,mail);
-		},
-		getOldestTimestamp: function () {
-			return oldestDate;
-		},
-		getNewestTimestamp: function () {
-			return newestDate;
-		},
-		updateFromServer: function (getOlder) {		
-			request.requestAll();
-			return this;
-		}
-	};
-};
-
-var NewsFeedList = function (request,serverSettings) {
-	$.extend(serverSettings,{maxMessages:15});
-	
-	return new GenericMailList("newsFeed",request,serverSettings,
-			"postListItem","postBox","",false);
-};
-
-var InboxList = function (request,serverSettings) {	
-	$.extend(serverSettings,{maxMessages:20});
-	
-	return new GenericMailList("inbox",request,serverSettings,
-			"messageListItem","messageBox", ">> ",true);
-};var Loading = function(indicator) {
+var Loading = function(indicator) {
 	var loadingCount = 0;
 	
 	function startLoading() {
@@ -248,408 +61,7 @@ $.fn.spin = function(opts) {
 		}
 	});
 	return this;
-};var MailItem = function(item) {
-	var canvas = $("<div/>").append(item.text);
-	
-	if(item.attachment != null) {
-		var imageCanvas = $("<div/>");
-
-		var attachCanvas = $("<ul/>");
-		
-		$.each(item.attachment, function(i, attach) {
-			if(attach.contentType.substring(0,5) == "image") {
-				var aObj = $("<a/>").attr({
-					href: attach.path,
-					target: "_TRG_"+attach.filename
-				}).appendTo(imageCanvas);
-				
-				$("<img/>").attr({
-					"src": attach.path,
-					style: "padding:5px 5px 5px 5px; height:130px;"
-				}).appendTo(aObj);				
-				
-				
-				$("<em/>").append("&nbsp;").appendTo(imageCanvas);
-			} else {
-				var li = $("<li/>").appendTo(attachCanvas);
-				
-				$("<a/>").attr({
-					href: attach.path,
-					target: "_TRG_"+attach.filename
-				}).append(attach.filename).appendTo(li);
-			}
-		});
-		
-		if(! imageCanvas.is(":empty")) {
-			imageCanvas.appendTo(canvas);
-		}
-		
-		if(! attachCanvas.is(":empty")) {
-			canvas.append("Attachments:");
-			attachCanvas.appendTo(canvas);
-		}
-	}	
-	
-	return canvas;
-};
-var MenuItem = function(id,title,messageText,topbarFrame) {
-	var isLoading = false;
-	var selected = false;	
-	var message = new MenuMessage(id+"Message","menuItemMessageClass",
-			messageText,topbarFrame);
-	
-	var listItem = $("<li/>").attr({"id": id});
-		
-	var aObj = $("<a/>").appendTo(listItem);
-	
-	var titleBox = $("<span/>").attr({
-		"id": id,
-		"style": "width:1%;"
-	}).appendTo(aObj);
-	
-	var refreshContainer = $("<div/>").attr({
-		"class": "refreshButtonArea",
-		"id": id,
-	})	.appendTo(aObj).hide();
-	
-	var loadingContainer = $("<div/>").attr({
-		"class": "refreshButtonArea",
-		"id": id,
-	})	.appendTo(aObj).hide();
-	
-	var refresh = $("<img/>").attr({
-		"id": id,
-		"src": "refresh.svg",
-		"class": "refreshButton"
-	})	.appendTo(refreshContainer);
-	
-	listItem.click(function() {
-		if(selected == false) {
-			eWolf.trigger("select",[id]);
-		}	
-	});
-
-	refresh.click(function() {
-		if(isLoading == false) {
-			eWolf.trigger("refresh."+id,[id]);
-		}	
-	});
-	
-	listItem.mouseover(function() {
-		message.show();
-	});
-
-	listItem.mouseout(function() {
-		message.hide();
-	});
-	
-	function updateView() {
-		var w = 145;
-		if(selected && !isLoading) {
-			refreshContainer.show();
-			w = w - 20;
-		} else {
-			refreshContainer.hide();
-		}
-		
-		if(isLoading) {
-			loadingContainer.show();
-			w = w - 20;
-		} else {
-			loadingContainer.hide();
-		}
-		
-		titleBox.text(title).shorten({width:w});
-	}	
-	
-	function select() {
-		aObj.addClass("currentMenuSelection");
-		selected = true;
-		updateView();
-	}
-
-	function unselect() {
-		aObj.removeClass("currentMenuSelection");
-		selected = false;
-		updateView();
-	}
-	
-	eWolf.bind("select."+id,function(event,eventId) {
-		if(id == eventId) {
-			select();
-		} else {
-			unselect();
-		}			
-	});
-	
-	eWolf.bind("loading."+id,function(event,eventId) {
-		if(id == eventId) {
-			isLoading = true;
-			updateView();
-			loadingContainer.spin(menuItemSpinnerOpts);
-		}	
-	});
-	
-	eWolf.bind("loadingEnd."+id,function(event,eventId) {
-		if(id == eventId) {
-			isLoading = false;
-			updateView();
-			loadingContainer.data('spinner').stop();
-		}	
-	});
-	
-	return {
-		appendTo: function(place) {
-			listItem.appendTo(place);
-			updateView();
-			return this;
-		},
-		getId : function() {
-			return id;
-		},
-		destroy: function() {
-			message.destroy();
-			listItem.remove();
-			delete this;
-		}
-	};
-	
-	return this;
-};
-
-var menuItemSpinnerOpts = {
-		  lines: 10, // The number of lines to draw
-		  length: 4, // The length of each line
-		  width: 2, // The line thickness
-		  radius: 3, // The radius of the inner circle
-		  rotate: 0, // The rotation offset
-		  color: '#000', // #rgb or #rrggbb
-		  speed: 0.8, // Rounds per second
-		  trail: 60, // Afterglow percentage
-		  shadow: false, // Whether to render a shadow
-		  hwaccel: false, // Whether to use hardware acceleration
-		  className: 'spinner', // The CSS class to assign to the spinner
-		  zIndex: 2e9, // The z-index (defaults to 2000000000)
-		  top: 0, // Top position relative to parent in px
-		  left: 0 // Left position relative to parent in px
-		};var MenuList = function(menu,id,title,topbarFrame) {
-	var items = [];
-	
-	var frame = $("<div/>").attr({
-		"class" : "menuList",
-		"id" : id+"Frame"
-	}).hide();
-	
-	$("<div/>").attr({
-		"class" : "menuListTitle",
-		"id" : id+"Title"
-	})	.append(title)
-		.appendTo(frame);
-
-	var list = $("<ul/>").attr({
-		"id" : id
-	})	.appendTo(frame);
-	
-	return {
-		addMenuItem : function(id,title) {			 
-			var menuItem = new MenuItem(id,title,
-					"Click to show "+title.toLowerCase(),topbarFrame).appendTo(list);
-			
-			items[id] = menuItem;
-			
-			if(Object.keys(items).length > 0) {
-				frame.show();
-			}
-		},
-		removeMenuItem: function(removeId) {
-			if(items[removeId] != null) {
-				items[removeId].destroy();
-				delete items[removeId];
-			}
-			
-			if(Object.keys(items).length <= 0) {
-				frame.hide();
-			}
-		},
-		appendTo : function(container) {
-			frame.appendTo(container);
-			return this;
-		}
-	};
-};var MenuMessage = function(id,itemclass,text,container) {
-	var message = null;
-	
-	return {
-		show : function() {
-			if(message == null) {
-				message = $("<div/>").attr({
-					"id": id,
-					"class": itemclass
-				}).text(text).appendTo(container);
-			} else {
-				message.show();
-			}
-		},
-		hide : function() {
-			if(message != null) {
-				message.remove();
-				message = null;
-			}
-		},
-		destroy : function() {
-			if(message != null) {
-				message.remove();
-				message = null;
-				delete this;
-			}
-		}
-	};
-};
-
-var NewMessageBox = function(id,container) {
-	var request = new PostRequestHandler(id,"/json",handleResponse,null,0);
-	
-	var box = $("<div/>").attr({
-		"class": "newMessageBoxClass"
-	}).appendTo(container).animate({
-		opacity : 0.9
-	}, 350, function() {
-		// Animation complete.
-	});
-	
-	var base = $("<table/>").appendTo(box);
-	
-	var idRaw = $("<tr/>").appendTo(base);
-	$("<td/>").append("Send to:").appendTo(idRaw);
-	
-	var userIdText = $("<input/>").attr({
-		"id": "sendToId",
-		"type": "text",
-		"placeholder": "Send to (user id)",
-		"style": "width:300px !important;"
-	});
-	
-	$("<td/>").append(userIdText).appendTo(idRaw);
-	
-	var msgRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("style","vertical-align:text-top;").append("Message:").appendTo(msgRaw);
-	
-	var messageText = $("<textarea/>").attr({
-		"id": "textileMessage",
-		"placeholder": "Your message",
-		"style": "width:300px !important;height:300px  !important;"
-	});
-	
-	$("<td/>").append(messageText).appendTo(msgRaw);
-	
-	var attacheRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("style","vertical-align:text-top;").append("Attachment:").appendTo(attacheRaw);
-	
-	var uploaderArea = $("<td/>").appendTo(attacheRaw);
-	
-	var files = new filedrag(uploaderArea);
-
-	var btnRaw = $("<tr/>").appendTo(base);
-	
-	$("<td/>").appendTo(btnRaw);
-	var btnBox = $("<td/>").appendTo(btnRaw);
-	
-	$("<input/>").attr({
-		"id": "sendMessageBtn",
-		"type": "button",
-		"value": "Send"
-	}).appendTo(btnBox).click(function() {
-		
-//		var uploader = new qq.FileUploaderBasic({
-//		    // path to server-side upload script
-//		    action: '/sfsupload',
-//		    params: {
-//		    	wolfpacks: "someWolfpack"
-//		    }
-//		});
-//		
-//		uploader._uploadFileList(files.getFiles());
-		
-		var msg = messageText.val().replace(/\n/g,"<br>");
-		var mailObject = {
-				text: msg,
-				attachment: [{
-					filename: "testfile.doc",
-					contentType: "document",
-					path: "http://www.google.com"
-				},
-				{
-					filename: "image.jpg",
-					contentType: "image/jpeg",
-					path: "https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"					
-				}]
-		};
-		
-		console.log(JSON.stringify(mailObject));
-		
-		request.getData({
-			sendMessage: {
-				userID: userIdText.val(),
-				message: JSON.stringify(mailObject)
-			}
-		  });
-	});
-	
-	btnBox.append("&nbsp;");
-	
-	$("<input/>").attr({
-		"id": "sabortBtn",
-		"type": "button",
-		"value": "Cancel"
-	}).appendTo(btnBox).click(function() {
-		destroySelf();
-	});
-	
-	var errorRaw = $("<tr/>").appendTo(base);
-	
-	$("<td/>").appendTo(errorRaw);
-	var errorBox = $("<td/>").appendTo(errorRaw);
-	
-	var errorMessage = $("<span/>").attr({
-		"style": "color:red;"
-	}).appendTo(errorBox);
-	
-	function handleResponse(data,postData) {
-		console.log(data);
-		if (data.sendMessage != null) {
-			if(data.sendMessage.result == "success") {
-				destroySelf();
-			} else {
-				errorMessage.html(data.sendMessage.result);
-			}
-		} else {
-			console.log("No sendMessage parameter in response");
-		}		
-	}
-	
-	function destroySelf() {
-		if(box != null) {
-			box.animate({
-				opacity : 0
-			}, 350, function() {
-				box.remove();
-				box = null;
-				delete this;
-			});;			
-		} else {
-			delete this;
-		}
-		
-	}
-
-	return {
-		destroy : function() {
-			destroySelf();
-		}
-	};
-};
-
-var BasicRequestHandler = function(id,requestAddress,refreshIntervalSec) {
+};var BasicRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 	
 	var observersRequestFunction = [];
 	var observersHandleDataFunction = [];
@@ -778,167 +190,99 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 			console.log("No category: \"" + category + "\" in response");
 		}
 	};
-};var ShowMore = function (frame,onClick) {
-	var element = null;
+};var TitleArea = function (title) {
+	var thisObj = this;
 	
-	return {
-		remove : function() {
-			if(element != null) {
-				element.remove();
-			}
-			
-			return this;
-		},
-		draw : function() {
-			this.remove();
-			
-			element = $("<div/>").attr({
-				"class": "showMoreClass"
-			}).append("Show More...").click(onClick);
-			
-			frame.append(element);
-			
-			return this;
+	var frame = $("<div/>").attr("class","titleArea");
+	
+	var topPart = $("<div/>").appendTo(frame);
+	var bottomPart = $("<div/>").attr("class","titleBottomPart").appendTo(frame);
+	
+	var table = $("<table/>").attr("class","titleTable").appendTo(topPart);
+	
+	var row = $("<tr>").appendTo(table);
+	var titleTextArea = $("<td>")
+		.attr("class","titleTextArea").appendTo(row);
+	var titleFunctionsArea = $("<td>")
+		.attr("class","titleFunctionsArea").appendTo(row);
+	
+	var theTitle = $("<span/>").attr({
+		"class" : "eWolfTitle"
+	}).appendTo(titleTextArea);
+	
+	var functions = {};
+	
+	this.setTitle = function (newTitle) {
+		if(newTitle != null) {
+			theTitle.html(newTitle);
 		}
 	};
-};var SideMenu = function(menu, mainFrame,topbarFrame) {
-	menu.data('menuObj', this);
-	mainFrame.data('menuObj', this);
-	var toggleButton = menu.children("#toggleButtons");
-
-	var hideBtn = toggleButton.children("#btnHideMenu")
-			.data('menuObj', this).click(function() {
-				hideMenu();
-			}),
-		showBtn = toggleButton.children("#btnShowMenu")
-			.data('menuObj', this).click(function() {
-				showMenu();
-			}),
-		pinBtn = toggleButton.children("#btnPin")
-			.data('menuObj', this).click(function() {
-				pinMenu();
-			}),
-		unpinBtn = toggleButton.children("#btnUnPin")
-			.data('menuObj', this).click(function() {
-				unpinMenu();
-			}),
-
-		menuLists = [];
 	
-	function showMenu() {
-		showBtn.hide();
-		menuIn();
-		mainFrameShrink();
-		hideBtn.show();
-	};
-
-	function hideMenu() {
-		hideBtn.hide();
-		menuOut();
-		mainFrameGrow();
-		showBtn.show();
-	};
-
-	function pinMenu() {
-		mainFrameShrink();
-		pinBtn.hide();
-		unpinBtn.show();
-		hideBtn.show();
-		menu.unbind("mouseover");
-		menu.unbind("mouseout");
-	};
-
-	function unpinMenu() {
-		mainFrameGrow();
-		unpinBtn.hide();
-		pinBtn.show();
-		hideBtn.hide();
-		menu.mouseover(function() {
-			menuIn();
-		});
-
-		menu.mouseout(function() {
-			menuOut();
-		});
-	};
-
-	function menuOut() {
-		menu.stop();
-
-		menu.animate({
-			opacity : 0.25,
-			left : '-175px',
-		}, 200, function() {
-			// Animation complete.
-		});
-	};
-
-	function menuIn() {
-		menu.stop();
-
-		menu.animate({
-			opacity : 0.7,
-			left : '-35px',
-		}, 200, function() {
-			// Animation complete.
-		});
-	};
-
-	function mainFrameGrow() {
-		mainFrame.stop();
-
-		mainFrame.animate({
-			left : '30px',
-			right : '0'
-		}, 200, function() {
-			eWolf.trigger("mainFrameResize",["sideMenu"]);
-		});
-	};
-
-	function mainFrameShrink() {
-		mainFrame.stop();
-
-		mainFrame.animate({
-			left : '170px',
-			right : '0'
-		}, 200, function() {
-			eWolf.trigger("mainFrameResize",["sideMenu"]);
-		});
+	this.setTitle(title);
+	
+	this.appendTo = function (container) {
+		frame.appendTo(container);
+		return thisObj;
 	};
 	
-	$(window).resize(function() {
-		eWolf.trigger("mainFrameResize",["window"]);
-	});
+	this.appendAtTitleTextArea = function (obj) {
+		titleTextArea.append(obj);
+		return thisObj;
+	};
 	
-	return {
-		append : function(item) {
-			menu.append(item);
-		},
-		createNewMenuList : function(id, title) {
-			var menuLst = new MenuList(this,id,title,topbarFrame)
-							.appendTo(menu);
-			menuLists.push(menuLst);
-			return menuLst;
+	this.appendAtTitleFunctionsArea = function (obj) {
+		titleFunctionsArea.append(obj);
+		return thisObj;
+	};
+	
+	this.appendAtBottomPart = function (obj) {
+		bottomPart.append(obj);
+		return thisObj;
+	};
+	
+	this.addFunction = function (functionName,functionOp) {
+		if(functions[functionName] == null) {
+			functions[functionName] = $("<input/>").attr({
+				"type": "button",
+				"value": functionName
+			}).click(functionOp).appendTo(titleFunctionsArea);
 		}
+		
+		return this;
 	};
+	
+	this.removeFunction = function (functionName) {
+		if(functions[functionName] != null) {
+			functions[functionName].remove();
+			functions[functionName] = null;
+		}
+		
+		return this;
+	};
+	
+	return this;
 };var User = function(id,name) {
 	return $("<span/>").attr({
 		"style": "width:1%;",
-		"class": "userBox"
+		"class": "selectableBox"
 	}).text(name).click(function() {
-		eWolf.trigger("search",[id]);
-	});	
+		if(id != eWolf.data("userID")) {
+			eWolf.trigger("search",[id,name]);
+		} else {
+			eWolf.trigger("select",[id]);
+		}
+	});
 };var Wolfpack = function(name) {
-	var box = $("<span/>").attr({
+	return $("<span/>").attr({
 		"style": "width:1%;",
-		"class": "userBox"
+		"class": "selectableBox"
 	}).text(name).click(function() {
 		eWolf.trigger("select",["__pack__"+name]);
-	});	
-		
-	return box;
-};var Wolfpacks = function (menu,request,applicationFrame) {		
-	var wolfpackList = [];
+	});
+};var Wolfpacks = function (menu,request,applicationFrame) {
+	var obj = this;
+	
+	var wolfpacks = {};
 	
 	var menuList = menu.createNewMenuList("wolfpacks","Wolfpacks");
 	
@@ -946,21 +290,30 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 		return {
 			 wolfpacks:{}
 		};
-	},new ResonseHandler("wolfpacks",
-			["wolfpacksList"],handleWolfpacks));
+	},new ResonseHandler("wolfpacks",["wolfpacksList"],handleWolfpacks));
 		
-	function addWolfpackApp(pack) {
-		var app = new WolfpackPage("__pack__"+pack,pack,applicationFrame);
-		menuList.addMenuItem("__pack__"+pack,pack);
-		wolfpackList.push(app);
+	this.addWolfpack = function (pack) {
+		if(wolfpacks[pack] == null) {
+			var app = new WolfpackPage("__pack__"+pack,pack,applicationFrame);
+			menuList.addMenuItem("__pack__"+pack,pack);
+			wolfpacks[pack] = app;
+		}		
+	};
+	
+	this.removeWolfpack = function(pack) {
+		if(wolfpacks[pack] != null) {
+			menuList.removeMenuItem("__pack__"+pack);
+			wolfpacks[pack].destroy();
+			wolfpacks[pack] = null;
+		}
 	};
 	
 	function handleWolfpacks(data, textStatus, postData) {
 		$.each(data.wolfpacksList,
 				function(i,pack){
-			addWolfpackApp(pack);
-		});			
-	}
+			obj.addWolfpack(pack);
+		});
+	}	
 	
 	return this;
 };
@@ -991,7 +344,7 @@ function getUserInformation() {
 		},new ResonseHandler("profile",
 					["id","name"],handleProfileData));
 	
-	new Wolfpacks(eWolf.sideMenu,request,eWolf.applicationFrame);
+	eWolf.wolfpacks = new Wolfpacks(eWolf.sideMenu,request,eWolf.applicationFrame);
 	request.requestAll();
 	
 	function handleProfileData(data, textStatus, postData) {
@@ -1017,16 +370,8 @@ function InitEWolf() {
 	
 	new SearchApp("search",eWolf.sideMenu,eWolf.applicationFrame,
 			$("#txtSearchBox"),$("#btnSearch"),$("#btnAdd"));
-	
-	
-	testZone();	
+		
 	//eWolf.trigger("select",["news_feed"]);
-}
-
-function testZone() {
-	$("#btnLoad").click(function() {
-		alert("Does nothing...");
-	});
 }/*
 filedrag.js - HTML5 File Drag & Drop demonstration
 Featured on SitePoint.com
@@ -2821,7 +2166,607 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 	};
 
 })(jQuery);//fgnass.github.com/spin.js#v1.2.5
-(function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);var AppContainer = function(id,container) {
+(function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);var MenuItem = function(id,title,messageText,topbarFrame) {
+	var isLoading = false;
+	var selected = false;	
+	var message = new MenuMessage(id+"Message","menuItemMessageClass",
+			messageText,topbarFrame);
+	
+	var listItem = $("<li/>").attr({"id": id});
+		
+	var aObj = $("<a/>").appendTo(listItem);
+	
+	var titleBox = $("<span/>").attr({
+		"id": id,
+		"style": "width:1%;"
+	}).appendTo(aObj);
+	
+	var refreshContainer = $("<div/>").attr({
+		"class": "refreshButtonArea",
+		"id": id,
+	})	.appendTo(aObj).hide();
+	
+	var loadingContainer = $("<div/>").attr({
+		"class": "refreshButtonArea",
+		"id": id,
+	})	.appendTo(aObj).hide();
+	
+	var refresh = $("<img/>").attr({
+		"id": id,
+		"src": "refresh.svg",
+		"class": "refreshButton"
+	})	.appendTo(refreshContainer);
+	
+	listItem.click(function() {
+		if(selected == false) {
+			eWolf.trigger("select",[id]);
+		}	
+	});
+
+	refresh.click(function() {
+		if(isLoading == false) {
+			eWolf.trigger("refresh."+id,[id]);
+		}	
+	});
+	
+	listItem.mouseover(function() {
+		message.show();
+	});
+
+	listItem.mouseout(function() {
+		message.hide();
+	});
+	
+	function updateView() {
+		var w = 145;
+		if(selected && !isLoading) {
+			refreshContainer.show();
+			w = w - 20;
+		} else {
+			refreshContainer.hide();
+		}
+		
+		if(isLoading) {
+			loadingContainer.show();
+			w = w - 20;
+		} else {
+			loadingContainer.hide();
+		}
+		
+		titleBox.text(title).shorten({width:w});
+	}	
+	
+	function select() {
+		aObj.addClass("currentMenuSelection");
+		selected = true;
+		updateView();
+	}
+
+	function unselect() {
+		aObj.removeClass("currentMenuSelection");
+		selected = false;
+		updateView();
+	}
+	
+	eWolf.bind("select."+id,function(event,eventId) {
+		if(id == eventId) {
+			select();
+		} else {
+			unselect();
+		}			
+	});
+	
+	eWolf.bind("loading."+id,function(event,eventId) {
+		if(id == eventId) {
+			isLoading = true;
+			updateView();
+			loadingContainer.spin(menuItemSpinnerOpts);
+		}	
+	});
+	
+	eWolf.bind("loadingEnd."+id,function(event,eventId) {
+		if(id == eventId) {
+			isLoading = false;
+			updateView();
+			loadingContainer.data('spinner').stop();
+		}	
+	});
+	
+	return {
+		appendTo: function(place) {
+			listItem.appendTo(place);
+			updateView();
+			return this;
+		},
+		getId : function() {
+			return id;
+		},
+		renameTitle : function(newTitle) {
+			title = newTitle;
+			updateView();
+		},
+		destroy: function() {
+			message.destroy();
+			listItem.remove();
+			delete this;
+		}
+	};
+	
+	return this;
+};
+
+var menuItemSpinnerOpts = {
+		  lines: 10, // The number of lines to draw
+		  length: 4, // The length of each line
+		  width: 2, // The line thickness
+		  radius: 3, // The radius of the inner circle
+		  rotate: 0, // The rotation offset
+		  color: '#000', // #rgb or #rrggbb
+		  speed: 0.8, // Rounds per second
+		  trail: 60, // Afterglow percentage
+		  shadow: false, // Whether to render a shadow
+		  hwaccel: false, // Whether to use hardware acceleration
+		  className: 'spinner', // The CSS class to assign to the spinner
+		  zIndex: 2e9, // The z-index (defaults to 2000000000)
+		  top: 0, // Top position relative to parent in px
+		  left: 0 // Left position relative to parent in px
+		};var MenuList = function(menu,id,title,topbarFrame) {
+	var items = [];
+	
+	var frame = $("<div/>").attr({
+		"class" : "menuList",
+		"id" : id+"Frame"
+	}).hide();
+	
+	$("<div/>").attr({
+		"class" : "menuListTitle",
+		"id" : id+"Title"
+	})	.append(title)
+		.appendTo(frame);
+
+	var list = $("<ul/>").attr({
+		"id" : id
+	})	.appendTo(frame);
+	
+	return {
+		addMenuItem : function(id,title) {
+			if(items[id] == null) {
+				var menuItem = new MenuItem(id,title,
+						"Click to show "+title.toLowerCase(),topbarFrame).appendTo(list);
+				
+				items[id] = menuItem;
+				
+				if(Object.keys(items).length > 0) {
+					frame.show();
+				}
+			} else {
+				console.log("[Menu Error] Item with id: "+ id +" already exist");
+			}
+			
+		},
+		removeMenuItem: function(removeId) {
+			if(items[removeId] != null) {
+				items[removeId].destroy();
+				delete items[removeId];
+			}
+			
+			if(Object.keys(items).length <= 0) {
+				frame.hide();
+			}
+		},
+		renameMenuItem : function(id,newTitle) {
+			if(items[id] != null) {
+				items[id].renameTitle(newTitle);
+			}
+		},
+		appendTo : function(container) {
+			frame.appendTo(container);
+			return this;
+		}
+	};
+};var MenuMessage = function(id,itemclass,text,container) {
+	var message = null;
+	
+	return {
+		show : function() {
+			if(message == null) {
+				message = $("<div/>").attr({
+					"id": id,
+					"class": itemclass
+				}).text(text).appendTo(container);
+			} else {
+				message.show();
+			}
+		},
+		hide : function() {
+			if(message != null) {
+				message.remove();
+				message = null;
+			}
+		},
+		destroy : function() {
+			if(message != null) {
+				message.remove();
+				message = null;
+				delete this;
+			}
+		}
+	};
+};
+
+var SideMenu = function(menu, mainFrame,topbarFrame) {
+	menu.data('menuObj', this);
+	mainFrame.data('menuObj', this);
+	var toggleButton = menu.children("#toggleButtons");
+
+	var hideBtn = toggleButton.children("#btnHideMenu")
+			.data('menuObj', this).click(function() {
+				hideMenu();
+			}),
+		showBtn = toggleButton.children("#btnShowMenu")
+			.data('menuObj', this).click(function() {
+				showMenu();
+			}),
+		pinBtn = toggleButton.children("#btnPin")
+			.data('menuObj', this).click(function() {
+				pinMenu();
+			}),
+		unpinBtn = toggleButton.children("#btnUnPin")
+			.data('menuObj', this).click(function() {
+				unpinMenu();
+			}),
+
+		menuLists = [];
+	
+	function showMenu() {
+		showBtn.hide();
+		menuIn();
+		mainFrameShrink();
+		hideBtn.show();
+	};
+
+	function hideMenu() {
+		hideBtn.hide();
+		menuOut();
+		mainFrameGrow();
+		showBtn.show();
+	};
+
+	function pinMenu() {
+		mainFrameShrink();
+		pinBtn.hide();
+		unpinBtn.show();
+		hideBtn.show();
+		menu.unbind("mouseover");
+		menu.unbind("mouseout");
+	};
+
+	function unpinMenu() {
+		mainFrameGrow();
+		unpinBtn.hide();
+		pinBtn.show();
+		hideBtn.hide();
+		menu.mouseover(function() {
+			menuIn();
+		});
+
+		menu.mouseout(function() {
+			menuOut();
+		});
+	};
+
+	function menuOut() {
+		menu.stop();
+
+		menu.animate({
+			opacity : 0.25,
+			left : '-175px',
+		}, 200, function() {
+			// Animation complete.
+		});
+	};
+
+	function menuIn() {
+		menu.stop();
+
+		menu.animate({
+			opacity : 0.7,
+			left : '-35px',
+		}, 200, function() {
+			// Animation complete.
+		});
+	};
+
+	function mainFrameGrow() {
+		mainFrame.stop();
+
+		mainFrame.animate({
+			left : '30px',
+			right : '0'
+		}, 200, function() {
+			eWolf.trigger("mainFrameResize",["sideMenu"]);
+		});
+	};
+
+	function mainFrameShrink() {
+		mainFrame.stop();
+
+		mainFrame.animate({
+			left : '170px',
+			right : '0'
+		}, 200, function() {
+			eWolf.trigger("mainFrameResize",["sideMenu"]);
+		});
+	};
+	
+	$(window).resize(function() {
+		eWolf.trigger("mainFrameResize",["window"]);
+	});
+	
+	return {
+		append : function(item) {
+			menu.append(item);
+		},
+		createNewMenuList : function(id, title) {
+			var menuLst = new MenuList(this,id,title,topbarFrame)
+							.appendTo(menu);
+			menuLists.push(menuLst);
+			return menuLst;
+		}
+	};
+};var GenericItem = function(senderID,senderName,timestamp,mail,
+		listClass,msgBoxClass,preMessageTitle,allowShrink) {
+		
+	var itemSpan = $("<span/>");
+	
+	var listItem = $("<li/>").attr({
+		"class": listClass
+	}).appendTo(itemSpan);
+	
+	var preMessageBox = $("<span/>").attr({
+		"style": "width:1%;",
+		"class": "preMessageBox"
+	}).append(preMessageTitle).appendTo(listItem);	
+	
+	var isOnSender = false;
+	var senderBox = User(senderID,senderName)
+		.appendTo(listItem)
+		.hover(function() {
+			isOnSender = true;
+		}, function () {
+			isOnSender = false;
+		});
+	
+	
+	var timestampBox = TimestampBox(timestamp).appendTo(listItem);
+		
+	var itsMessage = $("<li/>").attr({
+		 "class": msgBoxClass
+	 })	.append(MailItem(JSON.parse(mail)))
+	 	.insertAfter(listItem);
+	
+	if(allowShrink) {
+		itsMessage.hide();
+		
+		listItem.click(function() {		
+			if(!isOnSender){
+				itsMessage.toggle();
+			}				
+		});
+	}	
+	
+	function updateView() {
+		var w = listItem.width()-timestampBox.width()-preMessageBox.width()-20;		
+		senderBox.text(senderName).shorten({width:w});
+	}	
+	
+	eWolf.bind("mainFrameResize", function(event,eventId) {
+		updateView();
+	});
+	
+	return {
+		appendTo: function(place) {
+			itemSpan.appendTo(place);
+			updateView();
+			return this;
+		},
+		prependTo: function(place) {
+			itemSpan.prependTo(place);
+			updateView();
+			return this;
+		},
+		insertAfter: function(place) {
+			itemSpan.insertAfter(place);
+			updateView();
+			return this;
+		},
+		getListItem : function() {
+			return itemSpan;
+		},
+		destroy: function() {
+			message.destroy();
+			itemSpan.remove();
+			delete this;
+		}
+	};
+	
+	return this;
+};var GenericMailList = function(mailType,request,serverSettings,
+		listClass,msgBoxClass,preMessageTitle,allowShrink) {
+	var obj = this;
+	
+	var newestDate = null;
+	var oldestDate = null;
+	
+	var lastItem = null;
+	
+	var frame = $("<span/>");
+	
+	var list = $("<ul/>").attr({
+		"class" : "messageList"
+	}).appendTo(frame);
+	
+	this.updateFromServer = function (getOlder) {
+		var data = {};
+		$.extend(data,serverSettings);
+		
+		if(getOlder && newestDate != null && oldestDate != null) {
+			data.olderThan = oldestDate-1;
+		} else if(newestDate != null) {
+			data.newerThan = newestDate+1;
+		}		
+		
+		var postData = {};
+		postData[mailType] = data;
+		
+		return postData;
+	};
+	
+	this.addItem = function (senderID,senderName,timestamp,mail) {
+		 var item = new GenericItem(senderID,senderName,timestamp,mail,
+				 listClass,msgBoxClass,preMessageTitle,allowShrink);
+		 
+		var appended = false;
+		 
+		if(oldestDate == null || timestamp - oldestDate < 0) {
+			 oldestDate = timestamp;
+			 item.appendTo(list);
+			 appended = true;
+		}
+		
+		if(newestDate == null || timestamp - newestDate > 0) {
+			newestDate = timestamp;
+			if(!appended) {
+				item.prependTo(list);
+				appended = true;
+			}
+		}
+		
+		if(!appended) {
+			item.insertAfter(lastItem.getListItem());
+		}
+		
+		lastItem = item;
+		
+		return item;
+	};
+	
+	this.appendTo = function (canvas) {
+		frame.appendTo(canvas);
+		return this;
+	};
+
+	var responseHandler = new ResonseHandler(mailType,
+			["mailList"],handleNewData);
+	request.register(this.updateFromServer ,responseHandler);
+	
+	var showMore = new ShowMore(frame,function() {
+		request.request(obj.updateFromServer (true),responseHandler);
+	}).draw();
+	
+	function handleNewData(data, textStatus, parameters) {
+		$.each(data.mailList, function(j, mailItem) {
+			obj.addItem(mailItem.senderID,mailItem.senderName,
+					mailItem.timestamp, mailItem.mail);
+		});
+		
+		if (parameters[mailType].newerThan == null &&
+				data.mailList.length < parameters[mailType].maxMessages) {
+			showMore.remove();
+		}
+	}	
+	
+	return this;
+};
+
+var NewsFeedList = function (request,serverSettings) {
+	$.extend(serverSettings,{maxMessages:2});
+	
+	return new GenericMailList("newsFeed",request,serverSettings,
+			"postListItem","postBox","",false);
+};
+
+var InboxList = function (request,serverSettings) {	
+	$.extend(serverSettings,{maxMessages:2});
+	
+	return new GenericMailList("inbox",request,serverSettings,
+			"messageListItem","messageBox", ">> ",true);
+};var MailItem = function(item) {
+	var canvas = $("<div/>").append(item.text);
+	
+	if(item.attachment != null) {
+		var imageCanvas = $("<div/>");
+
+		var attachCanvas = $("<ul/>");
+		
+		$.each(item.attachment, function(i, attach) {
+			if(attach.contentType.substring(0,5) == "image") {
+				var aObj = $("<a/>").attr({
+					href: attach.path,
+					target: "_TRG_"+attach.filename
+				}).appendTo(imageCanvas);
+				
+				$("<img/>").attr({
+					"src": attach.path,
+					style: "padding:5px 5px 5px 5px; height:130px;"
+				}).appendTo(aObj);				
+				
+				
+				$("<em/>").append("&nbsp;").appendTo(imageCanvas);
+			} else {
+				var li = $("<li/>").appendTo(attachCanvas);
+				
+				$("<a/>").attr({
+					href: attach.path,
+					target: "_TRG_"+attach.filename
+				}).append(attach.filename).appendTo(li);
+			}
+		});
+		
+		if(! imageCanvas.is(":empty")) {
+			imageCanvas.appendTo(canvas);
+		}
+		
+		if(! attachCanvas.is(":empty")) {
+			canvas.append("Attachments:");
+			attachCanvas.appendTo(canvas);
+		}
+	}	
+	
+	return canvas;
+};
+var ShowMore = function (frame,onClick) {
+	var element = null;
+	
+	return {
+		remove : function() {
+			if(element != null) {
+				element.remove();
+			}
+			
+			return this;
+		},
+		draw : function() {
+			this.remove();
+			
+			element = $("<div/>").attr({
+				"class": "showMoreClass"
+			}).append("Show More...").click(onClick);
+			
+			frame.append(element);
+			
+			return this;
+		}
+	};
+};var TimestampBox = function(timestamp) {
+	var itsTime = new Date(timestamp);
+	
+	return $("<span/>").attr({
+		"class": "timestampBox"
+	}).append(itsTime.toString(dateFormat));
+};
+
+var dateFormat = "dd/MM/yyyy (HH:mm)";var AppContainer = function(id,container) {
 		var selected = false;
 		var needRefresh = true;
 		
@@ -2832,25 +2777,30 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 			.hide(0);
 		
 		eWolf.bind("select."+id,function(event,eventId) {
-			if(id == eventId) {				
-				frame.show(0);
-				frame.animate({
-					opacity : 1,
-				}, 700, function() {
-				});
+			if(id == eventId) {	
+				if(!selected) {
+					frame.show(0);
+					frame.animate({
+						opacity : 1,
+					}, 700, function() {
+					});
+					
+					selected = true;
+				}
 				
-				selected = true;
 				if(needRefresh) {
 					eWolf.trigger("refresh",[id]);
 				}
 			} else {
-				frame.animate({
-					opacity : 0,
-				}, 300, function() {
-					frame.hide(0);
-				});
-				
-				selected = false;
+				if(selected) {
+					frame.animate({
+						opacity : 0,
+					}, 300, function() {
+						frame.hide(0);
+					});
+					
+					selected = false;
+				}				
 			}			
 		});
 		
@@ -2891,18 +2841,12 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 	var request = new PostRequestHandler(id,"/json",60)
 		.listenToRefresh();
 	
-	var titleDiv = $("<div/>").attr({
-		"class" : "eWolfTitle"
-	})	.append("Inbox")
-		.appendTo(frame);
-	
-	$("<input/>").attr({
-		"type": "button",
-		"value": "New Message...",
-		"class": "newMessageBotton"
-	}).appendTo(titleDiv).click(function() {
-		new NewMessageBox("__newmessage__"+id,frame);
-	});
+	new TitleArea("Inbox")
+		.appendTo(frame)
+		.addFunction("New Message...", function() {
+			var box = new NewMessageBox(id,applicationFrame);
+			box.select();
+		});
 	
 	new InboxList(request,{}).appendTo(frame);
 	
@@ -2920,7 +2864,155 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 		}
 	};
 };
+var NewMessageBox = function(id,applicationFrame,sendTo) {
+	var obj = this;
+	var thisID = "__newmessage__"+id;
+	
+	var appContainer = new AppContainer(thisID,applicationFrame);
+	var frame = appContainer.getFrame();
+	
+	var request = new PostRequestHandler(thisID,"/json",0);
+	
+	var base = $("<table/>").appendTo(frame);
+	
+	var idRaw = $("<tr/>").appendTo(base);
+	$("<td/>").append("Send to:").appendTo(idRaw);
+	
+	var userIdText = $("<input/>").attr({
+		"id": "sendToId",
+		"type": "text",
+		"placeholder": "Send to (user id)",
+		"style": "width:300px !important;"
+	});
+	
+	$("<td/>").append(userIdText).appendTo(idRaw);
+	
+	var msgRaw = $("<tr/>").appendTo(base);
+	$("<td/>").attr("style","vertical-align:text-top;").append("Message:").appendTo(msgRaw);
+	
+	var messageText = $("<textarea/>").attr({
+		"id": "textileMessage",
+		"placeholder": "Your message",
+		"style": "width:300px !important;height:300px  !important;"
+	});
+	
+	$("<td/>").append(messageText).appendTo(msgRaw);
+	
+	var attacheRaw = $("<tr/>").appendTo(base);
+	$("<td/>").attr("style","vertical-align:text-top;").append("Attachment:").appendTo(attacheRaw);
+	
+	var uploaderArea = $("<td/>").appendTo(attacheRaw);
+	
+	var files = new filedrag(uploaderArea);
+
+	var btnRaw = $("<tr/>").appendTo(base);
+	
+	$("<td/>").appendTo(btnRaw);
+	var btnBox = $("<td/>").appendTo(btnRaw);
+	
+	$("<input/>").attr({
+		"id": "sendMessageBtn",
+		"type": "button",
+		"value": "Send"
+	}).appendTo(btnBox).click(function() {
+		
+//		var uploader = new qq.FileUploaderBasic({
+//		    // path to server-side upload script
+//		    action: '/sfsupload',
+//		    params: {
+//		    	wolfpacks: "someWolfpack"
+//		    }
+//		});
+//		
+//		uploader._uploadFileList(files.getFiles());
+		
+		var msg = messageText.val().replace(/\n/g,"<br>");
+		var mailObject = {
+				text: msg,
+				attachment: [{
+					filename: "testfile.doc",
+					contentType: "document",
+					path: "http://www.google.com"
+				},
+				{
+					filename: "image.jpg",
+					contentType: "image/jpeg",
+					path: "https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"					
+				}]
+		};
+		
+		console.log(JSON.stringify(mailObject));
+		
+		request.request({
+			sendMessage: {
+				userID: userIdText.val(),
+				message: JSON.stringify(mailObject)
+			}
+		  },handleResponse);
+	});
+	
+	btnBox.append("&nbsp;");
+	
+	$("<input/>").attr({
+		"id": "sabortBtn",
+		"type": "button",
+		"value": "Cancel"
+	}).appendTo(btnBox).click(function() {
+		obj.destroy();
+	});
+	
+	var errorRaw = $("<tr/>").appendTo(base);
+	
+	$("<td/>").appendTo(errorRaw);
+	var errorBox = $("<td/>").appendTo(errorRaw);
+	
+	var errorMessage = $("<span/>").attr({
+		"style": "color:red;"
+	}).appendTo(errorBox);
+	
+	function handleResponse(data,postData) {
+		if (data.sendMessage != null) {
+			if(data.sendMessage.result == "success") {
+				obj.destroy();
+			} else {
+				errorMessage.html(data.sendMessage.result);
+			}
+		} else {
+			console.log("No sendMessage parameter in response");
+		}		
+	}
+	
+	eWolf.bind("refresh",function(event,eventID) {
+		if(eventID == thisID) {
+			if(sendTo != null) {
+				userIdText.attr("value",sendTo);
+				window.setTimeout(function () {
+					messageText.focus();
+				}, 0);				
+			} else {
+				window.setTimeout(function () {
+					userIdText.focus();
+				}, 0);
+			}
+		}		
+	});
+	
+	this.select = function() {
+		eWolf.trigger("select",[thisID]);		
+	};
+	
+	this.destroy = function() {
+		eWolf.trigger("select",[id]);
+		appContainer.destroy();
+		delete obj;
+	};
+
+	return this;
+};
+
 var Profile = function (id,name,applicationFrame) {
+	var obj = this;
+	
 	var appContainer = new AppContainer(id,applicationFrame);
 	var frame = appContainer.getFrame();
 	
@@ -2950,25 +3042,52 @@ var Profile = function (id,name,applicationFrame) {
 		request.request(getProfileData(),handleProfileResonse);
 	}		
 	
-	var title = $("<div/>").appendTo(frame);
+	var topTitle = new TitleArea(name).appendTo(frame);
 	
-	var nameTitle = $("<span/>").attr({
-		"class" : "eWolfTitle"
-	}).appendTo(title);
+	if(id != eWolf.data("userID")) {
+		topTitle.addFunction("Send message...", function (event) {
+			var box = new NewMessageBox(id,applicationFrame,id);
+			box.select();
+		});
+	}
 	
-	title.append("&nbsp;");
+	var idRow = $("<span/>").attr("class","idBox");
+	topTitle.appendAtTitleTextArea("&nbsp;");
+	topTitle.appendAtTitleTextArea(idRow);
 	
-	var idRow = $("<span/>").attr({
-		"class": "idBox"
-	}).appendTo(title);
+	var wolfpacksContainer = $("<span/>").attr("class","wolfpacksBox").hide();	
+	topTitle.appendAtBottomPart(wolfpacksContainer);
 	
-	title.append("&nbsp;&nbsp;&nbsp; ");
-	
-	var wolfpacksContainer = $("<span/>").attr({
-		"class":"wolfpacksBox"
-	}).appendTo(title);	
-	
+	wolfpacksContainer.append("Wolfpakcs: ");	
 	var wolfpackslist = null;
+	
+	function updateWolfpacksView(newWolfpackslist) {
+		if (wolfpackslist != null) {
+			wolfpackslist.remove();
+		}
+		
+		if(newWolfpackslist == null) {
+			wolfpacksContainer.hide();
+			topTitle.addFunction("Add to wolfpack...", function () {
+				// TODO: add to any wolfpack (not just wall-readers) 
+				request.request({
+					addWolfpackMember: {
+						wolfpackName: "wall-readers",
+						userID: id
+					}
+				},new ResonseHandler("addWolfpackMember",
+						[],function (data, textStatus, postData) {
+					request.requestAll();
+					eWolf.trigger("needRefresh.__pack__"+postData.addWolfpackMember.wolfpackName);
+				}));
+			});
+		} else {
+			wolfpackslist = newWolfpackslist;
+			wolfpacksContainer.append(wolfpackslist);
+			wolfpacksContainer.show();
+			topTitle.removeFunction("Add to wolfpack...");
+		}		
+	}	
 	
 	new NewsFeedList(request,newsFeedObj).appendTo(frame);
 	
@@ -2976,7 +3095,7 @@ var Profile = function (id,name,applicationFrame) {
 	var wolfpackData = null;
 	
 	function handleProfileData(data, textStatus, postData) {
-		nameTitle.html(new User(data.id,data.name));
+		topTitle.setTitle(new User(data.id,data.name));
 		idRow.html(data.id);
 		
 		name = data.name;
@@ -2987,18 +3106,20 @@ var Profile = function (id,name,applicationFrame) {
 	  }
 	
 	function handleWolfpacksData(data, textStatus, postData) {		
-		if(wolfpackslist != null) {
-			 wolfpackslist.remove();
-		 }
+		var newWolfpackslist = null;
 		 
-		 wolfpackslist = $("<span/>").appendTo(wolfpacksContainer);
+		if(data.wolfpacksList.length > 0) {
+			newWolfpackslist = $("<span/>").appendTo(wolfpacksContainer);
+			 
+			 $.each(data.wolfpacksList,function(i,pack) {
+				 newWolfpackslist.append(new Wolfpack(pack));
+				 if(i != data.wolfpacksList.length-1) {
+					 newWolfpackslist.append(", ");
+				 }
+			 });
+		}	 
 		 
-		 $.each(data.wolfpacksList,function(i,pack) {
-			 wolfpackslist.append(new Wolfpack(pack));
-			 if(i != data.wolfpacksList.length-1) {
-				 wolfpackslist.append(", ");
-			 }
-		 });				
+		updateWolfpacksView(newWolfpackslist);
 	  }
 	
 	function getProfileData() {		
@@ -3013,56 +3134,62 @@ var Profile = function (id,name,applicationFrame) {
 		  };
 	}
 	
-	return {
-		getID : function() {
-			if(profileData != null) {
-				return profileData.id;
-			} else {
-				return id;
-			}			
-		},
-		getName : function() {
-			if(profileData != null) {
-				return profileData.name;
-			} else {
-				return id;
-			}				
-		},
-		getWolfpacks : function() {
-			if(wolfpackData != null) {
-				return wolfpackData.wolfpacksList;
-			} else {
-				return [];
-			}			
-		},
-		isSelected : function() {
-			return appContainer.isSelected();
-		},
-		onReceiveName: function(nameHandler) {
-			if(name != null) {
-				nameHandler(name);
-			} else {
-				waitingForName.push(nameHandler);
-			}
-			
-			return this;
-		},		
-		destroy : function() {
-			eWolf.unbind("refresh."+id);
-			appContainer.destroy();
-			delete this;
-		}
+	this.getID = function() {
+		if(profileData != null) {
+			return profileData.id;
+		} else {
+			return id;
+		}			
 	};
+	
+	this.getName = function() {
+		if(profileData != null) {
+			return profileData.name;
+		} else {
+			return id;
+		}				
+	};
+	
+	this.getWolfpacks = function() {
+		if(wolfpackData != null) {
+			return wolfpackData.wolfpacksList;
+		} else {
+			return [];
+		}			
+	};
+	
+	this.isSelected = function() {
+		return appContainer.isSelected();
+	};
+	
+	this.onReceiveName = function(nameHandler) {
+		if(name != null) {
+			nameHandler(name);
+		} else {
+			waitingForName.push(nameHandler);
+		}
+		
+		return obj;
+	};
+	
+	this.destroy = function() {
+		eWolf.unbind("refresh."+id);
+		appContainer.destroy();
+		delete obj;
+	};
+	
+	return this;
 };
-var SearchApp = function(id,menu,applicationFrame,query,searchBtn,addBtn) {
+var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 	var menuList = menu.createNewMenuList("search","Searches");
 	var apps = new Object();
 	var lastSearch = null;
 	
-	function addSearchMenuItem(key) {
-		var app = new Profile(key,null,applicationFrame)
-			.onReceiveName(function(name) {
-				menuList.addMenuItem(key,name);
+	function addSearchMenuItem(key,name) {
+		menuList.addMenuItem(key,name);
+		var app = new Profile(key,name,applicationFrame)
+			.onReceiveName(function(newName) {
+				menuList.renameMenuItem(key,newName);
 				eWolf.trigger("select",[key]);
 			});
 		apps[key] = app;		
@@ -3072,6 +3199,7 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn,addBtn) {
 		if(apps[key] != null) {
 			apps[key].destroy();
 			delete apps[key];
+			apps[key] = null;
 			menuList.removeMenuItem(key);
 		}
 	}
@@ -3083,64 +3211,71 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn,addBtn) {
 		}
 	}
 	
-	function searchUser(key) {
-		if(key != "") {
-			if(key != eWolf.data("userID")) {
+	function searchUser(key,name) {
+		if(key != null && key != "") {
+			if(key == eWolf.data("userID") || apps[key] != null) {
+				eWolf.trigger("select",[key]);
+			} else {
 				removeLastSearch();
 				lastSearch = key;
-				addSearchMenuItem(key);
-			}
-		}	
+				if(name == "") {
+					name = null;
+				}
+				addSearchMenuItem(key,name);
+			}			
+		}
 	}
 	
-	addBtn.click(function() {
-		var key = query.val();
-		if(key != "") {
-			if(key != eWolf.data("userID")) {
-				addSearchMenuItem(key,"Show "+key);
-			}
-			eWolf.trigger("select",[key]);
-		}
-	});
+//	addBtn.click(function() {
+//		var key = query.val();
+//		if(key != "") {
+//			if(key != eWolf.data("userID")) {
+//				addSearchMenuItem(key,"Show "+key);
+//			}
+//			eWolf.trigger("select",[key]);
+//		}
+//	});
 	
 	searchBtn.click(function() {
 		var key = query.val();
-		searchUser(key);	
+		searchUser(key,"Search: "+key);	
 	});
 	
 	eWolf.bind("select."+id,function(event,eventId) {
-		if(eventId != lastSearch) {
+		if(eventId != lastSearch && eventId != "__newmessage__"+lastSearch) {
 			removeLastSearch();
 		}
 	});
 	
 	query.keyup(function(event){
 	    if(event.keyCode == 13 && query.val() != ""){
-	    	if(event.shiftKey) {
-	    		addBtn.click();
-	    	} else {
-	    		searchBtn.click();
-	    	}
+//	    	if(event.shiftKey) {
+//	    		addBtn.click();
+//	    	} else {
+//	    		searchBtn.click();
+//	    	}
+	    	
+	    	searchBtn.click();
 	    }
 	    
 	    if(query.val() == "") {
 	    	searchBtn.hide(200);
-	    	addBtn.hide(200);
+//	    	addBtn.hide(200);
 	    } else {
 	    	searchBtn.show(200);
-	    	addBtn.show(200);
+//	    	addBtn.show(200);
 	    }
 	});
 		
 	
-	eWolf.bind("search",function(event,key) {
-		searchUser(key);
+	eWolf.bind("search",function(event,key,name) {
+		searchUser(key,name);
 	});
 
 	
 	return {
-		search: function (key) {
-			searchUser(key);
+		search: function (key,name) {
+			searchUser(key,name);
 		}
 	};
 };var WolfpackPage = function (id,wolfpackName,applicationFrame) {
@@ -3153,22 +3288,39 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn,addBtn) {
 				new ResonseHandler("wolfpackMembers",
 						["membersList"],handleWolfpacksMembersData));
 		
-	var title = $("<div/>").appendTo(frame);
+	var topTitle = new TitleArea(new Wolfpack(wolfpackName))
+		.appendTo(frame)
+		.addFunction("Post", function() {
+			// TODO: post on wolfpack
+		})
+		.addFunction("Add member...", function() {
+			// TODO: add member
+		});
 	
-	$("<span/>").attr({
-		"class" : "eWolfTitle"
-	}).append(new Wolfpack(wolfpackName)).appendTo(title);
+	var members = $("<span/>").attr("class","wolfpacksBox").hide();
+	topTitle.appendAtBottomPart(members);
 	
-	title.append("&nbsp;&nbsp;&nbsp; ");
-	
-	var members = $("<span/>").appendTo(title);	
+	members.append("Members: ");
+	var membersList = null;
+		
+	function updateMembersView(newMembersList) {
+		if (membersList != null) {
+			membersList.remove();
+		}
+		
+		if(newMembersList == null) {
+			members.hide();
+		} else {
+			membersList = newMembersList;
+			members.append(membersList);
+			members.show();
+		}		
+	}	
 	
 	new NewsFeedList(request,{
 		newsOf:"wolfpack",
 		wolfpackName:wolfpackName
-	}).appendTo(frame);
-	
-	var membersList = null;
+	}).appendTo(frame);	
 	
 	function getWolfpacksMembersData() {
 		return {
@@ -3181,18 +3333,20 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn,addBtn) {
 	function handleWolfpacksMembersData(data, textStatus, postData) {
 		list = data.membersList;
 
-		if (membersList != null) {
-			membersList.remove();
-		}
+		var newMembersList = null;
+		
+		if(list.length > 0) {
+			newMembersList = $("<span/>");
 
-		membersList = $("<span/>").appendTo(members);
-
-		$.each(list, function(i, member) {
-			membersList.append(new User(member.id, member.name));
-			if (i != list.length - 1) {
-				membersList.append(", ");
-			}
-		});
+			$.each(list, function(i, member) {
+				newMembersList.append(new User(member.id, member.name));
+				if (i != list.length - 1) {
+					newMembersList.append(", ");
+				}
+			});
+		}		
+		
+		updateMembersView(newMembersList);
 	}
 	
 	return {

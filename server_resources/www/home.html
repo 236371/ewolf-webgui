@@ -2,7 +2,7 @@
 <html>
 
 <head>
-
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 <link href="/external/jquery/jquery-ui.css" rel="stylesheet" type="text/css"/>
 <script src="/external/jquery/jquery.min.js"></script>
 <script src="/external/jquery/jquery-ui.min.js"></script>
@@ -26,18 +26,22 @@
 			&nbsp;&nbsp; eWolf &nbsp; &nbsp;
 		</div>
 		<div class="title-bar">
-			<input id="btnLoad" type="button" value="Load" />
 			<input id="txtSearchBox" class="search-input" type="text" placeholder="Search" autocomplete="off" spellcheck="false"/>
 			<input id="btnSearch" type="button" value="Search" style="display:none;" />
-			<input id="btnAdd" type="button" value="Add" style="display:none;" />
 		</div>		
 	</div>
 	
 	<!----------------------- Side Menu ---------------------------->
 	<div id="menu" class="sideMenu shadow-bar">
 		<div id="toggleButtons" class="toggleButtons">
-			<input id="btnUnPin" type="button" value="Un Pin" />
-			<input id="btnPin" type="button" value="Pin" style="display:none;" />
+			<input id="btnUnPin" type="image" src="pin.png" width="24px" 
+				style="margin-right:1px;"
+				onmouseover="this.src='unpin.png'"
+				onmouseout="this.src='pin.png'" />
+			<input id="btnPin" type="image" src="unpin.png" width="24px"
+				style="display:none;margin-right:1px;"
+				onmouseover="this.src='pin.png'"
+				onmouseout="this.src='unpin.png'"/>
 			<input id="btnHideMenu" type="button" value="<" class="toggleButton" />
 			<input id="btnShowMenu" type="button" value=">" class="toggleButton" style="display:none;"/>
 		</div>
