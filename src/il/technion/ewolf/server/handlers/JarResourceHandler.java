@@ -16,6 +16,7 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
 public class JarResourceHandler implements HttpRequestHandler {
+	private static final String PAGE_404 = "/404.html";
 
 	@Override
 	public void handle(HttpRequest request, HttpResponse response,
@@ -25,20 +26,31 @@ public class JarResourceHandler implements HttpRequestHandler {
 		//TODO move adding general headers to response intercepter
 		response.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
 		
+		if (reqUri.contains("..")) {
+			response.setStatusCode(HttpStatus.SC_FORBIDDEN);
+			return;
+		}
+
 		if(reqUri.equals("/")) {
 			reqUri = "/home.html";
 		}
 		
-		String path = "/www" + reqUri; // TODO prevent directory traversing
+		String path = "/www" + reqUri;
 		InputStream is = getClass().getResourceAsStream(path);
 
 		if (is==null) {
 			response.setStatusCode(HttpStatus.SC_NOT_FOUND);
-			return;
+			path = "/www" + PAGE_404;
+			is = getClass().getResourceAsStream(path);
+			if (is == null) return;
 		}
 		
-		ByteArrayEntity bae = new ByteArrayEntity(IOUtils.toByteArray(is));
+		setResponseEntity(response, is);
 		response.addHeader(HTTP.CONTENT_TYPE, ServerResources.getFileTypeMap().getContentType(path));
+	}
+
+	private void setResponseEntity(HttpResponse response, InputStream is) throws IOException {
+		ByteArrayEntity bae = new ByteArrayEntity(IOUtils.toByteArray(is));
 		response.setEntity(bae);
 	}
 }
