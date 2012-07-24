@@ -305,6 +305,7 @@ h1, h2
 
 .toggleButton {
 	max-width:25px;
+	height:20px !important;
 }
 
 .toggleButtons {

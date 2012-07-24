@@ -1,4 +1,34 @@
-var Loading = function(indicator) {
+var CommaSeperatedList = function(title) {
+	var list = $("<span/>")
+		.attr("class","wolfpacksBox")
+		.append(title+": ")
+		.hide();
+	
+	var items = null;
+	
+	this.addItem = function (item) {
+		if(items == null) {
+			items = $("<span/>").appendTo(list);
+			list.show();
+		} else {
+			items.append(", ");
+		}
+		
+		items.append(item);
+	};
+	
+	this.removeAll = function() {
+		if(items != null) {
+			items.remove();
+			items = null;
+			list.hide();
+		}		
+	};
+	
+	this.getList = function () {
+		return list;
+	};
+};var Loading = function(indicator) {
 	var loadingCount = 0;
 	
 	function startLoading() {
@@ -293,9 +323,14 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 	},new ResonseHandler("wolfpacks",["wolfpacksList"],handleWolfpacks));
 		
 	this.addWolfpack = function (pack) {
-		if(wolfpacks[pack] == null) {
+		if(wolfpacks[pack] == null) {		
+			if(pack != "wall-readers") {
+				menuList.addMenuItem("__pack__"+pack,pack);
+			}
+			
 			var app = new WolfpackPage("__pack__"+pack,pack,applicationFrame);
-			menuList.addMenuItem("__pack__"+pack,pack);
+			
+			
 			wolfpacks[pack] = app;
 		}		
 	};
@@ -313,6 +348,8 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 				function(i,pack){
 			obj.addWolfpack(pack);
 		});
+		
+		eWolf.trigger("select",["__pack__wall-readers"]);
 	}	
 	
 	return this;
@@ -353,25 +390,22 @@ function getUserInformation() {
 		eWolf.data('userID',data.id);
 		eWolf.data('userName',data.name);
 			
-		InitEWolf();			
+		createMainApps();			
 	}	
 }
 
-function InitEWolf() {
+function createMainApps() {
 		
 	eWolf.mainApps.addMenuItem(eWolf.data("userID"),"My Profile");
 	new Profile(eWolf.data("userID"),eWolf.data('userName'),eWolf.applicationFrame);
 	
-//	menuList.addMenuItem("news_feed","News Feed");
-//	new NewsFeed("news_feed",applicationFrame);
+	eWolf.mainApps.addMenuItem("__pack__wall-readers","News Feed");
 	
 	eWolf.mainApps.addMenuItem("messages","Messages");
 	new Inbox("messages",eWolf.applicationFrame);
 	
 	new SearchApp("search",eWolf.sideMenu,eWolf.applicationFrame,
 			$("#txtSearchBox"),$("#btnSearch"),$("#btnAdd"));
-		
-	//eWolf.trigger("select",["news_feed"]);
 }/*
 filedrag.js - HTML5 File Drag & Drop demonstration
 Featured on SitePoint.com
@@ -2864,7 +2898,7 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AppContainer = function(id,container) 
 		}
 	};
 };
-var NewMessageBox = function(id,applicationFrame,sendTo) {
+var NewMessageBox = function(id,applicationFrame,sendToID,sendToName) {
 	var obj = this;
 	var thisID = "__newmessage__"+id;
 	
@@ -2873,10 +2907,15 @@ var NewMessageBox = function(id,applicationFrame,sendTo) {
 	
 	var request = new PostRequestHandler(thisID,"/json",0);
 	
+	var topTitle = new TitleArea("Send new message")
+		.appendTo(frame)
+		.addFunction("Send", send)
+		.addFunction("Cancel",cancel);
+	
 	var base = $("<table/>").appendTo(frame);
 	
 	var idRaw = $("<tr/>").appendTo(base);
-	$("<td/>").append("Send to:").appendTo(idRaw);
+	$("<td/>").attr("style","text-align:right;").append("Send to:").appendTo(idRaw);
 	
 	var userIdText = $("<input/>").attr({
 		"id": "sendToId",
@@ -2885,10 +2924,10 @@ var NewMessageBox = function(id,applicationFrame,sendTo) {
 		"style": "width:300px !important;"
 	});
 	
-	$("<td/>").append(userIdText).appendTo(idRaw);
+	var userIdCell = $("<td/>").append(userIdText).appendTo(idRaw);
 	
 	var msgRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("style","vertical-align:text-top;").append("Message:").appendTo(msgRaw);
+	$("<td/>").attr("style","vertical-align:text-top;text-align:right;").append("Message:").appendTo(msgRaw);
 	
 	var messageText = $("<textarea/>").attr({
 		"id": "textileMessage",
@@ -2899,11 +2938,11 @@ var NewMessageBox = function(id,applicationFrame,sendTo) {
 	$("<td/>").append(messageText).appendTo(msgRaw);
 	
 	var attacheRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("style","vertical-align:text-top;").append("Attachment:").appendTo(attacheRaw);
+	$("<td/>").attr("style","vertical-align:text-top;text-align:right;").append("Attachment:").appendTo(attacheRaw);
 	
 	var uploaderArea = $("<td/>").appendTo(attacheRaw);
 	
-	var files = new filedrag(uploaderArea);
+	/*var files = */new filedrag(uploaderArea);
 
 	var btnRaw = $("<tr/>").appendTo(base);
 	
@@ -2914,8 +2953,42 @@ var NewMessageBox = function(id,applicationFrame,sendTo) {
 		"id": "sendMessageBtn",
 		"type": "button",
 		"value": "Send"
-	}).appendTo(btnBox).click(function() {
-		
+	}).appendTo(btnBox).click(send);
+	
+	btnBox.append("&nbsp;");
+	
+	$("<input/>").attr({
+		"id": "sabortBtn",
+		"type": "button",
+		"value": "Cancel"
+	}).appendTo(btnBox).click(cancel);
+	
+	var errorRaw = $("<tr/>").appendTo(base);
+	
+	$("<td/>").appendTo(errorRaw);
+	var errorBox = $("<td/>").appendTo(errorRaw);
+	
+	var errorMessage = $("<span/>").attr({
+		"style": "color:red;"
+	}).appendTo(errorBox);
+	
+	function handleResponse(data,postData) {
+		if (data.sendMessage != null) {
+			if(data.sendMessage.result == "success") {
+				obj.destroy();
+			} else {
+				errorMessage.html(data.sendMessage.result);
+			}
+		} else {
+			console.log("No sendMessage parameter in response");
+		}		
+	}
+	
+	function cancel() {
+		obj.destroy();
+	}
+	
+	function send() {		
 //		var uploader = new qq.FileUploaderBasic({
 //		    // path to server-side upload script
 //		    action: '/sfsupload',
@@ -2949,43 +3022,18 @@ var NewMessageBox = function(id,applicationFrame,sendTo) {
 				message: JSON.stringify(mailObject)
 			}
 		  },handleResponse);
-	});
-	
-	btnBox.append("&nbsp;");
-	
-	$("<input/>").attr({
-		"id": "sabortBtn",
-		"type": "button",
-		"value": "Cancel"
-	}).appendTo(btnBox).click(function() {
-		obj.destroy();
-	});
-	
-	var errorRaw = $("<tr/>").appendTo(base);
-	
-	$("<td/>").appendTo(errorRaw);
-	var errorBox = $("<td/>").appendTo(errorRaw);
-	
-	var errorMessage = $("<span/>").attr({
-		"style": "color:red;"
-	}).appendTo(errorBox);
-	
-	function handleResponse(data,postData) {
-		if (data.sendMessage != null) {
-			if(data.sendMessage.result == "success") {
-				obj.destroy();
-			} else {
-				errorMessage.html(data.sendMessage.result);
-			}
-		} else {
-			console.log("No sendMessage parameter in response");
-		}		
 	}
 	
 	eWolf.bind("refresh",function(event,eventID) {
 		if(eventID == thisID) {
-			if(sendTo != null) {
-				userIdText.attr("value",sendTo);
+			if(sendToID != null) {
+				userIdText.attr("value",sendToID);
+				
+				if(sendToName != null) {
+					userIdText.hide();
+					userIdCell.append(new User(sendToID,sendToName));
+				}
+				
 				window.setTimeout(function () {
 					messageText.focus();
 				}, 0);				
@@ -2997,14 +3045,19 @@ var NewMessageBox = function(id,applicationFrame,sendTo) {
 		}		
 	});
 	
+	eWolf.bind("select."+id,function(event,eventId) {
+		if(eventId != thisID) {
+			appContainer.destroy();
+			delete obj;
+		}
+	});
+	
 	this.select = function() {
-		eWolf.trigger("select",[thisID]);		
+		eWolf.trigger("select",[thisID]);
 	};
 	
 	this.destroy = function() {
 		eWolf.trigger("select",[id]);
-		appContainer.destroy();
-		delete obj;
 	};
 
 	return this;
@@ -3046,7 +3099,7 @@ var Profile = function (id,name,applicationFrame) {
 	
 	if(id != eWolf.data("userID")) {
 		topTitle.addFunction("Send message...", function (event) {
-			var box = new NewMessageBox(id,applicationFrame,id);
+			var box = new NewMessageBox(id,applicationFrame,id,name);
 			box.select();
 		});
 	}
@@ -3055,39 +3108,29 @@ var Profile = function (id,name,applicationFrame) {
 	topTitle.appendAtTitleTextArea("&nbsp;");
 	topTitle.appendAtTitleTextArea(idRow);
 	
-	var wolfpacksContainer = $("<span/>").attr("class","wolfpacksBox").hide();	
-	topTitle.appendAtBottomPart(wolfpacksContainer);
+	var wolfpacksContainer = new CommaSeperatedList("Wolfpakcs");
+	topTitle.appendAtBottomPart(wolfpacksContainer.getList());
 	
-	wolfpacksContainer.append("Wolfpakcs: ");	
-	var wolfpackslist = null;
-	
-	function updateWolfpacksView(newWolfpackslist) {
-		if (wolfpackslist != null) {
-			wolfpackslist.remove();
-		}
-		
-		if(newWolfpackslist == null) {
-			wolfpacksContainer.hide();
-			topTitle.addFunction("Add to wolfpack...", function () {
-				// TODO: add to any wolfpack (not just wall-readers) 
-				request.request({
-					addWolfpackMember: {
-						wolfpackName: "wall-readers",
-						userID: id
-					}
-				},new ResonseHandler("addWolfpackMember",
-						[],function (data, textStatus, postData) {
-					request.requestAll();
-					eWolf.trigger("needRefresh.__pack__"+postData.addWolfpackMember.wolfpackName);
-				}));
-			});
-		} else {
-			wolfpackslist = newWolfpackslist;
-			wolfpacksContainer.append(wolfpackslist);
-			wolfpacksContainer.show();
-			topTitle.removeFunction("Add to wolfpack...");
-		}		
-	}	
+	if(id != eWolf.data("userID")) {
+		topTitle.addFunction("Add to wolfpack...", function () {
+			// TODO: add to any wolfpack (not just wall-readers) 
+			request.request({
+				addWolfpackMember: {
+					wolfpackName: "wall-readers",
+					userID: id
+				}
+			},new ResonseHandler("addWolfpackMember",
+					[],function (data, textStatus, postData) {
+				request.requestAll();
+				eWolf.trigger("needRefresh.__pack__"+postData.addWolfpackMember.wolfpackName);
+			}));
+		});
+	} else {
+		topTitle.addFunction("Post", function() {
+			// TODO: post on wolfpack
+			alert("This will post to a wolfpack");
+		});
+	}
 	
 	new NewsFeedList(request,newsFeedObj).appendTo(frame);
 	
@@ -3106,20 +3149,11 @@ var Profile = function (id,name,applicationFrame) {
 	  }
 	
 	function handleWolfpacksData(data, textStatus, postData) {		
-		var newWolfpackslist = null;
-		 
-		if(data.wolfpacksList.length > 0) {
-			newWolfpackslist = $("<span/>").appendTo(wolfpacksContainer);
-			 
-			 $.each(data.wolfpacksList,function(i,pack) {
-				 newWolfpackslist.append(new Wolfpack(pack));
-				 if(i != data.wolfpacksList.length-1) {
-					 newWolfpackslist.append(", ");
-				 }
-			 });
-		}	 
-		 
-		updateWolfpacksView(newWolfpackslist);
+		wolfpacksContainer.removeAll();		 
+
+		 $.each(data.wolfpacksList,function(i,pack) {
+			 wolfpacksContainer.addItem(new Wolfpack(pack));
+		 });
 	  }
 	
 	function getProfileData() {		
@@ -3187,12 +3221,11 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 	
 	function addSearchMenuItem(key,name) {
 		menuList.addMenuItem(key,name);
-		var app = new Profile(key,name,applicationFrame)
+		apps[key] = new Profile(key,name,applicationFrame)
 			.onReceiveName(function(newName) {
 				menuList.renameMenuItem(key,newName);
 				eWolf.trigger("select",[key]);
-			});
-		apps[key] = app;		
+			});	
 	};
 	
 	function removeSearchMenuItem(key) {
@@ -3283,39 +3316,29 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 	var frame = appContainer.getFrame();
 	
 	var request = new PostRequestHandler(id,"/json",60)
-		.listenToRefresh()
-		.register(getWolfpacksMembersData,
-				new ResonseHandler("wolfpackMembers",
-						["membersList"],handleWolfpacksMembersData));
-		
+		.listenToRefresh();
+				
 	var topTitle = new TitleArea(new Wolfpack(wolfpackName))
 		.appendTo(frame)
 		.addFunction("Post", function() {
 			// TODO: post on wolfpack
-		})
-		.addFunction("Add member...", function() {
-			// TODO: add member
+			alert("This will post to this wolfpack");
 		});
 	
-	var members = $("<span/>").attr("class","wolfpacksBox").hide();
-	topTitle.appendAtBottomPart(members);
+	if(wolfpackName != "wall-readers") {
+		request.register(getWolfpacksMembersData,
+				new ResonseHandler("wolfpackMembers",
+						["membersList"],handleWolfpacksMembersData));
+		topTitle.addFunction("Add member...", function() {
+			// TODO: add member
+			alert("This will add a member to a wolfpack");
+		});
+	} else {
+		topTitle.setTitle("News Feed");
+	}		
 	
-	members.append("Members: ");
-	var membersList = null;
-		
-	function updateMembersView(newMembersList) {
-		if (membersList != null) {
-			membersList.remove();
-		}
-		
-		if(newMembersList == null) {
-			members.hide();
-		} else {
-			membersList = newMembersList;
-			members.append(membersList);
-			members.show();
-		}		
-	}	
+	var members = new CommaSeperatedList("Members");
+	topTitle.appendAtBottomPart(members.getList());
 	
 	new NewsFeedList(request,{
 		newsOf:"wolfpack",
@@ -3333,20 +3356,11 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 	function handleWolfpacksMembersData(data, textStatus, postData) {
 		list = data.membersList;
 
-		var newMembersList = null;
-		
-		if(list.length > 0) {
-			newMembersList = $("<span/>");
+		members.removeAll();
 
-			$.each(list, function(i, member) {
-				newMembersList.append(new User(member.id, member.name));
-				if (i != list.length - 1) {
-					newMembersList.append(", ");
-				}
-			});
-		}		
-		
-		updateMembersView(newMembersList);
+		$.each(list, function(i, member) {
+			members.addItem(new User(member.id, member.name));
+		});
 	}
 	
 	return {
