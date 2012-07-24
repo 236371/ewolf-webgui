@@ -196,8 +196,11 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 	};
 	
 	return res;
-};var ResonseHandler = function(category, requiredFields, handler) {
-	return function(data, textStatus, postData) {
+};var ResponseHandler = function(category, requiredFields, handler) {
+	var errorHandler = null;
+	var completeHandler = null;
+	
+	function theHandler(data, textStatus, postData) {
 		if (data[category] != null) {
 			if (data[category].result == "success") {
 				var valid = true;
@@ -209,15 +212,45 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 					}
 				});
 
-				if (valid) {
+				if (valid && handler) {
 					handler(data[category], textStatus, postData);
 				}
 			} else {
 				console.log("Response unsuccesssful: " + data[category].result);
+				if(errorHandler) {
+					errorHandler(data[category].result, textStatus, postData);
+				}
 			}
 
 		} else {
-			console.log("No category: \"" + category + "\" in response");
+			var errorMsg = "No category: \"" + category + "\" in response";
+			console.log(errorMsg);
+			
+			if(errorHandler) {
+				errorHandler(errorMsg, textStatus, postData);
+			}
+		}
+		
+		if(completeHandler) {
+			completeHandler(data, textStatus, postData);
+		}		
+	};
+	
+	return {
+		getHandler: function() {
+			return theHandler;
+		},
+		error: function (newErrorHandler) {
+			errorHandler = newErrorHandler;
+			return this;
+		},		
+		success: function (newSuccessHandler) {
+			handler = newSuccessHandler;
+			return this;
+		},		
+		complete: function (newCompleteHandler) {
+			completeHandler = newCompleteHandler;
+			return this;
 		}
 	};
 };var TitleArea = function (title) {
@@ -320,16 +353,12 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 		return {
 			 wolfpacks:{}
 		};
-	},new ResonseHandler("wolfpacks",["wolfpacksList"],handleWolfpacks));
+	},new ResponseHandler("wolfpacks",["wolfpacksList"],handleWolfpacks).getHandler());
 		
 	this.addWolfpack = function (pack) {
 		if(wolfpacks[pack] == null) {		
-			if(pack != "wall-readers") {
-				menuList.addMenuItem("__pack__"+pack,pack);
-			}
-			
-			var app = new WolfpackPage("__pack__"+pack,pack,applicationFrame);
-			
+			menuList.addMenuItem("__pack__"+pack,pack);			
+			var app = new WolfpackPage("__pack__"+pack,pack,applicationFrame);			
 			
 			wolfpacks[pack] = app;
 		}		
@@ -348,8 +377,6 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 				function(i,pack){
 			obj.addWolfpack(pack);
 		});
-		
-		eWolf.trigger("select",["__pack__wall-readers"]);
 	}	
 	
 	return this;
@@ -378,8 +405,8 @@ function getUserInformation() {
 			return {
 				profile: {}
 			};
-		},new ResonseHandler("profile",
-					["id","name"],handleProfileData));
+		},new ResponseHandler("profile",
+					["id","name"],handleProfileData).getHandler());
 	
 	eWolf.wolfpacks = new Wolfpacks(eWolf.sideMenu,request,eWolf.applicationFrame);
 	request.requestAll();
@@ -399,13 +426,16 @@ function createMainApps() {
 	eWolf.mainApps.addMenuItem(eWolf.data("userID"),"My Profile");
 	new Profile(eWolf.data("userID"),eWolf.data('userName'),eWolf.applicationFrame);
 	
-	eWolf.mainApps.addMenuItem("__pack__wall-readers","News Feed");
+	eWolf.mainApps.addMenuItem("newsFeedApp","News Feed");
+	new WolfpackPage("newsFeedApp",null,eWolf.applicationFrame);
 	
 	eWolf.mainApps.addMenuItem("messages","Messages");
 	new Inbox("messages",eWolf.applicationFrame);
 	
 	new SearchApp("search",eWolf.sideMenu,eWolf.applicationFrame,
 			$("#txtSearchBox"),$("#btnSearch"),$("#btnAdd"));
+	
+	eWolf.trigger("select",["newsFeedApp"]);
 }/*
 filedrag.js - HTML5 File Drag & Drop demonstration
 Featured on SitePoint.com
@@ -2690,12 +2720,12 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 		return this;
 	};
 
-	var responseHandler = new ResonseHandler(mailType,
+	var responseHandler = new ResponseHandler(mailType,
 			["mailList"],handleNewData);
-	request.register(this.updateFromServer ,responseHandler);
+	request.register(this.updateFromServer ,responseHandler.getHandler());
 	
 	var showMore = new ShowMore(frame,function() {
-		request.request(obj.updateFromServer (true),responseHandler);
+		request.request(obj.updateFromServer (true),responseHandler.getHandler());
 	}).draw();
 	
 	function handleNewData(data, textStatus, parameters) {
@@ -2878,7 +2908,7 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AppContainer = function(id,container) 
 	new TitleArea("Inbox")
 		.appendTo(frame)
 		.addFunction("New Message...", function() {
-			var box = new NewMessageBox(id,applicationFrame);
+			var box = new NewMessage(id,applicationFrame);
 			box.select();
 		});
 	
@@ -2898,7 +2928,9 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AppContainer = function(id,container) 
 		}
 	};
 };
-var NewMessageBox = function(id,applicationFrame,sendToID,sendToName) {
+var NewMail = function(id,applicationFrame,title,
+		createRequestObj,handleResponse,
+		allowAttachment,to,toReplacment) {
 	var obj = this;
 	var thisID = "__newmessage__"+id;
 	
@@ -2906,8 +2938,8 @@ var NewMessageBox = function(id,applicationFrame,sendToID,sendToName) {
 	var frame = appContainer.getFrame();
 	
 	var request = new PostRequestHandler(thisID,"/json",0);
-	
-	var topTitle = new TitleArea("Send new message")
+		
+	new TitleArea(title)
 		.appendTo(frame)
 		.addFunction("Send", send)
 		.addFunction("Cancel",cancel);
@@ -2915,34 +2947,34 @@ var NewMessageBox = function(id,applicationFrame,sendToID,sendToName) {
 	var base = $("<table/>").appendTo(frame);
 	
 	var idRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("style","text-align:right;").append("Send to:").appendTo(idRaw);
+	$("<td/>").attr("style","text-align:right;").append("To:").appendTo(idRaw);
 	
 	var userIdText = $("<input/>").attr({
-		"id": "sendToId",
 		"type": "text",
-		"placeholder": "Send to (user id)",
-		"style": "width:300px !important;"
+		"placeholder": "To...",
+		"style": "min-width:300px !important;"
 	});
 	
 	var userIdCell = $("<td/>").append(userIdText).appendTo(idRaw);
 	
 	var msgRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("style","vertical-align:text-top;text-align:right;").append("Message:").appendTo(msgRaw);
+	$("<td/>").attr("style","vertical-align:text-top;text-align:right;").append("Content:").appendTo(msgRaw);
 	
 	var messageText = $("<textarea/>").attr({
 		"id": "textileMessage",
-		"placeholder": "Your message",
-		"style": "width:300px !important;height:300px  !important;"
+		"placeholder": "What is on your mind...",
+		"style": "min-width:300px !important;height:300px  !important;"
 	});
 	
 	$("<td/>").append(messageText).appendTo(msgRaw);
 	
-	var attacheRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("style","vertical-align:text-top;text-align:right;").append("Attachment:").appendTo(attacheRaw);
-	
-	var uploaderArea = $("<td/>").appendTo(attacheRaw);
-	
-	/*var files = */new filedrag(uploaderArea);
+	if(allowAttachment) {
+		var attacheRaw = $("<tr/>").appendTo(base);
+		$("<td/>").attr("style","vertical-align:text-top;text-align:right;").append("Attachment:").appendTo(attacheRaw);
+		
+		var uploaderArea = $("<td/>").appendTo(attacheRaw);
+		/*var files = */new filedrag(uploaderArea);
+	}	
 
 	var btnRaw = $("<tr/>").appendTo(base);
 	
@@ -2971,22 +3003,16 @@ var NewMessageBox = function(id,applicationFrame,sendToID,sendToName) {
 	var errorMessage = $("<span/>").attr({
 		"style": "color:red;"
 	}).appendTo(errorBox);
-	
-	function handleResponse(data,postData) {
-		if (data.sendMessage != null) {
-			if(data.sendMessage.result == "success") {
-				obj.destroy();
-			} else {
-				errorMessage.html(data.sendMessage.result);
-			}
-		} else {
-			console.log("No sendMessage parameter in response");
-		}		
-	}
-	
+		
 	function cancel() {
 		obj.destroy();
 	}
+	
+	handleResponse.success(function(data, textStatus, postData) {
+		obj.destroy();
+	}).error(function(error, textStatus, postData) {
+		errorMessage.html(error);
+	});
 	
 	function send() {		
 //		var uploader = new qq.FileUploaderBasic({
@@ -3013,25 +3039,20 @@ var NewMessageBox = function(id,applicationFrame,sendToID,sendToName) {
 					path: "https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"					
 				}]
 		};
-		
-		console.log(JSON.stringify(mailObject));
-		
-		request.request({
-			sendMessage: {
-				userID: userIdText.val(),
-				message: JSON.stringify(mailObject)
-			}
-		  },handleResponse);
+				
+		request.request(
+				createRequestObj(userIdText.val(),JSON.stringify(mailObject)),
+				handleResponse.getHandler());
 	}
 	
 	eWolf.bind("refresh",function(event,eventID) {
 		if(eventID == thisID) {
-			if(sendToID != null) {
-				userIdText.attr("value",sendToID);
+			if(to != null) {
+				userIdText.attr("value",to);
 				
-				if(sendToName != null) {
+				if(toReplacment != null) {
 					userIdText.hide();
-					userIdCell.append(new User(sendToID,sendToName));
+					userIdCell.append(toReplacment);
 				}
 				
 				window.setTimeout(function () {
@@ -3042,7 +3063,7 @@ var NewMessageBox = function(id,applicationFrame,sendToID,sendToName) {
 					userIdText.focus();
 				}, 0);
 			}
-		}		
+		}
 	});
 	
 	eWolf.bind("select."+id,function(event,eventId) {
@@ -3063,6 +3084,47 @@ var NewMessageBox = function(id,applicationFrame,sendToID,sendToName) {
 	return this;
 };
 
+var NewMessage = function(id,applicationFrame,sendToID,sendToName) {
+	var replacement = null;
+	if(sendToID && sendToName) {
+		replacement = new User(sendToID,sendToName);
+	}
+	
+	function createNewMessageRequestObj(to,msg) {
+		return {
+			sendMessage: {
+				userID: to,
+				message: msg
+			}
+		  };
+	}
+	
+	var responseHandler = new ResponseHandler("sendMessage",[],null);
+	
+	return new NewMail(id,applicationFrame,"New Message",
+			createNewMessageRequestObj,responseHandler,true,sendToID,replacement);
+};
+
+var NewPost = function(id,applicationFrame,wolfpack) {	
+	var replacement = null;
+	if(wolfpack) {
+		replacement = new Wolfpack(wolfpack);
+	}
+	
+	function createNewPostRequestObj(to,content) {
+		return {
+			post: {
+				wolfpackName: to,
+				post: content
+			}
+		  };
+	}	
+	
+	var responseHandler = new ResponseHandler("post",[],null);
+	
+	return new NewMail(id,applicationFrame,"New Post",
+			createNewPostRequestObj,responseHandler,true,wolfpack,replacement);
+};
 var Profile = function (id,name,applicationFrame) {
 	var obj = this;
 	
@@ -3082,24 +3144,24 @@ var Profile = function (id,name,applicationFrame) {
 		};
 	$.extend(newsFeedObj,userObj);
 	
-	var handleProfileResonse = new ResonseHandler("profile",
+	var handleProfileResonse = new ResponseHandler("profile",
 			["id","name"],handleProfileData);
 	
 	var request = new PostRequestHandler(id,"/json",60)
 		.listenToRefresh()
-		.register(getProfileData,handleProfileResonse)
-		.register(geWolfpacksData,new ResonseHandler("wolfpacks",
-				["wolfpacksList"],handleWolfpacksData));
+		.register(getProfileData,handleProfileResonse.getHandler())
+		.register(geWolfpacksData,new ResponseHandler("wolfpacks",
+				["wolfpacksList"],handleWolfpacksData).getHandler());
 	
 	if(name == null) {
-		request.request(getProfileData(),handleProfileResonse);
+		request.request(getProfileData(),handleProfileResonse.getHandler());
 	}		
 	
 	var topTitle = new TitleArea(name).appendTo(frame);
 	
 	if(id != eWolf.data("userID")) {
 		topTitle.addFunction("Send message...", function (event) {
-			var box = new NewMessageBox(id,applicationFrame,id,name);
+			var box = new NewMessage(id,applicationFrame,id,name);
 			box.select();
 		});
 	}
@@ -3119,16 +3181,15 @@ var Profile = function (id,name,applicationFrame) {
 					wolfpackName: "wall-readers",
 					userID: id
 				}
-			},new ResonseHandler("addWolfpackMember",
+			},new ResponseHandler("addWolfpackMember",
 					[],function (data, textStatus, postData) {
 				request.requestAll();
 				eWolf.trigger("needRefresh.__pack__"+postData.addWolfpackMember.wolfpackName);
-			}));
+			}).getHandler());
 		});
 	} else {
 		topTitle.addFunction("Post", function() {
-			// TODO: post on wolfpack
-			alert("This will post to a wolfpack");
+			new NewPost(id,applicationFrame).select();
 		});
 	}
 	
@@ -3318,21 +3379,27 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 	var request = new PostRequestHandler(id,"/json",60)
 		.listenToRefresh();
 				
-	var topTitle = new TitleArea(new Wolfpack(wolfpackName))
+	var topTitle = new TitleArea()
 		.appendTo(frame)
 		.addFunction("Post", function() {
-			// TODO: post on wolfpack
-			alert("This will post to this wolfpack");
+			new NewPost(id,applicationFrame,wolfpackName).select();
 		});
 	
-	if(wolfpackName != "wall-readers") {
+	var newsFeedRequestObj = {
+			newsOf:"wolfpack"	
+	};
+	
+	if(wolfpackName != null) {
 		request.register(getWolfpacksMembersData,
-				new ResonseHandler("wolfpackMembers",
-						["membersList"],handleWolfpacksMembersData));
+				new ResponseHandler("wolfpackMembers",
+						["membersList"],handleWolfpacksMembersData).getHandler());
 		topTitle.addFunction("Add member...", function() {
 			// TODO: add member
 			alert("This will add a member to a wolfpack");
 		});
+		
+		topTitle.setTitle(new Wolfpack(wolfpackName));
+		newsFeedRequestObj["wolfpackName"] = wolfpackName;
 	} else {
 		topTitle.setTitle("News Feed");
 	}		
@@ -3340,10 +3407,7 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 	var members = new CommaSeperatedList("Members");
 	topTitle.appendAtBottomPart(members.getList());
 	
-	new NewsFeedList(request,{
-		newsOf:"wolfpack",
-		wolfpackName:wolfpackName
-	}).appendTo(frame);	
+	new NewsFeedList(request,newsFeedRequestObj).appendTo(frame);	
 	
 	function getWolfpacksMembersData() {
 		return {
