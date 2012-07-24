@@ -66,6 +66,9 @@ public class SendMessageHandler implements JsonDataHandler {
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
 			return new SendMessageResponse(RES_NOT_FOUND);
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+			return new SendMessageResponse(RES_BAD_REQUEST + ": illegal user ID.");
 		}
 		
 		ContentMessage msg = smail.createContentMessage().setMessage(jsonReqParams.message);
