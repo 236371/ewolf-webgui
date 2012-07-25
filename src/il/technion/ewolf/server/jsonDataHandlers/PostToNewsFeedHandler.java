@@ -63,7 +63,7 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
-			return new PostToNewsFeedResponse(RES_NOT_FOUND);
+			return new PostToNewsFeedResponse(RES_NOT_FOUND + ": given wolfpack wasn't found.");
 		}
 
 		try {

@@ -141,13 +141,13 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			}
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
-			return new NewsFeedResponse(RES_BAD_REQUEST);
+			return new NewsFeedResponse(RES_BAD_REQUEST + ": illegal user ID.");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
-			return new NewsFeedResponse(RES_NOT_FOUND);
+			return new NewsFeedResponse(RES_NOT_FOUND  + ": user with given ID wasn't found.");
 		}
 
 		return new NewsFeedResponse(filterPosts(posts, jsonReqParams.maxMessages, jsonReqParams.newerThan,

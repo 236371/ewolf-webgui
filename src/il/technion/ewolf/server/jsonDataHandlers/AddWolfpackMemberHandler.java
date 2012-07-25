@@ -67,15 +67,15 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 			profile = socialFS.findProfile(uid);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
-			return new AddWolfpackMemberResponse(RES_NOT_FOUND);
+			return new AddWolfpackMemberResponse(RES_NOT_FOUND + ": user with given ID wasn't found.");
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
-			return new AddWolfpackMemberResponse(RES_BAD_REQUEST);
+			return new AddWolfpackMemberResponse(RES_BAD_REQUEST + ": illegal user ID.");
 		}
 
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
-			return new AddWolfpackMemberResponse(RES_NOT_FOUND);
+			return new AddWolfpackMemberResponse(RES_NOT_FOUND + ": given wolfpack wasn't found.");
 		}
 		try {
 			socialGroup.addMember(profile);

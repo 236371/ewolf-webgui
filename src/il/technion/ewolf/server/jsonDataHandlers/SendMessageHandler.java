@@ -65,7 +65,7 @@ public class SendMessageHandler implements JsonDataHandler {
 			profile = socialFS.findProfile(uid);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
-			return new SendMessageResponse(RES_NOT_FOUND);
+			return new SendMessageResponse(RES_NOT_FOUND + ": user with given ID wasn't found.");
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 			return new SendMessageResponse(RES_BAD_REQUEST + ": illegal user ID.");

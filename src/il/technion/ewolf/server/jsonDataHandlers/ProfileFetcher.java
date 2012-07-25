@@ -66,10 +66,10 @@ public class ProfileFetcher implements JsonDataHandler {
 				profile = socialFS.findProfile(uid);
 			} catch (ProfileNotFoundException e) {
 				e.printStackTrace();
-				return new ProfileResponse(RES_NOT_FOUND);
+				return new ProfileResponse(RES_NOT_FOUND + ": user with given ID wasn't found.");
 			}  catch (IllegalArgumentException e) {
 				e.printStackTrace();
-				return new ProfileResponse(RES_BAD_REQUEST);
+				return new ProfileResponse(RES_BAD_REQUEST + ": illegal user ID.");
 			}
 		}
 		return new ProfileResponse(profile.getName(), jsonReqParams.userID);
