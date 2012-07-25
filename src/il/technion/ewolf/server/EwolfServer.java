@@ -81,7 +81,8 @@ public class EwolfServer {
 		kbr.join(configurations.kbrURIs);
 		
 		registerConnectorHandlers();
-		
+		new Thread(itsInjector.getInstance(PokeMessagesAcceptor.class),
+				"PokeMessagesAcceptorThread").start();
 		System.out.println("Server started.");
 	}
 	

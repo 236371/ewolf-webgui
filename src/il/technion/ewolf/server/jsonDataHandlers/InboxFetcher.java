@@ -2,7 +2,6 @@ package il.technion.ewolf.server.jsonDataHandlers;
 
 
 import il.technion.ewolf.msg.ContentMessage;
-import il.technion.ewolf.msg.PokeMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.socialfs.Profile;
@@ -88,12 +87,6 @@ public class InboxFetcher implements JsonDataHandler {
 
 		List<SocialMessage> messages = smail.readInbox();
 		for (SocialMessage m : messages) {
-			//TODO make separate thread that accepts PokeMessages
-			Class<? extends SocialMessage> messageClass = m.getClass();
-			if (messageClass == PokeMessage.class) {
-				((PokeMessage)m).accept();
-				continue;
-			}
 				
 			InboxMessage msg = new InboxMessage();
 
