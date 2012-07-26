@@ -1,6 +1,8 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
 import il.technion.ewolf.ewolf.WolfPackLeader;
+import il.technion.ewolf.socialfs.Profile;
+import il.technion.ewolf.socialfs.SocialFS;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -10,10 +12,12 @@ import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
 
 public class CreateWolfpackHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
+	private final SocialFS socialFS;
 	
 	@Inject
-	public CreateWolfpackHandler(WolfPackLeader socialGroupsManager) {
+	public CreateWolfpackHandler(WolfPackLeader socialGroupsManager, SocialFS socialFS) {
 		this.socialGroupsManager = socialGroupsManager;
+		this.socialFS = socialFS;
 	}
 	
 	private static class JsonReqCreateWolfpackParams {
@@ -49,8 +53,10 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 		if (socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName) != null) {
 			return new CreateWolfpackResponse(RES_BAD_REQUEST + ": wolfpack already exists");
 		}
+		Profile profile = socialFS.getCredentials().getProfile();
 		try {
-			socialGroupsManager.findOrCreateSocialGroup(jsonReqParams.wolfpackName);
+			socialGroupsManager.findOrCreateSocialGroup(jsonReqParams.wolfpackName)
+							   .addMember(profile);
 		} catch (Exception e) {
 			return new CreateWolfpackResponse(RES_INTERNAL_SERVER_ERROR);
 		}
