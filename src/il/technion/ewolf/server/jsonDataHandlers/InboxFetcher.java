@@ -87,7 +87,10 @@ public class InboxFetcher implements JsonDataHandler {
 
 		List<SocialMessage> messages = smail.readInbox();
 		for (SocialMessage m : messages) {
-				
+			if (m.getClass() != ContentMessage.class) {
+				continue;
+			}
+
 			InboxMessage msg = new InboxMessage();
 
 			try {
