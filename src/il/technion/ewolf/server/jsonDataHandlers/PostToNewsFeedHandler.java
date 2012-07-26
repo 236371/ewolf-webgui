@@ -12,22 +12,23 @@ import java.io.FileNotFoundException;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
 
 public class PostToNewsFeedHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 	private final SocialNetwork snet;
-	private final TextPost textPost;
+	private final Provider<TextPost> textPostProvider;
 
 	@Inject
 	public PostToNewsFeedHandler(SocialNetwork snet, WolfPackLeader socialGroupsManager,
-			TextPost textPost) {
+			Provider<TextPost> textPostProvider) {
 		this.snet = snet;
 		this.socialGroupsManager = socialGroupsManager;
-		this.textPost = textPost;
+		this.textPostProvider = textPostProvider;
 	}
-	
+
 	private static class JsonReqPostToNewsFeedParams {
 		String wolfpackName;
 		//post text
@@ -67,7 +68,7 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		}
 
 		try {
-			snet.getWall().publish(textPost.setText(jsonReqParams.post), socialGroup);
+			snet.getWall().publish(textPostProvider.get().setText(jsonReqParams.post), socialGroup);
 		} catch (GroupNotFoundException e) {
 			System.out.println("Wolfpack " + socialGroup + " not found");
 			e.printStackTrace();
