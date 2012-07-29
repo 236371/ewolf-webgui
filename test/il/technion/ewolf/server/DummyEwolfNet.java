@@ -123,7 +123,7 @@ public class DummyEwolfNet {
 		server2.initEwolf();
 		
 		//user2
-		Injector inj2 = server2.itsInjector;
+		Injector inj2 = server2.ewolfInjector;
 		SocialMail sm2 = inj2.getInstance(SocialMail.class);
 		SocialFS sfs2 = inj2.getInstance(SocialFS.class);
 		Profile profile2 = sfs2.getCredentials().getProfile();
@@ -132,7 +132,7 @@ public class DummyEwolfNet {
 		SocialNetwork sn2 = inj2.getInstance(SocialNetwork.class);
 		
 		//user1
-		Injector inj1 = server1.itsInjector;
+		Injector inj1 = server1.ewolfInjector;
 		SocialFS sfs1 = inj1.getInstance(SocialFS.class);
 		Profile profile1 = sfs1.getCredentials().getProfile();
 		SocialMail sm1 = inj1.getInstance(SocialMail.class);

@@ -21,7 +21,8 @@ public class ServerResources {
 		String password;
 		String name;
 		List<URI> kbrURIs = new ArrayList<URI>();
-		int port;
+		int serverPort;
+		int ewolfPort;
 	}
 	
 	public static URL getResource(String name) {
@@ -38,14 +39,11 @@ public class ServerResources {
 			configurations.username = config.getString("username");
 			configurations.password = config.getString("password");
 			configurations.name = config.getString("name");
-			configurations.port = config.getInt("port", 10000);
+			configurations.serverPort = config.getInt("serverPort", 10000);
+			configurations.ewolfPort = config.getInt("ewolfPort", 10300);
 
 			for (Object o: config.getList("kbr.urls")) {
 				configurations.kbrURIs.add(new URI((String)o));
-			}
-
-			if (configurations.username == null) {
-				//TODO get username/password from user, store to EWOLF_CONFIG and continue
 			}
 		} catch (ConfigurationException e) {
 			e.printStackTrace();

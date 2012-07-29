@@ -39,18 +39,18 @@ public class EwolfServer {
 	private static final String EWOLF_CONFIG = "/ewolf.config.properties";
 	
 	EwolfConfigurations configurations;
-	
-	Injector itsInjector;
-	
-	HttpConnector connector;
+	Injector serverInjector;
+	HttpConnector serverConnector;
+	Injector ewolfInjector;
+
+	private JsonHandler jsonHandler;
 	
 	public EwolfServer(EwolfConfigurations configurations) {
 		if(configurations == null) {
 			throw new IllegalArgumentException("Configuration file is missing.");
 		}
-		
+
 		this.configurations = configurations;
-		this.itsInjector = createInjector();
 	}
 
 	public static void main(String[] args) throws Exception {		
@@ -61,58 +61,83 @@ public class EwolfServer {
 		server.initEwolf();
 	}
 
+	private Injector createDefaultInjector() {
+		String port = String.valueOf(configurations.serverPort);
+
+		return Guice.createInjector(
+				new HttpConnectorModule()
+					.setProperty("httpconnector.net.port", port),
+				new KadNetModule()
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.seed", port)
+					.setProperty("openkad.net.udp.port", port));
+	}
+
 	public void initEwolf() throws IOException, Exception {
-		KeybasedRouting kbr = itsInjector.getInstance(KeybasedRouting.class);
-		kbr.create();
-		
-		// bind the chunkeeper
-		ChunKeeper chnukeeper = itsInjector.getInstance(ChunKeeper.class);
-		chnukeeper.bind();
-		
-		connector = itsInjector.getInstance(HttpConnector.class);
-		connector.bind();
-		connector.start();
-		
-		EwolfAccountCreator accountCreator = 
-				itsInjector.getInstance(EwolfAccountCreator.class);
-		accountCreator.create();
-		
-		//FIXME port for testing
-		kbr.join(configurations.kbrURIs);
-		
+
+		this.serverInjector = createDefaultInjector();
+
+		serverConnector = serverInjector.getInstance(HttpConnector.class);
+		serverConnector.bind();
 		registerConnectorHandlers();
-		new Thread(itsInjector.getInstance(PokeMessagesAcceptor.class),
-				"PokeMessagesAcceptorThread").start();
+		serverConnector.start();
+
+		if (configurations.username != null) {
+			this.ewolfInjector = createInjector();
+
+			KeybasedRouting kbr = ewolfInjector.getInstance(KeybasedRouting.class);
+			kbr.create();
+
+			// bind the chunkeeper
+			ChunKeeper chnukeeper = ewolfInjector.getInstance(ChunKeeper.class);
+			chnukeeper.bind();
+
+			HttpConnector ewolfConnector = ewolfInjector.getInstance(HttpConnector.class);
+			ewolfConnector.bind();
+			ewolfConnector.start();
+
+			EwolfAccountCreator accountCreator =
+					ewolfInjector.getInstance(EwolfAccountCreator.class);
+			accountCreator.create();
+
+			//FIXME port for testing
+			kbr.join(configurations.kbrURIs);
+
+			new Thread(ewolfInjector.getInstance(PokeMessagesAcceptor.class),
+					"PokeMessagesAcceptorThread").start();
+			addHandlers(jsonHandler);
+		} else {
+			//TODO
+		}
+
 		System.out.println("Server started.");
 	}
 	
 	private void registerConnectorHandlers() {
-		//ewolf resources handlers register
-		connector.register("/json*", createJsonHandler());
-		connector.register("/sfsupload*", itsInjector.getInstance(SFSUploadHandler.class));
-		connector.register("/sfs*", itsInjector.getInstance(SFShandler.class));
+		jsonHandler = new JsonHandler();
+		serverConnector.register("/json*", jsonHandler);
+//		serverConnector.register("/sfsupload*", serverInjector.getInstance(SFSUploadHandler.class));
+//		serverConnector.register("/sfs*", serverInjector.getInstance(SFShandler.class));
 
-		//server resources handlers register
-		connector.register("*", new JarResourceHandler());
-//		connector.register("*", new HttpFileHandler("/",
-//				new ServerResourceFactory(ServerResources.getFileTypeMap())));
+		serverConnector.register("*", new JarResourceHandler());
 	}
 	
-	private JsonHandler createJsonHandler() {
-		return new JsonHandler()
-		.addHandler("inbox", itsInjector.getInstance(InboxFetcher.class))
-		.addHandler("wolfpacks", itsInjector.getInstance(WolfpacksFetcher.class))
-		.addHandler("profile", itsInjector.getInstance(ProfileFetcher.class))
-		.addHandler("wolfpackMembers", itsInjector.getInstance(WolfpackMembersFetcher.class))
-		.addHandler("newsFeed", itsInjector.getInstance(NewsFeedFetcher.class))
-		.addHandler("createWolfpack", itsInjector.getInstance(CreateWolfpackHandler.class))
-		.addHandler("addWolfpackMember", itsInjector.getInstance(AddWolfpackMemberHandler.class))
-		.addHandler("post", itsInjector.getInstance(PostToNewsFeedHandler.class))
-		.addHandler("sendMessage", itsInjector.getInstance(SendMessageHandler.class));
+	private JsonHandler addHandlers(JsonHandler jsonHandler) {
+		return jsonHandler
+		.addHandler("inbox", ewolfInjector.getInstance(InboxFetcher.class))
+		.addHandler("wolfpacks", ewolfInjector.getInstance(WolfpacksFetcher.class))
+		.addHandler("profile", ewolfInjector.getInstance(ProfileFetcher.class))
+		.addHandler("wolfpackMembers", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
+		.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcher.class))
+		.addHandler("createWolfpack", ewolfInjector.getInstance(CreateWolfpackHandler.class))
+		.addHandler("addWolfpackMember", ewolfInjector.getInstance(AddWolfpackMemberHandler.class))
+		.addHandler("post", ewolfInjector.getInstance(PostToNewsFeedHandler.class))
+		.addHandler("sendMessage", ewolfInjector.getInstance(SendMessageHandler.class));
 	}
 
 	private Injector createInjector() {
-		String port = String.valueOf(configurations.port);
+		String port = String.valueOf(configurations.ewolfPort);
 		
 		return Guice.createInjector(
 
