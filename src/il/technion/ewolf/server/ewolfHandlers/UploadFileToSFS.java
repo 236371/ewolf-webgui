@@ -18,7 +18,7 @@ import org.apache.commons.lang.RandomStringUtils;
 
 import com.google.inject.Inject;
 
-public class UploadFile {
+public class UploadFileToSFS {
 	class UploadFileResponse extends EWolfResponse {
 		String path;
 		public UploadFileResponse(String result, String path) {
@@ -33,7 +33,7 @@ public class UploadFile {
 	private static final int FILENAME_LENGTH = 10;
 
 	@Inject
-	public UploadFile(SocialFS socialFS, WolfPackLeader socialGroupsManager) {
+	public UploadFileToSFS(SocialFS socialFS, WolfPackLeader socialGroupsManager) {
 		this.socialFS = socialFS;
 		this.socialGroupsManager = socialGroupsManager;
 	}

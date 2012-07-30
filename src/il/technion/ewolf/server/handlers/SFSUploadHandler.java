@@ -1,8 +1,9 @@
 package il.technion.ewolf.server.handlers;
 
 import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.RES_BAD_REQUEST;
+import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
 import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.RES_SUCCESS;
-import il.technion.ewolf.server.ewolfHandlers.UploadFile;
+import il.technion.ewolf.server.ewolfHandlers.UploadFileToSFS;
 import il.technion.ewolf.server.jsonDataHandlers.EWolfResponse;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.ParseException;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -27,7 +29,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 public class SFSUploadHandler implements HttpRequestHandler {
-	private UploadFile handler;
+	private UploadFileToSFS handler;
 
 	class SFSUploadHandlerResponse extends EWolfResponse {
 		String path;
@@ -39,7 +41,7 @@ public class SFSUploadHandler implements HttpRequestHandler {
 
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
-			HttpContext context) throws IOException {
+			HttpContext context) {
 		//TODO move adding server header to response intercepter
 		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
 		
@@ -76,6 +78,14 @@ public class SFSUploadHandler implements HttpRequestHandler {
 			e.printStackTrace();
 			setResponse(res, null, RES_BAD_REQUEST);
 			return;
+		} catch (ParseException e) {
+			e.printStackTrace();
+			setResponse(res, null, RES_INTERNAL_SERVER_ERROR);
+			return;
+		} catch (IOException e) {
+			e.printStackTrace();
+			setResponse(res, null, RES_INTERNAL_SERVER_ERROR);
+			return;
 		}
 	}
 
@@ -85,7 +95,7 @@ public class SFSUploadHandler implements HttpRequestHandler {
 		res.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
 	}
 	
-	public void addHandler(UploadFile handler) {
+	public void addHandler(UploadFileToSFS handler) {
 		this.handler = handler;
 	}
 }

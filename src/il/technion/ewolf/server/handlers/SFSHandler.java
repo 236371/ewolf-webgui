@@ -1,20 +1,13 @@
 package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.server.ServerResources;
-import il.technion.ewolf.socialfs.Profile;
-import il.technion.ewolf.socialfs.SFSFile;
-import il.technion.ewolf.socialfs.SocialFS;
-import il.technion.ewolf.socialfs.UserID;
-import il.technion.ewolf.socialfs.UserIDFactory;
-import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
+import il.technion.ewolf.server.ewolfHandlers.DownloadFileFromSFS;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
 import org.apache.http.Consts;
-import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -25,21 +18,12 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
-import com.google.inject.Inject;
-
-public class SFShandler implements HttpRequestHandler {
-	private final SocialFS socialFS;
-	private final UserIDFactory userIDFactory;
-
-	@Inject
-	public SFShandler(SocialFS socialFS, UserIDFactory userIDFactory) {
-		this.socialFS = socialFS;
-		this.userIDFactory = userIDFactory;
-	}
+public class SFSHandler implements HttpRequestHandler {
+	private DownloadFileFromSFS handler;
 
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
-			HttpContext context) throws HttpException, IOException {
+			HttpContext context) {
 		//TODO move adding server header to response intercepter
 		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
 		
@@ -63,21 +47,7 @@ public class SFShandler implements HttpRequestHandler {
 				//TODO reply bad request
 				return;
 			}
-			Profile profile;
-			try {
-				UserID uid = userIDFactory.getFromBase64(userID);
-				profile = socialFS.findProfile(uid);
-			} catch (ProfileNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				return;
-			}  catch (IllegalArgumentException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				return;
-			}
-			SFSFile sharedFolder = profile.getRootFile().getSubFile("sharedFolder");
-			String strEntity = sharedFolder.getSubFile(fileName).getData().toString();
+			String strEntity = handler.handleData(userID, fileName);
 			String mimeType = ServerResources.getFileTypeMap().getContentType(fileName);
 			res.setEntity(new StringEntity(strEntity, ContentType.create(mimeType, Consts.UTF_8)));
 		} catch (URISyntaxException e) {
@@ -85,6 +55,10 @@ public class SFShandler implements HttpRequestHandler {
 			e.printStackTrace();
 		}
 
+	}
+
+	public void addHandler(DownloadFileFromSFS handler) {
+		this.handler = handler;
 	}
 
 }

@@ -11,10 +11,11 @@ import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
-import il.technion.ewolf.server.ewolfHandlers.UploadFile;
+import il.technion.ewolf.server.ewolfHandlers.DownloadFileFromSFS;
+import il.technion.ewolf.server.ewolfHandlers.UploadFileToSFS;
 import il.technion.ewolf.server.handlers.JarResourceHandler;
 import il.technion.ewolf.server.handlers.JsonHandler;
-import il.technion.ewolf.server.handlers.SFShandler;
+import il.technion.ewolf.server.handlers.SFSHandler;
 import il.technion.ewolf.server.handlers.SFSUploadHandler;
 import il.technion.ewolf.server.jsonDataHandlers.AddWolfpackMemberHandler;
 import il.technion.ewolf.server.jsonDataHandlers.CreateWolfpackHandler;
@@ -46,6 +47,7 @@ public class EwolfServer {
 
 	private JsonHandler jsonHandler = new JsonHandler();
 	private SFSUploadHandler sfsUploadHandler = new SFSUploadHandler();
+	private SFSHandler sfsHandler = new SFSHandler();
 	
 	public EwolfServer(EwolfConfigurations configurations) {
 		if(configurations == null) {
@@ -119,7 +121,7 @@ public class EwolfServer {
 	private void registerConnectorHandlers() {
 		serverConnector.register("/json*", jsonHandler);
 		serverConnector.register("/sfsupload*", sfsUploadHandler);
-//		serverConnector.register("/sfs*", serverInjector.getInstance(SFShandler.class));
+		serverConnector.register("/sfs*", sfsHandler);
 
 		serverConnector.register("*", new JarResourceHandler());
 	}
@@ -136,7 +138,9 @@ public class EwolfServer {
 			.addHandler("post", ewolfInjector.getInstance(PostToNewsFeedHandler.class))
 			.addHandler("sendMessage", ewolfInjector.getInstance(SendMessageHandler.class));
 		sfsUploadHandler
-			.addHandler(ewolfInjector.getInstance(UploadFile.class));
+			.addHandler(ewolfInjector.getInstance(UploadFileToSFS.class));
+		sfsHandler
+			.addHandler(ewolfInjector.getInstance(DownloadFileFromSFS.class));
 	}
 
 	private Injector createInjector() {
