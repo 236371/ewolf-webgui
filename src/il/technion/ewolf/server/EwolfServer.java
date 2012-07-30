@@ -11,6 +11,7 @@ import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
+import il.technion.ewolf.server.ewolfHandlers.UploadFile;
 import il.technion.ewolf.server.handlers.JarResourceHandler;
 import il.technion.ewolf.server.handlers.JsonHandler;
 import il.technion.ewolf.server.handlers.SFShandler;
@@ -43,7 +44,8 @@ public class EwolfServer {
 	HttpConnector serverConnector;
 	Injector ewolfInjector;
 
-	private JsonHandler jsonHandler;
+	private JsonHandler jsonHandler = new JsonHandler();
+	private SFSUploadHandler sfsUploadHandler = new SFSUploadHandler();
 	
 	public EwolfServer(EwolfConfigurations configurations) {
 		if(configurations == null) {
@@ -106,7 +108,7 @@ public class EwolfServer {
 
 			new Thread(ewolfInjector.getInstance(PokeMessagesAcceptor.class),
 					"PokeMessagesAcceptorThread").start();
-			addHandlers(jsonHandler);
+			addEwolfHandlers();
 		} else {
 			//TODO
 		}
@@ -115,25 +117,26 @@ public class EwolfServer {
 	}
 	
 	private void registerConnectorHandlers() {
-		jsonHandler = new JsonHandler();
 		serverConnector.register("/json*", jsonHandler);
-//		serverConnector.register("/sfsupload*", serverInjector.getInstance(SFSUploadHandler.class));
+		serverConnector.register("/sfsupload*", sfsUploadHandler);
 //		serverConnector.register("/sfs*", serverInjector.getInstance(SFShandler.class));
 
 		serverConnector.register("*", new JarResourceHandler());
 	}
 	
-	private JsonHandler addHandlers(JsonHandler jsonHandler) {
-		return jsonHandler
-		.addHandler("inbox", ewolfInjector.getInstance(InboxFetcher.class))
-		.addHandler("wolfpacks", ewolfInjector.getInstance(WolfpacksFetcher.class))
-		.addHandler("profile", ewolfInjector.getInstance(ProfileFetcher.class))
-		.addHandler("wolfpackMembers", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
-		.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcher.class))
-		.addHandler("createWolfpack", ewolfInjector.getInstance(CreateWolfpackHandler.class))
-		.addHandler("addWolfpackMember", ewolfInjector.getInstance(AddWolfpackMemberHandler.class))
-		.addHandler("post", ewolfInjector.getInstance(PostToNewsFeedHandler.class))
-		.addHandler("sendMessage", ewolfInjector.getInstance(SendMessageHandler.class));
+	private void addEwolfHandlers() {
+		jsonHandler
+			.addHandler("inbox", ewolfInjector.getInstance(InboxFetcher.class))
+			.addHandler("wolfpacks", ewolfInjector.getInstance(WolfpacksFetcher.class))
+			.addHandler("profile", ewolfInjector.getInstance(ProfileFetcher.class))
+			.addHandler("wolfpackMembers", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
+			.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcher.class))
+			.addHandler("createWolfpack", ewolfInjector.getInstance(CreateWolfpackHandler.class))
+			.addHandler("addWolfpackMember", ewolfInjector.getInstance(AddWolfpackMemberHandler.class))
+			.addHandler("post", ewolfInjector.getInstance(PostToNewsFeedHandler.class))
+			.addHandler("sendMessage", ewolfInjector.getInstance(SendMessageHandler.class));
+		sfsUploadHandler
+			.addHandler(ewolfInjector.getInstance(UploadFile.class));
 	}
 
 	private Injector createInjector() {
