@@ -1,12 +1,65 @@
-var CommaSeperatedList = function(title) {
+var eWolfMaster = new function() {
+};
+
+var eWolf = $(eWolfMaster);
+
+$(document).ready(function () {
+	new Loading($("#loadingFrame"));
+	
+	eWolf.sideMenu = new SideMenu($("#menu"),$("#mainFrame"),$("#topbarID"));	
+	eWolf.applicationFrame = $("#applicationFrame");	
+	eWolf.mainApps = eWolf.sideMenu.createNewMenuList("mainapps","Main");
+	
+	getUserInformation();
+});
+
+function getUserInformation() {
+	var request = new PostRequestHandler("eWolf","/json",0)
+		.register(function() {
+			return {
+				profile: {}
+			};
+		},new ResponseHandler("profile",
+					["id","name"],handleProfileData).getHandler());
+	
+	eWolf.wolfpacks = new Wolfpacks(eWolf.sideMenu,request,eWolf.applicationFrame);
+	request.requestAll();
+	
+	function handleProfileData(data, textStatus, postData) {
+		document.title = "eWolf - " + data.name;
+			
+		eWolf.data('userID',data.id);
+		eWolf.data('userName',data.name);
+			
+		createMainApps();			
+	}	
+}
+
+function createMainApps() {
+		
+	eWolf.mainApps.addMenuItem(eWolf.data("userID"),"My Profile");
+	new Profile(eWolf.data("userID"),eWolf.data('userName'),eWolf.applicationFrame);
+	
+	eWolf.mainApps.addMenuItem("newsFeedApp","News Feed");
+	new WolfpackPage("newsFeedApp",null,eWolf.applicationFrame);
+	
+	eWolf.mainApps.addMenuItem("messages","Messages");
+	new Inbox("messages",eWolf.applicationFrame);
+	
+	new SearchApp("search",eWolf.sideMenu,eWolf.applicationFrame,
+			$("#txtSearchBox"),$("#btnSearch"),$("#btnAdd"));
+	
+	eWolf.trigger("select",["newsFeedApp"]);
+}var CommaSeperatedList = function(title) {
 	var list = $("<span/>")
 		.attr("class","wolfpacksBox")
 		.append(title+": ")
 		.hide();
 	
 	var items = null;
+	var itemsArray = [];
 	
-	this.addItem = function (item) {
+	this.addItem = function (item,itemName) {
 		if(items == null) {
 			items = $("<span/>").appendTo(list);
 			list.show();
@@ -15,12 +68,14 @@ var CommaSeperatedList = function(title) {
 		}
 		
 		items.append(item);
+		itemsArray.push(itemName);
 	};
 	
 	this.removeAll = function() {
 		if(items != null) {
 			items.remove();
 			items = null;
+			itemsArray = [];
 			list.hide();
 		}		
 	};
@@ -28,6 +83,22 @@ var CommaSeperatedList = function(title) {
 	this.getList = function () {
 		return list;
 	};
+	
+	this.getItemNames = function () {
+		return itemsArray;
+	};
+	
+	this.show = function (speed) {
+		if(items != null) {
+			list.show(speed);
+		}
+	};
+	
+	this.hide = function (speed) {
+		list.hide(speed);
+	};
+	
+	return this;
 };var Loading = function(indicator) {
 	var loadingCount = 0;
 	
@@ -90,6 +161,46 @@ $.fn.spin = function(opts) {
 			}, opts)).spin(this);
 		}
 	});
+	return this;
+};var PopUp = function(frame, activator) {
+	var thisObj = this;
+	
+	var pos = $(activator).position();
+
+	// .outerWidth() takes into account border and padding.
+	var width = $(activator).outerWidth() - 26;
+	var height = $(activator).outerHeight();
+	
+	var leftMargin = parseInt($(activator).css("margin-left"));
+
+	//show the menu directly over the placeholder
+	this.frame = $("<div/>").css({
+		position : "absolute",
+		top : (pos.top + height + 1) + "px",
+		left : (pos.left + 13 + leftMargin) + "px",
+		width : width,
+		"border": "1px solid #999",
+		"background-color" : "white"
+	}).appendTo(frame).hide();
+	
+	function clickFunc() {
+		if(! thisObj.frame.is(":hover")) {
+			thisObj.destroy();
+		}		
+	};
+	
+	$(document).bind("click",clickFunc);
+	
+	this.destroy = function () {
+		thisObj.frame.hide(200,function() {
+			thisObj.frame.remove();
+		});
+		 $(document).unbind("click",clickFunc);
+		 delete thisObj;
+	};
+	
+	this.frame.show(200);
+	
 	return this;
 };var BasicRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 	
@@ -199,6 +310,7 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 };var ResponseHandler = function(category, requiredFields, handler) {
 	var errorHandler = null;
 	var completeHandler = null;
+	var badResponseHandler = null;
 	
 	function theHandler(data, textStatus, postData) {
 		if (data[category] != null) {
@@ -213,12 +325,12 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 				});
 
 				if (valid && handler) {
-					handler(data[category], textStatus, postData);
+					handler(data[category], textStatus, postData[category]);
 				}
 			} else {
 				console.log("Response unsuccesssful: " + data[category].result);
 				if(errorHandler) {
-					errorHandler(data[category].result, textStatus, postData);
+					errorHandler(data[category], textStatus, postData[category]);
 				}
 			}
 
@@ -226,13 +338,13 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 			var errorMsg = "No category: \"" + category + "\" in response";
 			console.log(errorMsg);
 			
-			if(errorHandler) {
-				errorHandler(errorMsg, textStatus, postData);
+			if(badResponseHandler) {
+				badResponseHandler(errorMsg, textStatus, postData[category]);
 			}
 		}
 		
 		if(completeHandler) {
-			completeHandler(data, textStatus, postData);
+			completeHandler(textStatus, postData[category]);
 		}		
 	};
 	
@@ -251,8 +363,218 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 		complete: function (newCompleteHandler) {
 			completeHandler = newCompleteHandler;
 			return this;
+		},
+		badResponseHandler: function (newBadResponseHandler) {
+			badResponseHandler = newBadResponseHandler;
+			return this;
 		}
 	};
+};var SearchList = function(minWidth,queryPlaceHolder,availableQueries,commitQuery) {
+	var thisObj = this;
+	
+	var box = $("<div/>").attr("class","seachListClass");
+	
+	var queryBox = $("<div/>").appendTo(box);
+	var tagBox = $("<div/>").appendTo(box);
+	
+	var query = $("<input/>").attr({
+		"type": "text",
+		"placeholder": queryPlaceHolder
+	}).css({
+		"min-width" : minWidth
+	}).appendTo(queryBox);
+	
+	var addBtn = $("<input/>").attr({
+		"type": "button",
+		"value": "Add"
+	}).click(function() {
+		thisObj.addTag(query.val(),true);
+	}).appendTo(queryBox).hide();
+	
+	query.autocomplete({
+		source: availableQueries,
+		select: onSelectSendTo
+	}).keyup(function(event) {
+	    if(event.keyCode == 13 && query.val() != ""){
+	    	thisObj.addTag(query.val(),true);
+	    	query.val("");
+	    }
+	    
+	    if(query.val() == "") {
+	    	addBtn.hide(200);
+	    } else {
+	    	addBtn.show(200);
+	    }
+	});
+	
+	function onSelectSendTo(event,ui) {		
+		if(thisObj.addTag(ui.item.label,true) == true) {
+			query.val("");
+		}
+		
+		return false;
+	}
+		
+	this.foreachTag = function (applyThis,withSelector) {
+		var selector = ".TagClass";
+		if(withSelector) {
+			selector += withSelector;
+		}
+		
+		tagBox.children(selector).each(function(i, thisTag) {
+			applyThis($(thisTag).attr("id"));
+		});
+		
+		return this;
+	};
+	
+	this.foreachMarkedTag = function (applyThis) {
+		return thisObj.foreachTag(applyThis, ".TagErrorClass");
+	};
+	
+	this.foreachUnMarkedTag = function (applyThis) {
+		return thisObj.foreachTag(applyThis, ":not(.TagErrorClass)");
+	};
+	
+	this.foreachRemovableTag = function (applyThis) {
+		return thisObj.foreachTag(applyThis, ":not(.TagNonRemoveable)");
+	};
+	
+	this.removeTag = function (tag) {
+		var tagElement = tagBox.children(".TagClass[id=\""+tag+"\"]");
+		if(tagElement.length > 0) {
+			tagElement.remove();
+			return true;
+		}
+		
+		return false;
+	};
+	
+	this.addTag = function(thisQuery,removable) {
+		var res = commitQuery(thisQuery);
+		// sould return:	res.term and res.display
+		
+		if(res == null) {
+			return false;
+		}
+
+		if(tagBox.find(".TagClass[id=\""+res.term+"\"]").length != 0) {
+			return false;
+		}		
+		
+		var newTagItem = new Tag(res.term,null,removable)
+			.attr("id",res.term)
+			.append(res.display);
+		
+		tagBox.append(newTagItem);
+		
+		query.val("");
+		addBtn.hide(200);
+		
+		return true;
+	};
+	
+	this.appendTo = function(someFrame) {
+		box.appendTo(someFrame);
+		return this;
+	};
+	
+	this.markTag = function (tag,error) {
+		tagBox.children(".TagClass[id=\""+tag+"\"]")
+			.addClass("TagErrorClass")
+			.attr("title",error);
+		return this;
+	};
+	
+	this.unmarkTag = function (tag) {
+		tagBox.children(".TagClass[id=\""+tag+"\"]")
+			.removeClass("TagErrorClass")
+			.attr("title",null);
+		return this;
+	};
+	
+	this.isEmpty = function() {
+		return (tagBox.children(".TagClass,.TagClass.TagErrorClass").length == 0);
+	};
+	
+	this.tagCount = function() {
+		return tagBox.children(".TagClass").length;
+	};
+	
+	this.unmarkedTagCount = function() {
+		return tagBox.children(".TagClass:not(.TagErrorClass)").length;
+	};
+	
+	this.markedTagCount = function() {
+		return tagBox.children(".TagClass.TagErrorClass").length;
+	};
+	
+	this.removableTagCount = function () {
+		return tagBox.children(".TagClass:not(.TagNonRemoveable)").length;
+	};
+	
+	this.unmarkAll = function () {
+		tagBox.children(".TagClass").removeClass("TagErrorClass");
+		return this;
+	};
+	
+	return this;
+};
+
+var FriendsSearchList = function (minWidth) {
+	function sendToFuncReplace(query) {
+		var id = eWolf.wolfpacks.getFriendID(query);
+		
+		if(id == null) {
+			id = query;
+			query = null;
+		}
+		
+		return {
+			term: id,
+			display: new User(id,query)
+		};
+	}
+	
+	return new SearchList(minWidth,"Type user name or ID...",
+			eWolf.wolfpacks.friendsNameArray,sendToFuncReplace);
+};
+
+var WolfpackSearchList = function (minWidth) {
+	function sendToFuncReplace(pack) {
+		var idx = eWolf.wolfpacks.wolfpacksArray.indexOf(pack);
+		if(idx != -1) {
+			return {
+				term: pack,
+				display: new Wolfpack(pack)
+			};
+		} else {
+			return null;
+		}		
+	}
+	
+	return new SearchList(minWidth,"Type wolfpack name...",
+			eWolf.wolfpacks.wolfpacksArray,sendToFuncReplace);
+};var Tag = function(id,onRemove,removable) {
+	var box = $("<p/>").attr({
+		"class" : "TagClass"
+	});
+	
+	if(!removable) {
+		box.addClass("TagNonRemoveable");
+	}
+
+	$("<span/>").attr({
+		"class" : "TagDeleteClass"
+	}).append("&times;").appendTo(box).click(function() {
+		if(onRemove) {
+			onRemove(id);
+		}
+		
+		box.remove();
+	});
+	
+	return box;
 };var TitleArea = function (title) {
 	var thisObj = this;
 	
@@ -323,18 +645,60 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 		return this;
 	};
 	
+	this.hideFunction = function (functionName) {
+		if(functions[functionName] != null) {
+			functions[functionName].hide(200);
+		}
+		
+		return this;
+	};
+	
+	this.showFunction = function (functionName) {
+		if(functions[functionName] != null) {
+			functions[functionName].show(200);
+		}
+		
+		return this;
+	};
+	
 	return this;
 };var User = function(id,name) {
-	return $("<span/>").attr({
+	var link = $("<a/>").attr({
 		"style": "width:1%;",
-		"class": "selectableBox"
-	}).text(name).click(function() {
+		"class": "selectableBox",
+		"title": id
+	}).click(function() {
 		if(id != eWolf.data("userID")) {
 			eWolf.trigger("search",[id,name]);
 		} else {
 			eWolf.trigger("select",[id]);
 		}
 	});
+	
+	if (id == null && name != null) {
+		id = eWolf.wolfpacks.getFriendID(name);
+	} else if (id != null && name == null) {
+		name = eWolf.wolfpacks.getFriendName(id);
+		if(name == null) {
+			name = id;
+			var request = new PostRequestHandler(id,"/json",0).request({
+						profile: {
+							userID: id
+						}
+					  },
+					new ResponseHandler("profile",["name"],
+							function(data, textStatus, postData) {
+						name = data.name;
+						link.text(name);
+					}).getHandler());
+		}
+	} else if (id == null && name == null) {
+		return null;
+	}
+	
+	link.text(name);
+
+	return link;
 };var Wolfpack = function(name) {
 	return $("<span/>").attr({
 		"style": "width:1%;",
@@ -343,9 +707,14 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 		eWolf.trigger("select",["__pack__"+name]);
 	});
 };var Wolfpacks = function (menu,request,applicationFrame) {
-	var obj = this;
+	var thisObj = this;
 	
-	var wolfpacks = {};
+	var wolfpacksApps = {},
+		friendsMapByName = {},
+		friendsMapByID = {};
+	
+	this.wolfpacksArray = [];
+	this.friendsNameArray = [];
 	
 	var menuList = menu.createNewMenuList("wolfpacks","Wolfpacks");
 	
@@ -354,89 +723,86 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 			 wolfpacks:{}
 		};
 	},new ResponseHandler("wolfpacks",["wolfpacksList"],handleWolfpacks).getHandler());
+	
+	request.register(function() {
+		return {
+			wolfpackMembers:{}
+		};
+	},new ResponseHandler("wolfpackMembers",["membersList"],handleMembers).getHandler());
 		
 	this.addWolfpack = function (pack) {
-		if(wolfpacks[pack] == null) {		
+		if(wolfpacksApps[pack] == null) {		
 			menuList.addMenuItem("__pack__"+pack,pack);			
 			var app = new WolfpackPage("__pack__"+pack,pack,applicationFrame);			
 			
-			wolfpacks[pack] = app;
-		}		
+			wolfpacksApps[pack] = app;
+			thisObj.wolfpacksArray.push(pack);
+		}
+		
+		return thisObj;
 	};
 	
 	this.removeWolfpack = function(pack) {
-		if(wolfpacks[pack] != null) {
+		if(wolfpacksApps[pack] != null) {
 			menuList.removeMenuItem("__pack__"+pack);
-			wolfpacks[pack].destroy();
-			wolfpacks[pack] = null;
+			wolfpacksApps[pack].destroy();
+			wolfpacksApps[pack] = null;
+			
+			var idx = wolfpacksArray.indexOf(pack);
+			if(idx != -1){
+				wolfpacksArray.splice(idx, 1);
+			}
 		}
+		
+		return thisObj;
 	};
 	
+	this.addFriend = function(userID,userName) {
+		friendsMapByName[userName] = userID;
+		friendsMapByID[userID] = userName;
+		thisObj.friendsNameArray.push(userName);
+		
+		return thisObj;
+	};
+	
+	this.removeFriend = function(userID,userName) {
+		friendsMapByName[userName] = null;
+		friendsMapByID[userID] = null;
+		
+		var idx = thisObj.friendsNameArray.indexOf(userName);
+		if(idx != -1){
+			thisObj.friendsNameArray.splice(idx, 1);
+		}
+		
+		return thisObj;
+	};
+	
+	this.getFriendID = function (userName) {
+		return friendsMapByName[userName];
+	};
+	
+	this.getFriendName = function (userID) {
+		return friendsMapByID[userID];
+	};
+		
 	function handleWolfpacks(data, textStatus, postData) {
-		$.each(data.wolfpacksList,
-				function(i,pack){
-			obj.addWolfpack(pack);
+		$.each(data.wolfpacksList, function(i,pack){
+			thisObj.addWolfpack(pack);
 		});
-	}	
+	}
+	
+	function handleMembers(data, textStatus, postData) {
+		$.each(data.membersList, function(i,userObj){
+			thisObj.addFriend(userObj.id,userObj.name);
+		});
+	}
 	
 	return this;
 };
 
 
 
-var eWolfMaster = new function() {
-};
-
-var eWolf = $(eWolfMaster);
-
-$(document).ready(function () {
-	new Loading($("#loadingFrame"));
-	
-	eWolf.sideMenu = new SideMenu($("#menu"),$("#mainFrame"),$("#topbarID"));	
-	eWolf.applicationFrame = $("#applicationFrame");	
-	eWolf.mainApps = eWolf.sideMenu.createNewMenuList("mainapps","Main");
-	
-	getUserInformation();
-});
-
-function getUserInformation() {
-	var request = new PostRequestHandler("eWolf","/json",0)
-		.register(function() {
-			return {
-				profile: {}
-			};
-		},new ResponseHandler("profile",
-					["id","name"],handleProfileData).getHandler());
-	
-	eWolf.wolfpacks = new Wolfpacks(eWolf.sideMenu,request,eWolf.applicationFrame);
-	request.requestAll();
-	
-	function handleProfileData(data, textStatus, postData) {
-		document.title = "eWolf - " + data.name;
-			
-		eWolf.data('userID',data.id);
-		eWolf.data('userName',data.name);
-			
-		createMainApps();			
-	}	
-}
-
-function createMainApps() {
-		
-	eWolf.mainApps.addMenuItem(eWolf.data("userID"),"My Profile");
-	new Profile(eWolf.data("userID"),eWolf.data('userName'),eWolf.applicationFrame);
-	
-	eWolf.mainApps.addMenuItem("newsFeedApp","News Feed");
-	new WolfpackPage("newsFeedApp",null,eWolf.applicationFrame);
-	
-	eWolf.mainApps.addMenuItem("messages","Messages");
-	new Inbox("messages",eWolf.applicationFrame);
-	
-	new SearchApp("search",eWolf.sideMenu,eWolf.applicationFrame,
-			$("#txtSearchBox"),$("#btnSearch"),$("#btnAdd"));
-	
-	eWolf.trigger("select",["newsFeedApp"]);
-}/*
+/*
 filedrag.js - HTML5 File Drag & Drop demonstration
 Featured on SitePoint.com
 Developed by Craig Buckler (@craigbuckler) of OptimalWorks.net
@@ -2624,7 +2990,7 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 		senderBox.text(senderName).shorten({width:w});
 	}	
 	
-	eWolf.bind("mainFrameResize", function(event,eventId) {
+	eWolf.bind("mainFrameResize,refresh",function(event,eventId) {
 		updateView();
 	});
 	
@@ -2728,14 +3094,14 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 		request.request(obj.updateFromServer (true),responseHandler.getHandler());
 	}).draw();
 	
-	function handleNewData(data, textStatus, parameters) {
+	function handleNewData(data, textStatus, postData) {
 		$.each(data.mailList, function(j, mailItem) {
 			obj.addItem(mailItem.senderID,mailItem.senderName,
 					mailItem.timestamp, mailItem.mail);
 		});
 		
-		if (parameters[mailType].newerThan == null &&
-				data.mailList.length < parameters[mailType].maxMessages) {
+		if (postData.newerThan == null &&
+				data.mailList.length < postData.maxMessages) {
 			showMore.remove();
 		}
 	}	
@@ -2756,8 +3122,9 @@ var InboxList = function (request,serverSettings) {
 	return new GenericMailList("inbox",request,serverSettings,
 			"messageListItem","messageBox", ">> ",true);
 };var MailItem = function(item) {
-	var canvas = $("<div/>").append(item.text);
-	
+	var text = item.text.replace("<","&lt").replace(">","&gt").replace(/\n/g,"<br>");
+	var canvas = $("<div/>").html(text);
+
 	if(item.attachment != null) {
 		var imageCanvas = $("<div/>");
 
@@ -2830,7 +3197,284 @@ var ShowMore = function (frame,onClick) {
 	}).append(itsTime.toString(dateFormat));
 };
 
-var dateFormat = "dd/MM/yyyy (HH:mm)";var AppContainer = function(id,container) {
+var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(fatherID,wolfpack, existingMemebers,
+		onFinish,request) {
+	var thisObj = this;
+	this.frame = $("<span/>");
+	
+	var madeChanges = false;
+
+	addMembersQuery = new FriendsSearchList(400).appendTo(this.frame);
+	
+	$.each(existingMemebers, function(i, item) {
+		addMembersQuery.addTag(item,false);
+	});
+	
+	var applyBtn = $("<input/>").attr({
+		"type": "button",
+		"value": "Apply"
+	}).click(apply).appendTo(this.frame);
+	
+	var cancelBtn = $("<input/>").attr({
+		"type": "button",
+		"value": "Cancel"
+	}).click(cancel).appendTo(this.frame);
+	
+	var errorMessage = $("<div/>").attr("class","errorArea").appendTo(this.frame);
+	
+	function apply() {
+		if(addMembersQuery.removableTagCount() <= 0) {
+			errorMessage.html("Please add new members...");
+			return false;
+		}
+		
+		applyBtn.hide(200);
+		cancelBtn.hide(200);
+		
+		errorMessage.html("");
+		
+		var idsToAdd = [];
+		
+		addMembersQuery.foreachRemovableTag(function(term) {
+			idsToAdd.push(term);
+		});
+		
+		var responseHandler = new ResponseHandler("addWolfpackMember",[],null);
+		
+		responseHandler.success(function(data, textStatus, postData) {
+			madeChanges = true;
+			cancel();
+		});
+		
+		responseHandler.error(function(data, textStatus, postData) {
+			var errorMsg = null;
+			
+			if(data.wolfpacksResult == null) {
+				console.log("No wolfpacksResult in response");
+			} else if(data.wolfpacksResult[0] != "success") {
+				errorMsg = "Error: " + data.wolfpacksResult[0];
+				errorMessage.append(errorMsg+"<br>");
+			}
+			
+			if(data.usersResult == null) {
+				console.log("No usersResult in response");
+			} else {
+				$.each(data.usersResult, function(i, item) {
+					if(item == "success") {
+						madeChanges = true;
+						sendToQuery.removeTag(postData.userID[i]);
+					} else {
+						var errorMsg = "Failed to add: " +
+								postData.userID[i] +
+								" with error: " + item;
+						errorMessage.append(errorMsg+"<br>");
+						
+						sendToQuery.markTag(item,errorMsg);	
+					}					
+				});
+			}
+			
+			if(errorMsg == null) {
+				errorMessage.append("Unknown error...<br>");
+			}			
+		});
+		
+		responseHandler.complete(function (textStatus, postData) {
+			if(madeChanges) {
+				madeChanges = false;
+				eWolf.trigger("needRefresh."+fatherID);
+			}
+			
+			applyBtn.show(200);
+			cancelBtn.show(200);
+		});
+		
+		request.request({
+			addWolfpackMember: {
+				wolfpackName: [wolfpack],
+				userID: idsToAdd
+			}
+		},responseHandler.getHandler());
+	}
+	
+	function cancel() {
+		if(onFinish != null) {
+			onFinish();
+		}
+		
+		thisObj.frame.remove();
+		
+		if(madeChanges) {
+			eWolf.trigger("needRefresh."+fatherID);
+		}
+		
+		delete thisObj;
+	}
+	
+	return this;
+};var AddToWolfpack = function(id, frame, activator, request, packsAlreadyIn) {
+	var popUpApp = new PopUp(frame,activator);
+	var popUp = popUpApp.frame;
+	
+	var packList = $("<ul/>").attr({
+		"class": "packListSelect"
+	}).appendTo(popUp);	
+
+	$.each(eWolf.wolfpacks.wolfpacksArray,function(i,pack) {
+		var box = $("<input/>").attr({
+			"value" : pack,
+			"type": "checkbox"
+		});
+		
+		if(packsAlreadyIn.indexOf(pack) >= 0) {
+			box.attr("checked","checked");
+			box.data("isMember",true);
+		} else {
+			box.data("isMember",false);
+		}
+
+		$("<li/>").attr({
+			"class": "packListSelectItem"
+		}).append(box).append(pack).appendTo(packList);
+	});
+	
+	var createItem = $("<li/>").attr({
+		"class": "packListSelectItem"
+	}).css({
+		"margin-top": "5px"
+	}).appendTo(packList);
+	
+	var createLink = $("<span/>").attr({
+		"class": "aLink createLink"
+	});
+	
+	createLink.append("+ new wolfpack").appendTo(createItem).click(function() {
+		var newPackItem = $("<li/>").attr({
+			"class": "packListSelectItem"
+		});		
+
+		
+		var newPack = $("<input/>").attr({
+			"type":"text",
+			"class": "newWolfpackInput"
+		}).css({
+			"width" : (parseInt(createLink.css("width")) - 5) + "px"
+		});
+		
+		var itsCheckbox = $("<input/>").attr({
+			"type": "checkbox",
+			"disabled" : true
+		}).data({
+			"isNew" : true,
+			"itsInput" : newPack
+		}).appendTo(newPackItem);
+		
+		newPack.appendTo(newPackItem);
+		newPack.keyup(function(event) {
+		    if(newPack.val() != "") {
+		    	itsCheckbox.attr("checked",true);
+		    	itsCheckbox.removeAttr("disabled");
+		    } else {
+		    	itsCheckbox.attr({
+		    		"checked" : false,
+		    		"disabled" : true
+		    	});
+		    }
+		});
+			
+		createItem.before(newPackItem);
+		
+		window.setTimeout(function () {
+			newPack.focus();
+		}, 0);	
+	});
+	
+	$("<hr/>").css({
+		"margin":"0"
+	}).appendTo(popUp);
+	
+	$("<span/>").attr({
+		"class": "aLink applyLink"
+	}).append("Apply").appendTo(popUp).click(function() {
+		var add = [],
+			create = [],
+			remove = [];
+		
+		$.each(packList.find("input"),function(i,item) {
+			var itsBox = $(item);
+
+			if(itsBox.is(':checked') == true) {
+				if(itsBox.data("isMember") != true) {
+					if(itsBox.data("isNew") == true) {
+						var packName = itsBox.data("itsInput").val();
+						add.push(packName);
+						create.push(packName);
+					} else {
+						add.push(itsBox.attr("value"));
+					}		
+				}
+			} else {
+				if(itsBox.data("isMember") == true) {
+					remove.push(itsBox.attr("value"));
+				}
+			}
+		});
+		
+		popUpApp.destroy();
+			
+		if(create.length > 0) {			
+			var responseHandler = new ResponseHandler("createWolfpack",[],null);
+			
+			responseHandler.success(function(data, textStatus, postData) {
+				$.each(create,function(i,pack) {
+					eWolf.wolfpacks.addWolfpack(pack);
+				});
+				
+				addToAllWolfpacks();
+			}).error(function(data, textStatus, postData) {				
+				if(data.wolfpacksResult == null) {
+					console.log("No wolfpacksResult in response");
+				} else {
+					$.each(data.wolfpacksResult, function(i,item) {
+						if(item == "success")
+							eWolf.wolfpacks.addWolfpack(postData.wolfpackName[i]);
+					});
+					
+				}
+				
+				addToAllWolfpacks();
+			});
+			
+			request.request({
+				createWolfpack: {
+					wolfpackName: create
+				}
+			},responseHandler.getHandler());
+			
+		} else {
+			addToAllWolfpacks();
+		}
+		
+		function addToAllWolfpacks() {
+			if(add.length > 0) {
+				var response = new ResponseHandler("addWolfpackMember",[],null);
+				
+				response.complete(function (textStatus, postData) {
+					eWolf.trigger("needRefresh."+id);
+				});			
+				
+				request.request({
+					addWolfpackMember: {
+						wolfpackName: add,
+						userID: [id]
+					}
+				},response.getHandler());
+			}			
+		}		
+	});
+		
+	return this;
+};var AppContainer = function(id,container) {
 		var selected = false;
 		var needRefresh = true;
 		
@@ -2929,8 +3573,8 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AppContainer = function(id,container) 
 	};
 };
 var NewMail = function(id,applicationFrame,title,
-		createRequestObj,handleResponse,
-		allowAttachment,to,toReplacment) {
+		createRequestObj,handleResponseCategory,
+		allowAttachment,sendTo,sendToQuery) {
 	var obj = this;
 	var thisID = "__newmessage__"+id;
 	
@@ -2939,26 +3583,25 @@ var NewMail = function(id,applicationFrame,title,
 	
 	var request = new PostRequestHandler(thisID,"/json",0);
 		
-	new TitleArea(title)
+	var titleArea = new TitleArea(title)
 		.appendTo(frame)
 		.addFunction("Send", send)
 		.addFunction("Cancel",cancel);
 	
 	var base = $("<table/>").appendTo(frame);
 	
-	var idRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("style","text-align:right;").append("To:").appendTo(idRaw);
+	var queryRaw = $("<tr/>").appendTo(base);
+	$("<td/>").attr("class","newMailAlt").append("To:").appendTo(queryRaw);	
+	var userIdCell = $("<td/>").appendTo(queryRaw);
 	
-	var userIdText = $("<input/>").attr({
-		"type": "text",
-		"placeholder": "To...",
-		"style": "min-width:300px !important;"
-	});
+	sendToQuery.appendTo(userIdCell);
 	
-	var userIdCell = $("<td/>").append(userIdText).appendTo(idRaw);
+	if(sendTo != null) {
+		sendToQuery.addTag(sendTo,true);
+	}
 	
 	var msgRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("style","vertical-align:text-top;text-align:right;").append("Content:").appendTo(msgRaw);
+	$("<td/>").attr("class","newMailAlt").append("Content:").appendTo(msgRaw);
 	
 	var messageText = $("<textarea/>").attr({
 		"id": "textileMessage",
@@ -2970,7 +3613,7 @@ var NewMail = function(id,applicationFrame,title,
 	
 	if(allowAttachment) {
 		var attacheRaw = $("<tr/>").appendTo(base);
-		$("<td/>").attr("style","vertical-align:text-top;text-align:right;").append("Attachment:").appendTo(attacheRaw);
+		$("<td/>").attr("class","newMailAlt").append("Attachment:").appendTo(attacheRaw);
 		
 		var uploaderArea = $("<td/>").appendTo(attacheRaw);
 		/*var files = */new filedrag(uploaderArea);
@@ -3001,20 +3644,40 @@ var NewMail = function(id,applicationFrame,title,
 	var errorBox = $("<td/>").appendTo(errorRaw);
 	
 	var errorMessage = $("<span/>").attr({
-		"style": "color:red;"
+		"class": "errorArea"
 	}).appendTo(errorBox);
 		
 	function cancel() {
 		obj.destroy();
 	}
 	
-	handleResponse.success(function(data, textStatus, postData) {
-		obj.destroy();
-	}).error(function(error, textStatus, postData) {
-		errorMessage.html(error);
-	});
-	
-	function send() {		
+	function send() {
+		if(sendToQuery.isEmpty()) {
+			errorMessage.html("Please select a destination(s)");
+			return false;
+		}
+		
+		sendToQuery.unmarkAll();
+		
+		function updateSend() {
+			if(sendToQuery.unmarkedTagCount() > 0) {
+				titleArea.removeFunction("Send");
+				titleArea.removeFunction("Cancel");
+				btnBox.hide();
+			} else {
+				titleArea.addFunction("Send",send);
+				titleArea.addFunction("Cancel",cancel);
+				btnBox.show();
+			}
+			
+			if(sendToQuery.isEmpty()) {
+				eWolf.trigger("needRefresh."+id,[id]);
+				obj.destroy();
+			}
+		}
+		
+		updateSend();
+		
 //		var uploader = new qq.FileUploaderBasic({
 //		    // path to server-side upload script
 //		    action: '/sfsupload',
@@ -3025,7 +3688,7 @@ var NewMail = function(id,applicationFrame,title,
 //		
 //		uploader._uploadFileList(files.getFiles());
 		
-		var msg = messageText.val().replace(/\n/g,"<br>");
+		var msg = messageText.val();
 		var mailObject = {
 				text: msg,
 				attachment: [{
@@ -3039,30 +3702,47 @@ var NewMail = function(id,applicationFrame,title,
 					path: "https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"					
 				}]
 		};
+		
+		var mailString = JSON.stringify(mailObject);
+		
+		errorMessage.html("");
+		
+		sendToQuery.foreachTag(function(term) {			
+			var responseHandler = new ResponseHandler(handleResponseCategory,[],null);
+			
+			responseHandler.success(function(data, textStatus, postData) {
+				sendToQuery.removeTag(term);				
+				updateSend();
+			}).error(function(data, textStatus, postData) {
+				var errorMsg = "Failed to arrive at destination: " +
+						term + " with error: " + data.result;
+				errorMessage.append(errorMsg+"<br>");
 				
-		request.request(
-				createRequestObj(userIdText.val(),JSON.stringify(mailObject)),
-				handleResponse.getHandler());
+				sendToQuery.markTag(term,errorMsg);				
+				updateSend();
+			});
+			
+			request.request(
+					createRequestObj(term,mailString),
+					responseHandler.getHandler());
+		});		
 	}
 	
 	eWolf.bind("refresh",function(event,eventID) {
 		if(eventID == thisID) {
-			if(to != null) {
-				userIdText.attr("value",to);
-				
-				if(toReplacment != null) {
-					userIdText.hide();
-					userIdCell.append(toReplacment);
-				}
-				
-				window.setTimeout(function () {
-					messageText.focus();
-				}, 0);				
-			} else {
-				window.setTimeout(function () {
-					userIdText.focus();
-				}, 0);
-			}
+//			if(sendTo != null) {				
+//				window.setTimeout(function () {
+//					messageText.focus();
+//				}, 0);				
+//			} else {
+//				window.setTimeout(function () {
+//					sendToQuery.focus();
+//				}, 0);
+//			}
+			
+			window.setTimeout(function () {
+				messageText.focus();
+			}, 0);
 		}
 	});
 	
@@ -3084,12 +3764,7 @@ var NewMail = function(id,applicationFrame,title,
 	return this;
 };
 
-var NewMessage = function(id,applicationFrame,sendToID,sendToName) {
-	var replacement = null;
-	if(sendToID && sendToName) {
-		replacement = new User(sendToID,sendToName);
-	}
-	
+var NewMessage = function(id,applicationFrame,sendToID,sendToName) {	
 	function createNewMessageRequestObj(to,msg) {
 		return {
 			sendMessage: {
@@ -3099,18 +3774,12 @@ var NewMessage = function(id,applicationFrame,sendToID,sendToName) {
 		  };
 	}
 	
-	var responseHandler = new ResponseHandler("sendMessage",[],null);
-	
 	return new NewMail(id,applicationFrame,"New Message",
-			createNewMessageRequestObj,responseHandler,true,sendToID,replacement);
+			createNewMessageRequestObj,"sendMessage",true,
+			sendToName,new FriendsSearchList(300));
 };
 
 var NewPost = function(id,applicationFrame,wolfpack) {	
-	var replacement = null;
-	if(wolfpack) {
-		replacement = new Wolfpack(wolfpack);
-	}
-	
 	function createNewPostRequestObj(to,content) {
 		return {
 			post: {
@@ -3120,10 +3789,9 @@ var NewPost = function(id,applicationFrame,wolfpack) {
 		  };
 	}	
 	
-	var responseHandler = new ResponseHandler("post",[],null);
-	
 	return new NewMail(id,applicationFrame,"New Post",
-			createNewPostRequestObj,responseHandler,true,wolfpack,replacement);
+			createNewPostRequestObj,"post",true,
+			wolfpack,new WolfpackSearchList(300));
 };
 var Profile = function (id,name,applicationFrame) {
 	var obj = this;
@@ -3176,16 +3844,19 @@ var Profile = function (id,name,applicationFrame) {
 	if(id != eWolf.data("userID")) {
 		topTitle.addFunction("Add to wolfpack...", function () {
 			// TODO: add to any wolfpack (not just wall-readers) 
-			request.request({
-				addWolfpackMember: {
-					wolfpackName: "wall-readers",
-					userID: id
-				}
-			},new ResponseHandler("addWolfpackMember",
-					[],function (data, textStatus, postData) {
-				request.requestAll();
-				eWolf.trigger("needRefresh.__pack__"+postData.addWolfpackMember.wolfpackName);
-			}).getHandler());
+//			request.request({
+//				addWolfpackMember: {
+//					wolfpackName: "wall-readers",
+//					userID: id
+//				}
+//			},new ResponseHandler("addWolfpackMember",
+//					[],function (data, textStatus, postData) {
+//				request.requestAll();
+//				eWolf.trigger("needRefresh.__pack__"+postData.wolfpackName);
+//			}).getHandler());
+			
+			new AddToWolfpack(id, frame,this, request, wolfpacksContainer.getItemNames());
+			return false;
 		});
 	} else {
 		topTitle.addFunction("Post", function() {
@@ -3213,7 +3884,7 @@ var Profile = function (id,name,applicationFrame) {
 		wolfpacksContainer.removeAll();		 
 
 		 $.each(data.wolfpacksList,function(i,pack) {
-			 wolfpacksContainer.addItem(new Wolfpack(pack));
+			 wolfpacksContainer.addItem(new Wolfpack(pack),pack);
 		 });
 	  }
 	
@@ -3281,7 +3952,14 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 	var lastSearch = null;
 	
 	function addSearchMenuItem(key,name) {
-		menuList.addMenuItem(key,name);
+		var tempName;
+		if(name == null) {
+			tempName = "Search: "+key;
+		} else {
+			tempName = name;
+		}
+		
+		menuList.addMenuItem(key,tempName);
 		apps[key] = new Profile(key,name,applicationFrame)
 			.onReceiveName(function(newName) {
 				menuList.renameMenuItem(key,newName);
@@ -3332,7 +4010,7 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 	
 	searchBtn.click(function() {
 		var key = query.val();
-		searchUser(key,"Search: "+key);	
+		searchUser(key);	
 	});
 	
 	eWolf.bind("select."+id,function(event,eventId) {
@@ -3379,35 +4057,39 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 	var request = new PostRequestHandler(id,"/json",60)
 		.listenToRefresh();
 				
-	var topTitle = new TitleArea()
-		.appendTo(frame)
+	var topTitle = new TitleArea().appendTo(frame)
 		.addFunction("Post", function() {
 			new NewPost(id,applicationFrame,wolfpackName).select();
-		});
+		});		
 	
 	var newsFeedRequestObj = {
 			newsOf:"wolfpack"	
 	};
 	
-	if(wolfpackName != null) {
-		request.register(getWolfpacksMembersData,
-				new ResponseHandler("wolfpackMembers",
-						["membersList"],handleWolfpacksMembersData).getHandler());
-		topTitle.addFunction("Add member...", function() {
-			// TODO: add member
-			alert("This will add a member to a wolfpack");
-		});
-		
-		topTitle.setTitle(new Wolfpack(wolfpackName));
-		newsFeedRequestObj["wolfpackName"] = wolfpackName;
-	} else {
-		topTitle.setTitle("News Feed");
-	}		
-	
+	var addMembers = null;
+
 	var members = new CommaSeperatedList("Members");
 	topTitle.appendAtBottomPart(members.getList());
 	
-	new NewsFeedList(request,newsFeedRequestObj).appendTo(frame);	
+	if(wolfpackName != null) {
+		topTitle.setTitle(new Wolfpack(wolfpackName));
+		newsFeedRequestObj["wolfpackName"] = wolfpackName;
+		
+		request.register(getWolfpacksMembersData,
+				new ResponseHandler("wolfpackMembers",
+					["membersList"],handleWolfpacksMembersData).getHandler());
+		
+		topTitle.addFunction("Add members...", showAddMembers);		
+		topTitle.addFunction("Delete wolfpack", showDeleteWolfpackDialog);		
+	} else {
+		topTitle.setTitle("News Feed");
+	}
+	
+	new NewsFeedList(request,newsFeedRequestObj).appendTo(frame);
+	
+	eWolf.bind("select."+id,function(event,eventId) {
+		removeAddMemebers();
+	});
 	
 	function getWolfpacksMembersData() {
 		return {
@@ -3423,7 +4105,59 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 		members.removeAll();
 
 		$.each(list, function(i, member) {
-			members.addItem(new User(member.id, member.name));
+			members.addItem(new User(member.id, member.name),member.name);
+		});
+	}
+	
+	function showAddMembers() {
+		members.hide(200);
+		topTitle.hideFunction("Add members...");
+		if(addMembers != null) {
+			addMembers.remove();
+		}
+		
+		addMembers = $("<span/>");
+		topTitle.appendAtBottomPart(addMembers);
+		
+		new AddMembersToWolfpack(id,wolfpackName,members.getItemNames(),
+				removeAddMemebers,request).frame.appendTo(addMembers);
+	}
+	
+	function removeAddMemebers() {
+		if(addMembers != null) {
+			addMembers.hide(200,function() {
+				addMembers.remove();
+				addMembers = null;
+			});			
+		}
+		
+		topTitle.showFunction("Add members...");
+		members.show(200);
+	}
+	
+	function showDeleteWolfpackDialog() {
+		var diag = $("<div/>").attr({
+			"id" : "dialog-confirm",
+			"title" : "Delete wolfpack?"
+		});
+		
+		var p = $("<p/>").appendTo(diag);
+	
+		p.append("The wolfpack will be permanently deleted and cannot be recovered. Are you sure?");
+		
+		diag.dialog({
+			resizable: true,
+			//height:140,
+			modal: true,
+			buttons: {
+				"Delete wolfpack": function() {
+					// TODO: delete wolfpack
+					$( this ).dialog( "close" );
+				},
+				Cancel: function() {
+					$( this ).dialog( "close" );
+				}
+			}
 		});
 	}
 	

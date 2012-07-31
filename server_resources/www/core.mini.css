@@ -1,4 +1,36 @@
-.filesList {
+.packListSelect {
+	list-style-type:none;
+	padding: 0 5px;
+	margin: 0 0;
+}
+
+.packListSelectItem {
+	font-size:12px;
+}
+
+.applyLink {
+	font-size:14px;
+	margin-left:20px;
+}
+
+.createLink {
+	font-size:12px;
+	font-style:italic;
+	margin-left:7px;
+}
+
+.newWolfpackInput {
+	height:15px!important;
+	font-size:12px!important;
+	border-radius:0!important;
+	padding:0 0 0 0!important;
+	margin-left:7px;
+	background-color: transparent!important;
+	border-style: solid!important; 
+	border-width: 0px 0px 1px 0px!important;
+	border-color: darkred;
+	box-shadow:none!important;
+}.filesList {
 	list-style-type:none;
 	padding: 0 10px;
 	margin: 1em 0;
@@ -85,6 +117,21 @@ h1, h2
 	text-decoration:underline;
 }
 
+.aLink {
+	text-decoration:none;
+	color:inherit;
+	cursor:pointer;
+}
+
+.aLink:hover {
+	color:blue;
+	text-decoration:underline;
+}
+
+.errorArea {
+	color:red;
+	font-size:11px;
+}
 /*** Inbox ***/
 
 .newMessageBoxClass {
@@ -106,6 +153,12 @@ h1, h2
 /* 	margin-right:10%; */
 /* 	margin-top:10%; */
 /* 	margin-bottom:10%; */
+}
+
+.newMailAlt {
+	vertical-align:text-top;
+	text-align:right;
+	padding-top:6px;
 }
 
 .preMessageBox {
@@ -358,6 +411,45 @@ h1, h2
 .senderBox:hover {
 	color:blue;
 	text-decoration:underline;
+}.TagClass {
+	background-color:#999;
+	color:white;
+	border:1px solid #222;
+	border-radius:5px;
+	padding-right:5px;
+	padding-left:5px;
+	margin-right:5px;
+	margin-top:5px;
+	margin-bottom:5px;
+	width:auto !important;
+	display:inline-block;
+}
+
+.TagErrorClass {
+	background-color:#F99  !important;
+}
+
+.TagNonRemoveable > .TagDeleteClass {
+	display:none;
+}
+
+.TagDeleteClass {
+	text-decoration:none;
+	color:#DDD;
+	cursor:pointer;
+	border:1px solid #222;
+	border-width: 0px 1px 0px 0px;
+	padding-right:5px;
+	margin-right:5px;
+}
+
+.TagDeleteClass:hover {
+	color:white;
+}
+
+.seachListClass {
+	margin-top:5px;
+	margin-bottom:5px;
 }.titleArea {
 	background-color:rgba(256,256,256,0.65);
 	border-radius:13px;
@@ -491,7 +583,7 @@ button, input[type="button"]:hover {
 }
 
 input[type="text"] {
-	width:163px;
+	width:250px;
 	height:14px;
 	min-height:auto;
 	padding:10px 27px 6px 12px;
@@ -500,12 +592,12 @@ input[type="text"] {
 	color:#666;
 	background-color: /*#ccc*/ #ddd;
 	border:0;
-	-webkit-border-radius:13px;
-	-moz-border-radius:13px;
-	-webkit-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
-	-moz-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
-	-webkit-transition:all .2s ease-in-out;
-	-moz-transition:all .2s ease-in-out;
+/* 	-webkit-border-radius:13px; */
+/* 	-moz-border-radius:13px; */
+/* 	-webkit-box-shadow:inset 0 1px 2px rgba(0,0,0,.2); */
+/* 	-moz-box-shadow:inset 0 1px 2px rgba(0,0,0,.2); */
+/* 	-webkit-transition:all .2s ease-in-out; */
+/* 	-moz-transition:all .2s ease-in-out; */
 	transition:all .2s ease-in-out;
 	border-radius:13px;	
 	box-shadow:inset 0 1px 2px rgba(0,0,0,.2);	
