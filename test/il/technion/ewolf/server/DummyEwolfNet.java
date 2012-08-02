@@ -138,12 +138,11 @@ public class DummyEwolfNet {
 		SocialMail sm1 = inj1.getInstance(SocialMail.class);
 
 		//user2 creates wolfpacks
-		WolfPack friends = sgm2.findOrCreateSocialGroup("friends")
-				.addMember(profile1).addMember(profile2);
+		WolfPack friends = sgm2.findOrCreateSocialGroup("friends").addMember(profile1);
 		//user1 SHOULDN't get posts to enemies
-		WolfPack enemies = sgm2.findOrCreateSocialGroup("enemies").addMember(profile2);
+		WolfPack enemies = sgm2.findOrCreateSocialGroup("enemies");
 
-		sgm2.findSocialGroup("wall-readers").addMember(profile1).addMember(profile2);
+		sgm2.findSocialGroup("wall-readers").addMember(profile1);
 		List<SocialMessage> inbox = sm1.readInbox();
 		((PokeMessage)inbox.get(0)).accept();
 		((PokeMessage)inbox.get(1)).accept();
