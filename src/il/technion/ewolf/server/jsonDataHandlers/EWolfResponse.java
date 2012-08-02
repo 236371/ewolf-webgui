@@ -16,4 +16,7 @@ public abstract class EWolfResponse {
 		this.result = RES_SUCCESS;
 	}
 	
+	public String result() {
+		return result;
+	}
 }

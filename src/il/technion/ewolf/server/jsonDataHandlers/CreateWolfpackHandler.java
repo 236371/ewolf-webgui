@@ -1,5 +1,8 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import il.technion.ewolf.ewolf.WolfPackLeader;
 
 import com.google.gson.Gson;
@@ -17,7 +20,7 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 	}
 	
 	private static class JsonReqCreateWolfpackParams {
-		String wolfpackName;
+		List<String> wolfpackNames;
 	}
 
 	static class CreateWolfpackResponse extends EWolfResponse {
@@ -42,17 +45,29 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 			return new CreateWolfpackResponse(RES_BAD_REQUEST);
 		}
 
-		if (jsonReqParams.wolfpackName == null) {
-			return new CreateWolfpackResponse(RES_BAD_REQUEST + ": must specify wolfpack name.");
+		if (jsonReqParams.wolfpackNames == null || jsonReqParams.wolfpackNames.isEmpty()) {
+			return new CreateWolfpackResponse(RES_BAD_REQUEST + ": must specify wolfpack name/s.");
 		}
-		//TODO do we want to get feedback about this?
-		if (socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName) != null) {
-			return new CreateWolfpackResponse(RES_BAD_REQUEST + ": wolfpack already exists");
+
+		List<CreateWolfpackResponse> wolfpacksResult = new ArrayList<CreateWolfpackResponse>();
+		for (String wolfpackName : jsonReqParams.wolfpackNames) {
+			//TODO do we want to get feedback about this?
+			if (socialGroupsManager.findSocialGroup(wolfpackName) != null) {
+				wolfpacksResult.add(new CreateWolfpackResponse(RES_BAD_REQUEST + ": wolfpack already exists"));
+				continue;
+			}
+			try {
+				socialGroupsManager.findOrCreateSocialGroup(wolfpackName);
+			} catch (Exception e) {
+				wolfpacksResult.add(new CreateWolfpackResponse(RES_INTERNAL_SERVER_ERROR));
+				continue;
+			}
+			wolfpacksResult.add(new CreateWolfpackResponse());
 		}
-		try {
-			socialGroupsManager.findOrCreateSocialGroup(jsonReqParams.wolfpackName);
-		} catch (Exception e) {
-			return new CreateWolfpackResponse(RES_INTERNAL_SERVER_ERROR);
+		for (CreateWolfpackResponse res : wolfpacksResult) {
+			if (res.result() != RES_SUCCESS) {
+				return wolfpacksResult;
+			}
 		}
 		return new CreateWolfpackResponse();
 	}
