@@ -186,9 +186,12 @@ public class NewsFeedFetcher implements JsonDataHandler {
 	}
 
 	private List<Post> fetchPostsForWolfpack(String socialGroupName) throws FileNotFoundException {
+		Set<Profile> profiles = new HashSet<Profile>();
 		List<WolfPack> wolfpacks = new ArrayList<WolfPack>();
+
 		if (socialGroupName==null) {
 			wolfpacks = socialGroupsManager.getAllSocialGroups();
+			profiles.add(socialFS.getCredentials().getProfile());
 		} else {
 			WolfPack wp = socialGroupsManager.findSocialGroup(socialGroupName);
 			if (wp == null) {
@@ -198,8 +201,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 				wolfpacks.add(wp);
 			}
 		}
-		
-		Set<Profile> profiles = new HashSet<Profile>();
+
 		for (WolfPack w : wolfpacks) {
 			profiles.addAll(w.getMembers());
 		}
