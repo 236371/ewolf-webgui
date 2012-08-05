@@ -3,6 +3,7 @@ package il.technion.ewolf.server.handlers;
 import il.technion.ewolf.server.ServerResources;
 import il.technion.ewolf.server.ewolfHandlers.DownloadFileFromSFS;
 
+import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -12,8 +13,7 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
@@ -47,9 +47,14 @@ public class SFSHandler implements HttpRequestHandler {
 				//TODO reply bad request
 				return;
 			}
-			String strEntity = handler.handleData(userID, fileName);
+			Serializable fileData = handler.handleData(userID, fileName);
+			if (fileData == null) {
+				//TODO what?
+			}
 			String mimeType = ServerResources.getFileTypeMap().getContentType(fileName);
-			res.setEntity(new StringEntity(strEntity, ContentType.create(mimeType, Consts.UTF_8)));
+			res.addHeader(HTTP.CONTENT_TYPE, mimeType);
+			res.setEntity(new ByteArrayEntity((byte[]) fileData));
+//			res.setEntity(new StringEntity(fileData, ContentType.create(mimeType, Consts.UTF_8)));
 		} catch (URISyntaxException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

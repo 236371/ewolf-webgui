@@ -70,8 +70,8 @@ public class SFSUploadHandler implements HttpRequestHandler {
 				return;
 			}
 
-			String fileData = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity(), Consts.UTF_8);
-			
+			byte[] fileData = EntityUtils.toByteArray(((HttpEntityEnclosingRequest)req).getEntity());
+
 			Object resObj = handler.handleData(wolfpackName, ext, fileData);
 			setResponse(res, resObj, RES_SUCCESS);
 		} catch (URISyntaxException e) {

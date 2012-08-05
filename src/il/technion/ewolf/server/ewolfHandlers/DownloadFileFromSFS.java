@@ -1,6 +1,7 @@
 package il.technion.ewolf.server.ewolfHandlers;
 
 import java.io.FileNotFoundException;
+import java.io.Serializable;
 
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SFSFile;
@@ -21,14 +22,14 @@ public class DownloadFileFromSFS {
 		this.userIDFactory = userIDFactory;
 	}
 	
-	public String handleData(String userID, String fileName) {
+	public Serializable handleData(String userID, String fileName) {
 		Profile profile;
-		String strEntity;
+		Serializable fileData;
 		try {
 			UserID uid = userIDFactory.getFromBase64(userID);
 			profile = socialFS.findProfile(uid);
 			SFSFile sharedFolder = profile.getRootFile().getSubFile("sharedFolder");
-			strEntity = sharedFolder.getSubFile(fileName).getData().toString();
+			fileData = sharedFolder.getSubFile(fileName).getData();
 		} catch (ProfileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -42,7 +43,7 @@ public class DownloadFileFromSFS {
 			e.printStackTrace();
 			return null;
 		}
-		return strEntity;
+		return fileData;
 	}
 
 }

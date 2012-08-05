@@ -38,7 +38,7 @@ public class UploadFileToSFS {
 		this.socialGroupsManager = socialGroupsManager;
 	}
 	
-	public UploadFileResponse handleData(String wolfpackName, String ext, String fileData) {
+	public UploadFileResponse handleData(String wolfpackName, String ext, byte[] fileData) {
 		Profile profile = socialFS.getCredentials().getProfile();
 		String resFileName;
 		try {
