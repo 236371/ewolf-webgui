@@ -55,8 +55,8 @@ public class JsonHandler implements HttpRequestHandler {
     			jsonRes.add(key, gson.toJsonTree(handlerRes));
         	} else {
         		System.out.println("No handlers are registered to handle request " +
-        				"with keyword " + key);
-        		//TODO send response with 400 Bad Request status
+        				"with keyword \"" + key + "\"");
+        		jsonRes.addProperty("result", "unavailable request");
         	}     	
 		}
         
