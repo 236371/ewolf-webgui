@@ -52,9 +52,9 @@ public class SFSHandler implements HttpRequestHandler {
 				//TODO what?
 			}
 			String mimeType = ServerResources.getFileTypeMap().getContentType(fileName);
-			res.addHeader(HTTP.CONTENT_TYPE, mimeType);
+			res.setHeader(HTTP.CONTENT_TYPE, mimeType);
+			res.setHeader( "Content-Disposition", "attachment; filename=" + fileName );
 			res.setEntity(new ByteArrayEntity((byte[]) fileData));
-//			res.setEntity(new StringEntity(fileData, ContentType.create(mimeType, Consts.UTF_8)));
 		} catch (URISyntaxException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
