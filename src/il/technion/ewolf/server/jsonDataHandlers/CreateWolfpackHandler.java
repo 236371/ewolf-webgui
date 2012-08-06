@@ -4,12 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import il.technion.ewolf.ewolf.WolfPackLeader;
+import il.technion.ewolf.server.EWolfResponse;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
+import static il.technion.ewolf.server.EWolfResponse.*;
 
 public class CreateWolfpackHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;

@@ -2,6 +2,7 @@ package il.technion.ewolf.server.jsonDataHandlers;
 
 import il.technion.ewolf.msg.ContentMessage;
 import il.technion.ewolf.msg.SocialMail;
+import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -12,7 +13,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
+import static il.technion.ewolf.server.EWolfResponse.*;
 
 public class SendMessageHandler implements JsonDataHandler {
 	private final SocialMail smail;

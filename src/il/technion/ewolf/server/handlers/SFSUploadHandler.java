@@ -1,10 +1,10 @@
 package il.technion.ewolf.server.handlers;
 
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.RES_BAD_REQUEST;
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.RES_SUCCESS;
+import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
+import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
+import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
+import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.ewolfHandlers.UploadFileToSFS;
-import il.technion.ewolf.server.jsonDataHandlers.EWolfResponse;
 
 import java.io.IOException;
 import java.net.URI;

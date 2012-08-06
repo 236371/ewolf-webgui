@@ -1,11 +1,11 @@
 package il.technion.ewolf.server.ewolfHandlers;
 
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.RES_BAD_REQUEST;
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.RES_SUCCESS;
+import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
+import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
+import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
-import il.technion.ewolf.server.jsonDataHandlers.EWolfResponse;
+import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SFSFile;
 import il.technion.ewolf.socialfs.SocialFS;

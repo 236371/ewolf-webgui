@@ -11,9 +11,10 @@ import com.google.inject.Inject;
 
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
+import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.socialfs.Profile;
 
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
+import static il.technion.ewolf.server.EWolfResponse.*;
 
 public class WolfpackMembersFetcher implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;

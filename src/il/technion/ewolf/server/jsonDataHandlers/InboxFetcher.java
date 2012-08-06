@@ -4,6 +4,7 @@ package il.technion.ewolf.server.jsonDataHandlers;
 import il.technion.ewolf.msg.ContentMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
+import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
@@ -16,7 +17,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
+import static il.technion.ewolf.server.EWolfResponse.*;
 
 public class InboxFetcher implements JsonDataHandler {
 	private static final String SENDER_NOT_FOUND_MESSAGE = "Not found";

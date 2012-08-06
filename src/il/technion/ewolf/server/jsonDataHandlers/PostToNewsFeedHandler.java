@@ -5,6 +5,7 @@ import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.posts.TextPost;
+import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
 import java.io.FileNotFoundException;
@@ -14,7 +15,7 @@ import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
-import static il.technion.ewolf.server.jsonDataHandlers.EWolfResponse.*;
+import static il.technion.ewolf.server.EWolfResponse.*;
 
 public class PostToNewsFeedHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
