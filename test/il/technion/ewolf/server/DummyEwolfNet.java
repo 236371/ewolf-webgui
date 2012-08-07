@@ -19,7 +19,6 @@ import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
-import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
 import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher;
 import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher.PostData;
 import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcherTest;
@@ -110,16 +109,12 @@ public class DummyEwolfNet {
 			System.out.println("done\n");
 		}
 
-		EwolfConfigurations configurations1 = 
-				ServerResources.getConfigurations(EWOLF_CONFIG_1);
 		
-		EwolfServer server1 = new EwolfServer(configurations1);
+		EwolfServer server1 = new EwolfServer(EWOLF_CONFIG_1);
 		server1.initEwolf();
+
 		
-		EwolfConfigurations configurations2 = 
-				ServerResources.getConfigurations(EWOLF_CONFIG_2);
-		
-		EwolfServer server2 = new EwolfServer(configurations2);
+		EwolfServer server2 = new EwolfServer(EWOLF_CONFIG_2);
 		server2.initEwolf();
 		
 		//user2

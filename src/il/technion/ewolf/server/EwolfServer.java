@@ -33,6 +33,8 @@ import il.technion.ewolf.stash.StashModule;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.configuration.ConfigurationException;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
@@ -40,7 +42,8 @@ public class EwolfServer {
 	
 	private static final String EWOLF_CONFIG = "/ewolf.config.properties";
 	
-	EwolfConfigurations configurations;
+	private String config = EWOLF_CONFIG;
+	private EwolfConfigurations configurations;
 	Injector serverInjector;
 	HttpConnector serverConnector;
 	Injector ewolfInjector;
@@ -48,20 +51,19 @@ public class EwolfServer {
 	private JsonHandler jsonHandler = new JsonHandler();
 	private SFSUploadHandler sfsUploadHandler = new SFSUploadHandler();
 	private SFSHandler sfsHandler = new SFSHandler();
-	
-	public EwolfServer(EwolfConfigurations configurations) {
-		if(configurations == null) {
-			throw new IllegalArgumentException("Configuration file is missing.");
-		}
 
-		this.configurations = configurations;
+	public EwolfServer(String config) {
+		if (config == null) {
+			throw new IllegalArgumentException("Have to specify configuration file.");
+		}
+		this.config = config;
 	}
 
-	public static void main(String[] args) throws Exception {		
-		EwolfConfigurations myServerConfigurations = 
-				ServerResources.getConfigurations(EWOLF_CONFIG);
-		
-		EwolfServer server = new EwolfServer(myServerConfigurations);
+	public EwolfServer() {
+	}
+
+	public static void main(String[] args) throws Exception {
+		EwolfServer server = new EwolfServer();
 		server.initEwolf();
 	}
 
@@ -78,7 +80,8 @@ public class EwolfServer {
 					.setProperty("openkad.net.udp.port", port));
 	}
 
-	public void initEwolf() throws IOException, Exception {
+	public void initEwolf() throws IOException, ConfigurationException, Exception {
+		this.configurations = ServerResources.getConfigurations(config);
 
 		this.serverInjector = createDefaultInjector();
 
@@ -87,33 +90,36 @@ public class EwolfServer {
 		registerConnectorHandlers();
 		serverConnector.start();
 
-		if (configurations.username != null) {
-			this.ewolfInjector = createInjector();
-
-			KeybasedRouting kbr = ewolfInjector.getInstance(KeybasedRouting.class);
-			kbr.create();
-
-			// bind the chunkeeper
-			ChunKeeper chnukeeper = ewolfInjector.getInstance(ChunKeeper.class);
-			chnukeeper.bind();
-
-			HttpConnector ewolfConnector = ewolfInjector.getInstance(HttpConnector.class);
-			ewolfConnector.bind();
-			ewolfConnector.start();
-
-			EwolfAccountCreator accountCreator =
-					ewolfInjector.getInstance(EwolfAccountCreator.class);
-			accountCreator.create();
-
-			//FIXME port for testing
-			kbr.join(configurations.kbrURIs);
-
-			new Thread(ewolfInjector.getInstance(PokeMessagesAcceptor.class),
-					"PokeMessagesAcceptorThread").start();
-			addEwolfHandlers();
-		} else {
-			//TODO
+		while (configurations.username == null || configurations.password == null
+											   || configurations.name == null) {
+			this.configurations = ServerResources.getConfigurations(config);
+			Thread.sleep(1000);
+			System.out.println("Username and/or password and/or name weren't provided.");
 		}
+
+		this.ewolfInjector = createInjector();
+
+		KeybasedRouting kbr = ewolfInjector.getInstance(KeybasedRouting.class);
+		kbr.create();
+
+		// bind the chunkeeper
+		ChunKeeper chnukeeper = ewolfInjector.getInstance(ChunKeeper.class);
+		chnukeeper.bind();
+
+		HttpConnector ewolfConnector = ewolfInjector.getInstance(HttpConnector.class);
+		ewolfConnector.bind();
+		ewolfConnector.start();
+
+		EwolfAccountCreator accountCreator =
+				ewolfInjector.getInstance(EwolfAccountCreator.class);
+		accountCreator.create();
+
+		//FIXME port for testing
+		kbr.join(configurations.kbrURIs);
+
+		new Thread(ewolfInjector.getInstance(PokeMessagesAcceptor.class),
+				"PokeMessagesAcceptorThread").start();
+		addEwolfHandlers();
 
 		System.out.println("Server started.");
 	}

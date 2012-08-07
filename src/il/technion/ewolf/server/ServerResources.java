@@ -28,11 +28,26 @@ public class ServerResources {
 	public static URL getResource(String name) {
 		return ServerResources.class.getResource(name);
 	}
-	
-	public static EwolfConfigurations getConfigurations(String configurationFile) 
+
+	public synchronized static void setUserConfigurations(String configurationFile, String username,
+			String name, String password) throws ConfigurationException {
+		URL configFile = getResource(configurationFile);
+		try {
+			PropertiesConfiguration config = new PropertiesConfiguration(configFile);
+			config.setProperty("username", username);
+			config.setProperty("name", name);
+			config.setProperty("password", password);
+		} catch (ConfigurationException e) {
+			e.printStackTrace();
+			System.out.println("Can't read configuration file.");
+			throw e;
+		}
+	}
+
+	public synchronized static EwolfConfigurations getConfigurations(String configurationFile)
 			throws ConfigurationException {
 		EwolfConfigurations configurations = new EwolfConfigurations();
-		
+
 		try {
 			URL configFile = getResource(configurationFile);
 			PropertiesConfiguration config = new PropertiesConfiguration(configFile);
@@ -47,14 +62,14 @@ public class ServerResources {
 			}
 		} catch (ConfigurationException e) {
 			e.printStackTrace();
-			System.out.println("Cant' read configuration file");
+			System.out.println("Can't read configuration file.");
 			throw e;
 		} catch (URISyntaxException e) {
 			e.printStackTrace();
-			System.out.println("String from configuration file could not be parsed as a URI");
+			System.out.println("Can't parse kbr URI string as valid URI in configuration file.");
 			throw new ConfigurationException(e);
 		}
-		
+
 		return configurations;
 	}
 	
