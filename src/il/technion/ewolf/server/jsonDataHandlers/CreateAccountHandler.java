@@ -20,7 +20,7 @@ public class CreateAccountHandler implements JsonDataHandler {
 	}
 
 	private static class JsonReqCreateAccountParams {
-		String userame;
+		String username;
 		String name;
 		String password;
 	}
@@ -44,13 +44,17 @@ public class CreateAccountHandler implements JsonDataHandler {
 			return new CreateAccountResponse(RES_BAD_REQUEST);
 		}
 
-		if (jsonReqParams.userame == null || jsonReqParams.name == null
+		if (jsonReqParams.username == null || jsonReqParams.name == null
 										  || jsonReqParams.password == null) {
 			return new CreateAccountResponse(RES_BAD_REQUEST + 
 					": must specify username, name and password.");
 		}
+		if (!jsonReqParams.username.matches("[a-zA-z0-9]+")) {
+			return new CreateAccountResponse(RES_BAD_REQUEST +
+					":username can contain only digits and letters.");
+		}
 		try {
-			ServerResources.setUserConfigurations(configFile, jsonReqParams.userame,
+			ServerResources.setUserConfigurations(configFile, jsonReqParams.username,
 					jsonReqParams.name, jsonReqParams.password);
 		} catch (ConfigurationException e) {
 			e.printStackTrace();
