@@ -25,10 +25,14 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 	}
 
 	static class CreateWolfpackResponse extends EWolfResponse {
+		List<EWolfResponse> wolfpacksResult;
 		public CreateWolfpackResponse(String result) {
 			super(result);
+			wolfpacksResult = null;
 		}
-		public CreateWolfpackResponse() {
+		public CreateWolfpackResponse(String result, List<EWolfResponse> wolfpacksResult) {
+			super(result);
+			this.wolfpacksResult = wolfpacksResult;
 		}
 	}
 
@@ -50,27 +54,27 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 			return new CreateWolfpackResponse(RES_BAD_REQUEST + ": must specify wolfpack name/s.");
 		}
 
-		List<CreateWolfpackResponse> wolfpacksResult = new ArrayList<CreateWolfpackResponse>();
+		List<EWolfResponse> wolfpacksResult = new ArrayList<EWolfResponse>();
 		for (String wolfpackName : jsonReqParams.wolfpackNames) {
 			//TODO do we want to get feedback about this?
 			if (socialGroupsManager.findSocialGroup(wolfpackName) != null) {
-				wolfpacksResult.add(new CreateWolfpackResponse(RES_BAD_REQUEST + ": wolfpack already exists"));
+				wolfpacksResult.add(new EWolfResponse(RES_BAD_REQUEST + ": wolfpack already exists"));
 				continue;
 			}
 			try {
 				socialGroupsManager.findOrCreateSocialGroup(wolfpackName);
 			} catch (Exception e) {
-				wolfpacksResult.add(new CreateWolfpackResponse(RES_INTERNAL_SERVER_ERROR));
+				wolfpacksResult.add(new EWolfResponse(RES_INTERNAL_SERVER_ERROR));
 				continue;
 			}
-			wolfpacksResult.add(new CreateWolfpackResponse());
+			wolfpacksResult.add(new EWolfResponse());
 		}
-		for (CreateWolfpackResponse res : wolfpacksResult) {
+		for (EWolfResponse res : wolfpacksResult) {
 			if (res.result() != RES_SUCCESS) {
-				return wolfpacksResult;
+				return new CreateWolfpackResponse(RES_GENERIC_ERROR, wolfpacksResult);
 			}
 		}
-		return new CreateWolfpackResponse();
+		return new CreateWolfpackResponse(RES_SUCCESS);
 	}
 
 }

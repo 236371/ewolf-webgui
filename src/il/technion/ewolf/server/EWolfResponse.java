@@ -1,6 +1,6 @@
 package il.technion.ewolf.server;
 
-public abstract class EWolfResponse {
+public class EWolfResponse {
 	String result;
 	public static final String RES_SUCCESS = "success";
 	public static final String RES_NOT_FOUND = "not found";
