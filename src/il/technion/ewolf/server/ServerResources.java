@@ -29,7 +29,7 @@ public class ServerResources {
 		return ServerResources.class.getResource(name);
 	}
 
-	public synchronized static void setUserConfigurations(String configurationFile, String username,
+	public static void setUserConfigurations(String configurationFile, String username,
 			String name, String password) throws ConfigurationException {
 		URL configFile = getResource(configurationFile);
 		try {
@@ -44,7 +44,7 @@ public class ServerResources {
 		}
 	}
 
-	public synchronized static EwolfConfigurations getConfigurations(String configurationFile)
+	public static EwolfConfigurations getConfigurations(String configurationFile)
 			throws ConfigurationException {
 		EwolfConfigurations configurations = new EwolfConfigurations();
 
