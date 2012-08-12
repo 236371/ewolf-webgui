@@ -1,5 +1,8 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
+import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
+import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
+import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
 import il.technion.ewolf.ewolf.SocialNetwork;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
@@ -14,8 +17,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-
-import static il.technion.ewolf.server.EWolfResponse.*;
 
 public class PostToNewsFeedHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
@@ -40,6 +41,11 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		public PostToNewsFeedResponse(String result) {
 			super(result);
 		}
+
+		public PostToNewsFeedResponse(String result, String errorMessage) {
+			super(result, errorMessage);
+		}
+
 		public PostToNewsFeedResponse() {
 		}
 	}
@@ -59,13 +65,13 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 			return new PostToNewsFeedResponse(RES_BAD_REQUEST);
 		}
 		if (jsonReqParams.wolfpackName == null || jsonReqParams.post == null) {
-			return new PostToNewsFeedResponse(RES_BAD_REQUEST +
-					": must specify both wolfpack name and post text");
+			return new PostToNewsFeedResponse(RES_BAD_REQUEST,
+					"Must specify both wolfpack name and post text.");
 		}
 
 		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
 		if (socialGroup == null) {
-			return new PostToNewsFeedResponse(RES_NOT_FOUND + ": given wolfpack wasn't found.");
+			return new PostToNewsFeedResponse(RES_NOT_FOUND, "Given wolfpack wasn't found.");
 		}
 
 		try {
@@ -76,7 +82,7 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 			//TODO check what I should response here?
 			return new PostToNewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (WallNotFound e) {
-			System.out.println("Wall not found");
+			System.out.println("Wall not found.");
 			e.printStackTrace();
 			return new PostToNewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (FileNotFoundException e) {

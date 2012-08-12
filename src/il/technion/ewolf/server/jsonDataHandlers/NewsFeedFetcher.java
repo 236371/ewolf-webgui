@@ -1,16 +1,8 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
-import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.inject.Inject;
-
+import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
+import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
+import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
 import il.technion.ewolf.ewolf.SocialNetwork;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
@@ -24,7 +16,16 @@ import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
-import static il.technion.ewolf.server.EWolfResponse.*;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.inject.Inject;
 
 public class NewsFeedFetcher implements JsonDataHandler {
 	private final SocialFS socialFS;
@@ -106,8 +107,13 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		public NewsFeedResponse(List<PostData> postList) {
 			this.mailList = postList;
 		}
+
 		public NewsFeedResponse(String result) {
 			super(result);
+		}
+
+		public NewsFeedResponse(String result, String errorMessage) {
+			super(result, errorMessage);
 		}
 	}
 
@@ -128,8 +134,8 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		
 		List<Post> posts;
 		if (jsonReqParams.newsOf == null) {
-			return new NewsFeedResponse(RES_BAD_REQUEST +
-					": Must specify whose news feed to fetch");
+			return new NewsFeedResponse(RES_BAD_REQUEST,
+					"Must specify whose news feed to fetch.");
 		}
 		try {
 			if (jsonReqParams.newsOf.equals("user")) {
@@ -137,18 +143,18 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			} else if (jsonReqParams.newsOf.equals("wolfpack")) {
 				posts = fetchPostsForWolfpack(jsonReqParams.wolfpackName);
 			} else {
-				return new NewsFeedResponse(RES_BAD_REQUEST +
-						": request type should be either \"user\" or \"wolfpack\"");
+				return new NewsFeedResponse(RES_BAD_REQUEST,
+						"Request type should be either \"user\" or \"wolfpack\"");
 			}
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
-			return new NewsFeedResponse(RES_BAD_REQUEST + ": illegal user ID.");
+			return new NewsFeedResponse(RES_BAD_REQUEST, "Illegal user ID.");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
-			return new NewsFeedResponse(RES_NOT_FOUND  + ": user with given ID wasn't found.");
+			return new NewsFeedResponse(RES_NOT_FOUND, "User with given ID wasn't found.");
 		}
 
 		return new NewsFeedResponse(filterPosts(posts, jsonReqParams.maxMessages, jsonReqParams.newerThan,
