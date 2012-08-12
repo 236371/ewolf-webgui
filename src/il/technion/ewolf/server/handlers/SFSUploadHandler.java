@@ -3,6 +3,7 @@ package il.technion.ewolf.server.handlers;
 import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
 import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
+import static il.technion.ewolf.server.EWolfResponse.RES_UNAVAILBLE_REQUEST;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.ewolfHandlers.UploadFileToSFS;
 
@@ -16,7 +17,6 @@ import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.ParseException;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -30,14 +30,6 @@ import com.google.gson.GsonBuilder;
 
 public class SFSUploadHandler implements HttpRequestHandler {
 	private UploadFileToSFS handler;
-
-	class SFSUploadHandlerResponse extends EWolfResponse {
-		String path;
-		public SFSUploadHandlerResponse(String result, String path) {
-			super(result);
-			this.path = path;
-		}
-	}
 
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
@@ -78,19 +70,22 @@ public class SFSUploadHandler implements HttpRequestHandler {
 			e.printStackTrace();
 			setResponse(res, null, RES_BAD_REQUEST);
 			return;
-		} catch (ParseException e) {
-			e.printStackTrace();
-			setResponse(res, null, RES_INTERNAL_SERVER_ERROR);
-			return;
 		} catch (IOException e) {
 			e.printStackTrace();
 			setResponse(res, null, RES_INTERNAL_SERVER_ERROR);
+			return;
+		} catch (NullPointerException e) {
+			e.printStackTrace();
+			setResponse(res, null, RES_UNAVAILBLE_REQUEST);
 			return;
 		}
 	}
 
 	private void setResponse(HttpResponse res, Object resObj, String result) {
 		Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
+		if (resObj == null) {
+			resObj = new EWolfResponse(result);
+		}
 		String json = gson.toJson(resObj);
 		res.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
 	}

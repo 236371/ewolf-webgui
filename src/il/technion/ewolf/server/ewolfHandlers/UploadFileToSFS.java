@@ -25,9 +25,13 @@ public class UploadFileToSFS {
 			super(result);
 			this.path = path;
 		}
+
+		public UploadFileResponse(String result, String errorMessage, String path) {
+			super(result, errorMessage);
+			this.path = path;
+		}
 	}
 	private final SocialFS socialFS;
-
 	private final WolfPackLeader socialGroupsManager;
 
 	private static final int FILENAME_LENGTH = 10;
@@ -42,6 +46,12 @@ public class UploadFileToSFS {
 		Profile profile = socialFS.getCredentials().getProfile();
 		String resFileName;
 		try {
+			WolfPack sharedSocialGroup = socialGroupsManager.findSocialGroup(wolfpackName);
+			if (sharedSocialGroup == null) {
+				return new UploadFileResponse(RES_BAD_REQUEST, "Given wolfpack wasn't found.", null);
+			}
+			Group group = sharedSocialGroup.getGroup();
+
 			SFSFile sharedFolder = profile.getRootFile().getSubFile("sharedFolder");
 
 			//create unique file name
@@ -57,12 +67,7 @@ public class UploadFileToSFS {
 			SFSFile file = socialFS.getSFSFileFactory().createNewFile()
 					.setName(resFileName)
 					.setData(fileData);
-			WolfPack sharedSocialGroup = socialGroupsManager.findSocialGroup(wolfpackName);
-			if (sharedSocialGroup == null) {
-				return new UploadFileResponse(RES_BAD_REQUEST, null);
-			}
 
-			Group group = sharedSocialGroup.getGroup();
 			sharedFolder.append(file, group);
 
 			String encodedID = URLEncoder.encode(profile.getUserId().toString(), "UTF-8");

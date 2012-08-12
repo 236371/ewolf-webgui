@@ -180,7 +180,7 @@ public class WolfpackMembersFetcherTest {
 
 		JsonElement params = setWolfpackMembersParams(null);
 		WolfpackMembersResponse obj = (WolfpackMembersResponse) (injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
-		Assert.assertEquals(obj.result(), EWolfResponse.RES_SUCCESS);
+		Assert.assertEquals(obj.getResult(), EWolfResponse.RES_SUCCESS);
 		List<String> strUidListAfter = new ArrayList<String>();
 		for (int i=0; i<obj.membersList.size(); i++) {
 			strUidListAfter.add(obj.membersList.get(i).id);
@@ -315,11 +315,11 @@ public class WolfpackMembersFetcherTest {
 		}
 		strUidListAfter.add(userIDList.get(0).toString());
 		Assert.assertTrue(CollectionUtils.isEqualCollection(strUidListBefore, strUidListAfter));
-		Assert.assertEquals(obj1.result(), EWolfResponse.RES_SUCCESS);
+		Assert.assertEquals(obj1.getResult(), EWolfResponse.RES_SUCCESS);
 		
 		params = setWolfpackMembersParams("friends");
 		WolfpackMembersResponse obj2 = ((WolfpackMembersResponse)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
-		Assert.assertEquals(obj2.result(), EWolfResponse.RES_SUCCESS);
+		Assert.assertEquals(obj2.getResult(), EWolfResponse.RES_SUCCESS);
 		List<String> strUidList2After = new ArrayList<String>();
 		for (int i=0; i<obj2.membersList.size(); i++) {
 			strUidList2After.add(obj2.membersList.get(i).id);

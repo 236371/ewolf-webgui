@@ -70,7 +70,7 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 			wolfpacksResult.add(new EWolfResponse());
 		}
 		for (EWolfResponse res : wolfpacksResult) {
-			if (res.result() != RES_SUCCESS) {
+			if (res.getResult() != RES_SUCCESS) {
 				return new CreateWolfpackResponse(RES_GENERIC_ERROR, wolfpacksResult);
 			}
 		}
