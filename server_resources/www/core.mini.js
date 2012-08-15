@@ -5,10 +5,11 @@ var eWolf = $(eWolfMaster);
 
 $(document).ready(function () {
 	new Loading($("#loadingFrame"));
+	eWolf.applicationFrame = $("#applicationFrame");
 	
 	eWolf.sideMenu = new SideMenu($("#menu"),$("#mainFrame"),$("#topbarID"));	
-	eWolf.applicationFrame = $("#applicationFrame");	
 	eWolf.mainApps = eWolf.sideMenu.createNewMenuList("mainapps","Main");
+	eWolf.wolfpacksMenuList = eWolf.sideMenu.createNewMenuList("wolfpacks","Wolfpacks");
 	
 	getUserInformation();
 });
@@ -22,7 +23,7 @@ function getUserInformation() {
 		},new ResponseHandler("profile",
 					["id","name"],handleProfileData).getHandler());
 	
-	eWolf.wolfpacks = new Wolfpacks(eWolf.sideMenu,request,eWolf.applicationFrame);
+	eWolf.wolfpacks = new Wolfpacks(eWolf.wolfpacksMenuList,request,eWolf.applicationFrame);
 	request.requestAll();
 	
 	function handleProfileData(data, textStatus, postData) {
@@ -31,12 +32,13 @@ function getUserInformation() {
 		eWolf.data('userID',data.id);
 		eWolf.data('userName',data.name);
 			
-		createMainApps();			
+		createMainApps();
 	}	
 }
 
 function createMainApps() {
-		
+	eWolf.wolfpacks.addFriend(eWolf.data("userID"), eWolf.data("userName"));
+	
 	eWolf.mainApps.addMenuItem(eWolf.data("userID"),"My Profile");
 	new Profile(eWolf.data("userID"),eWolf.data('userName'),eWolf.applicationFrame);
 	
@@ -99,6 +101,248 @@ function createMainApps() {
 	};
 	
 	return this;
+};var FileItem = function(file) {
+	var left = $("<div/>").css({
+		"text-align" : "left",
+		"display": "inline-block"
+	}).append(file.name);
+	
+	var fileSize = 0;
+    if (file.size > 1024 * 1024) {
+    	fileSize = (Math.round(file.size * 100 / (1024 * 1024)) / 100).toString() + 'MB';
+    } else {
+    	fileSize = (Math.round(file.size * 100 / 1024) / 100).toString() + 'KB';
+    } 
+	
+	var right = $("<div/>").css({
+		"text-align" : "right",
+		"font-size" : "10px",
+		"display": "inline-block",
+		"margin-left" : "5px"
+	}).append("(" + fileSize + ")");
+	
+	return $("<div/>").css({
+		"display": "inline-block"
+	}).append(left).append(right);
+};var FilesBox = function(uploaderArea) {
+	var thisObj = this;
+	
+	var fileselect;
+	var filedrag;
+	var filelist = null;
+	
+	// file unique ID
+	var UID = 0;
+	
+	if (new XMLHttpRequest().upload) {
+		fileselect = $("<input/>").attr({
+			"type" : "file",
+			"id" : "fileselect",
+			"name" : "fileselect[]",
+			"multiple" : "multiple"
+		}).appendTo(uploaderArea);
+
+		filedrag = $("<div/>")
+			.addClass("fileDragBox")
+			.append("drop files here")
+			.appendTo(uploaderArea);
+
+		filelist = new TagList(true).appendTo(uploaderArea);
+
+		fileselect[0].addEventListener("change", FileSelectHandler, false);
+
+		// file drop
+		filedrag[0].addEventListener("dragover", FileDragHover, false);
+		filedrag[0].addEventListener("dragleave", FileDragHover, false);
+		filedrag[0].addEventListener("drop", FileSelectHandler, false);
+		filedrag[0].style.display = "block";
+	}
+
+	// file drag hover
+	function FileDragHover(e) {
+		e.stopPropagation();
+		e.preventDefault();
+		e.target.className = (e.type == "dragover" ? "fileDragBoxHover" : "fileDragBox");
+	}
+
+	function FileSelectHandler(e) {
+		// cancel event and hover styling
+		FileDragHover(e);
+
+		// fetch FileList object
+		var files = e.target.files || e.dataTransfer.files;
+
+		// process all File objects
+		for ( var i = 0, f; f = files[i]; i++) {
+			filelist.addTag(UID, f, new FileItem(f), true);
+			UID += 1;
+		}
+	}
+	
+	this.markError = function (id) {
+		filelist.match({id:id})
+			.removeProgressBar()
+			.markError("There was an error attempting to upload the file.");
+	};
+	
+	this.markOK = function (id,fileObj) {
+		filelist.match({id:id})
+			.removeProgressBar()
+			.markOK()
+			.setData(fileObj);
+	};
+
+	this.getUploadedFiles = function() {
+		if(!filelist) {
+			return [];
+		} else {
+			return filelist.match({markedOK:true}).getData();
+		}		
+	};
+	
+	this.uploadFile = function(wolfpackName,onComplete) {
+		if(!filelist || filelist.match({markedOK:false}).isEmpty()) {
+			onComplete(true,[]);
+			return this;
+		}
+		
+		filelist.match({markedOK:false}).each(function(id,file) {
+			var xhr = new XMLHttpRequest();
+
+			filelist.initProgressBar(id);
+			
+			/* event listners */
+			xhr.upload.addEventListener("progress", function(evt) {
+				if (evt.lengthComputable) {
+					var percentComplete = Math.round(evt.loaded * 100
+							/ evt.total);
+					filelist.setProgress(id,percentComplete);
+				} else {
+					// TODO: waiting animation
+				}
+			}, false);
+			
+			xhr.addEventListener("load", function (evt) {
+				var obj = JSON.parse(xhr.responseText);
+				
+				if(obj.result != "success") {
+					thisObj.markError(id);
+				} else {
+					thisObj.markOK(id,{
+						filename: file.name,
+						contentType: file.type,
+						path: obj.path
+					});
+				}
+				
+				isComplete();
+			}, false);
+			
+			xhr.addEventListener("error", function (evt) {
+				thisObj.markError(id);
+				isComplete();
+			}, false);
+			
+			xhr.addEventListener("abort", function (evt) {
+				thisObj.markError(id);
+				isComplete();
+			}, false);
+			
+			filelist.setOnRemoveTag(id, function(id) {
+				xhr.abort();
+			});
+			
+			function isComplete() {
+				if(filelist.match({markedOK:false,markedError:false}).isEmpty()) {
+					var success = false;
+					if(filelist.match({markedError:true}).isEmpty()) {
+						success = true;
+					}
+					
+					return onComplete(success,thisObj.getUploadedFiles());
+				}				
+			}
+
+			var addr = "/sfsupload?" + "wolfpackName=" + wolfpackName
+					+ "&fileName=" + file.name 
+					+ "&contentType=" + file.type;
+
+
+			xhr.open("POST", addr);
+			xhr.send(file);
+		});
+		
+		return this;
+	};
+	
+	return this;
+};var FunctionsArea = function () {	
+	this.frame = $("<div/>");
+	
+	var functions = {};
+	
+	this.appendTo = function (container) {
+		this.frame.appendTo(container);
+		return this;
+	};
+	
+	this.addFunction = function (functionName,functionOp) {
+		if(functions[functionName] == null) {
+			functions[functionName] = $("<input/>").attr({
+				"type": "button",
+				"value": functionName
+			}).click(functionOp).appendTo(this.frame);
+		}
+		
+		return this;
+	};
+	
+	this.removeFunction = function (functionName) {
+		if(functions[functionName] != null) {
+			functions[functionName].remove();
+			functions[functionName] = null;
+		}
+		
+		return this;
+	};
+	
+	this.hideFunction = function (functionName) {
+		if(functions[functionName] != null) {
+			functions[functionName].hide(200);
+		}
+		
+		return this;
+	};
+	
+	this.showFunction = function (functionName) {
+		if(functions[functionName] != null) {
+			functions[functionName].show(200);
+		}
+		
+		return this;
+	};
+	
+	this.hideAll = function (functionName) {
+		$.each(functions, function(funcName,funcBtn) {
+			if(funcBtn != null) {
+				funcBtn.hide(200);
+			}			
+		});
+		
+		return this;
+	};
+	
+	this.showAll = function (functionName) {
+		$.each(functions, function(funcName,funcBtn) {
+			if(funcBtn != null) {
+				funcBtn.show(200);
+			}			
+		});
+		
+		return this;
+	};
+	
+	return this;
 };var Loading = function(indicator) {
 	var loadingCount = 0;
 	
@@ -118,16 +362,19 @@ function createMainApps() {
 	eWolf.bind("loadingEnd",stopLoading);
 
 
-	return {
-		listenToEvent : function(eventStart,eventEnd) {
-			eWolf.bind(eventStart,startLoading);	
-			eWolf.bind(eventEnd,stopLoading);
-		},
-		stopListenToEvent : function(eventStart,eventEnd) {
-			eWolf.unbind(eventStart,startLoading);	
-			eWolf.unbind(eventEnd,stopLoading);
-		}
+	this.listenToEvent = function(eventStart,eventEnd) {
+		eWolf.bind(eventStart,startLoading);	
+		eWolf.bind(eventEnd,stopLoading);
+		return this;
 	};
+	
+	this.stopListenToEvent = function(eventStart,eventEnd) {
+		eWolf.unbind(eventStart,startLoading);	
+		eWolf.unbind(eventEnd,stopLoading);
+		return this;
+	};
+	
+	return this;
 };
 
 var spinnerOpts = {
@@ -202,6 +449,125 @@ $.fn.spin = function(opts) {
 	this.frame.show(200);
 	
 	return this;
+};var QueryTagList = function(minWidth,queryPlaceHolder,availableQueries,
+		allowMultipleDestinations,commitQuery) {
+	var thisObj = this;
+	
+	this.frame = $("<div/>").attr("class","seachListClass");	
+	var queryBox = $("<div/>").appendTo(this.frame);
+	
+	var query = $("<input/>").attr({
+		"type": "text",
+		"placeholder": queryPlaceHolder
+	}).css({
+		"min-width" : minWidth
+	}).appendTo(queryBox);
+	
+	var addBtn = $("<input/>").attr({
+		"type": "button",
+		"value": "Add"
+	}).click(function() {
+		thisObj.addTagByQuery(query.val(),true);
+	}).appendTo(queryBox).hide();
+	
+	query.autocomplete({
+		source: availableQueries,
+		select: onSelectSendTo
+	}).keyup(function(event) {
+	    if(event.keyCode == 13 && query.val() != "") {
+	    	thisObj.addTagByQuery(query.val(),true);   	
+	    } else {
+	    	updateQuery();
+	    }	    
+	});
+	
+	function onSelectSendTo(event,ui) {		
+		thisObj.addTagByQuery(ui.item.label,true);
+		return false;
+	}
+	
+	function updateQuery (id) {	
+		if(query.val() == "") {
+			addBtn.hide(200);
+		} else {
+			addBtn.show(200);
+		}
+		
+		if(!allowMultipleDestinations) {
+			if(! thisObj.tagList.match().isEmpty()) {
+				queryBox.hide();
+			} else {
+				queryBox.show();
+			}
+		}
+	}
+	
+	this.tagList = new TagList(false,updateQuery).appendTo(this.frame);
+		
+	this.addTagByQuery = function(thisQuery,removable) {
+		var res = commitQuery(thisQuery);
+		// sould return:	res.term and res.display
+		
+		if(res == null) {
+			return false;
+		}
+		
+		if(thisObj.tagList.addTag(res.term,res.term,res.display,removable)) {
+			query.val("");
+    		updateQuery();
+    		return true;
+		} else {
+			return false;
+		}		
+	};
+	
+	this.appendTo = function(someFrame) {
+		this.frame.appendTo(someFrame);
+		return this;
+	};
+	
+	this.focus = function () {
+		query.focus();
+		return this;
+	};
+	
+	return this;
+};
+
+var FriendsQueryTagList = function (minWidth) {
+	function sendToFuncReplace(query) {
+		var id = eWolf.wolfpacks.getFriendID(query);
+		
+		if(id == null) {
+			id = query;
+			query = null;
+		}
+		
+		return {
+			term: id,
+			display: new User(id,query)
+		};
+	}
+	
+	return new QueryTagList(minWidth,"Type user name or ID...",
+			eWolf.wolfpacks.friendsNameArray,true,sendToFuncReplace);
+};
+
+var WolfpackQueryTagList = function (minWidth) {
+	function sendToFuncReplace(pack) {
+		var idx = eWolf.wolfpacks.wolfpacksArray.indexOf(pack);
+		if(idx != -1) {
+			return {
+				term: pack,
+				display: new Wolfpack(pack)
+			};
+		} else {
+			return null;
+		}		
+	}
+	
+	return new QueryTagList(minWidth,"Type wolfpack name...",
+			eWolf.wolfpacks.wolfpacksArray,false,sendToFuncReplace);
 };var BasicRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 	
 	var observersRequestFunction = [];
@@ -369,193 +735,7 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 			return this;
 		}
 	};
-};var SearchList = function(minWidth,queryPlaceHolder,availableQueries,commitQuery) {
-	var thisObj = this;
-	
-	var box = $("<div/>").attr("class","seachListClass");
-	
-	var queryBox = $("<div/>").appendTo(box);
-	var tagBox = $("<div/>").appendTo(box);
-	
-	var query = $("<input/>").attr({
-		"type": "text",
-		"placeholder": queryPlaceHolder
-	}).css({
-		"min-width" : minWidth
-	}).appendTo(queryBox);
-	
-	var addBtn = $("<input/>").attr({
-		"type": "button",
-		"value": "Add"
-	}).click(function() {
-		thisObj.addTag(query.val(),true);
-	}).appendTo(queryBox).hide();
-	
-	query.autocomplete({
-		source: availableQueries,
-		select: onSelectSendTo
-	}).keyup(function(event) {
-	    if(event.keyCode == 13 && query.val() != ""){
-	    	thisObj.addTag(query.val(),true);
-	    	query.val("");
-	    }
-	    
-	    if(query.val() == "") {
-	    	addBtn.hide(200);
-	    } else {
-	    	addBtn.show(200);
-	    }
-	});
-	
-	function onSelectSendTo(event,ui) {		
-		if(thisObj.addTag(ui.item.label,true) == true) {
-			query.val("");
-		}
-		
-		return false;
-	}
-		
-	this.foreachTag = function (applyThis,withSelector) {
-		var selector = ".TagClass";
-		if(withSelector) {
-			selector += withSelector;
-		}
-		
-		tagBox.children(selector).each(function(i, thisTag) {
-			applyThis($(thisTag).attr("id"));
-		});
-		
-		return this;
-	};
-	
-	this.foreachMarkedTag = function (applyThis) {
-		return thisObj.foreachTag(applyThis, ".TagErrorClass");
-	};
-	
-	this.foreachUnMarkedTag = function (applyThis) {
-		return thisObj.foreachTag(applyThis, ":not(.TagErrorClass)");
-	};
-	
-	this.foreachRemovableTag = function (applyThis) {
-		return thisObj.foreachTag(applyThis, ":not(.TagNonRemoveable)");
-	};
-	
-	this.removeTag = function (tag) {
-		var tagElement = tagBox.children(".TagClass[id=\""+tag+"\"]");
-		if(tagElement.length > 0) {
-			tagElement.remove();
-			return true;
-		}
-		
-		return false;
-	};
-	
-	this.addTag = function(thisQuery,removable) {
-		var res = commitQuery(thisQuery);
-		// sould return:	res.term and res.display
-		
-		if(res == null) {
-			return false;
-		}
-
-		if(tagBox.find(".TagClass[id=\""+res.term+"\"]").length != 0) {
-			return false;
-		}		
-		
-		var newTagItem = new Tag(res.term,null,removable)
-			.attr("id",res.term)
-			.append(res.display);
-		
-		tagBox.append(newTagItem);
-		
-		query.val("");
-		addBtn.hide(200);
-		
-		return true;
-	};
-	
-	this.appendTo = function(someFrame) {
-		box.appendTo(someFrame);
-		return this;
-	};
-	
-	this.markTag = function (tag,error) {
-		tagBox.children(".TagClass[id=\""+tag+"\"]")
-			.addClass("TagErrorClass")
-			.attr("title",error);
-		return this;
-	};
-	
-	this.unmarkTag = function (tag) {
-		tagBox.children(".TagClass[id=\""+tag+"\"]")
-			.removeClass("TagErrorClass")
-			.attr("title",null);
-		return this;
-	};
-	
-	this.isEmpty = function() {
-		return (tagBox.children(".TagClass,.TagClass.TagErrorClass").length == 0);
-	};
-	
-	this.tagCount = function() {
-		return tagBox.children(".TagClass").length;
-	};
-	
-	this.unmarkedTagCount = function() {
-		return tagBox.children(".TagClass:not(.TagErrorClass)").length;
-	};
-	
-	this.markedTagCount = function() {
-		return tagBox.children(".TagClass.TagErrorClass").length;
-	};
-	
-	this.removableTagCount = function () {
-		return tagBox.children(".TagClass:not(.TagNonRemoveable)").length;
-	};
-	
-	this.unmarkAll = function () {
-		tagBox.children(".TagClass").removeClass("TagErrorClass");
-		return this;
-	};
-	
-	return this;
-};
-
-var FriendsSearchList = function (minWidth) {
-	function sendToFuncReplace(query) {
-		var id = eWolf.wolfpacks.getFriendID(query);
-		
-		if(id == null) {
-			id = query;
-			query = null;
-		}
-		
-		return {
-			term: id,
-			display: new User(id,query)
-		};
-	}
-	
-	return new SearchList(minWidth,"Type user name or ID...",
-			eWolf.wolfpacks.friendsNameArray,sendToFuncReplace);
-};
-
-var WolfpackSearchList = function (minWidth) {
-	function sendToFuncReplace(pack) {
-		var idx = eWolf.wolfpacks.wolfpacksArray.indexOf(pack);
-		if(idx != -1) {
-			return {
-				term: pack,
-				display: new Wolfpack(pack)
-			};
-		} else {
-			return null;
-		}		
-	}
-	
-	return new SearchList(minWidth,"Type wolfpack name...",
-			eWolf.wolfpacks.wolfpacksArray,sendToFuncReplace);
-};var Tag = function(id,onRemove,removable) {
+};var Tag = function(id,onRemove,removable,multirow) {
 	var box = $("<p/>").attr({
 		"class" : "TagClass"
 	});
@@ -563,25 +743,305 @@ var WolfpackSearchList = function (minWidth) {
 	if(!removable) {
 		box.addClass("TagNonRemoveable");
 	}
+	
+	if(!multirow) {
+		box.addClass("TagNoMultiRow");
+	}
 
-	$("<span/>").attr({
+	$("<div/>").attr({
 		"class" : "TagDeleteClass"
 	}).append("&times;").appendTo(box).click(function() {
+		box.remove();
+		
 		if(onRemove) {
 			onRemove(id);
 		}
-		
-		box.remove();
 	});
 	
+	box.data("initProgressBar", function() {
+		var progress = $("<div/>").appendTo(box);
+		
+		progress.progressbar({ disabled: true });
+		progress.css({
+			"width" : "100%",
+			"height" : "100%",
+			"class" : "ui-progressbar",
+			"z-index" : "1"
+		});
+		
+		progress.children("div").css({
+			'background': '#001a00'
+		});
+		
+		box.children(":not(.ui-progressbar)").css({
+			"position" : "relative",
+			"z-index" : "999"
+		});
+		
+		box.data("setProgress", function (prec) {
+			progress.progressbar({ value: prec });
+		});
+		
+		box.data("removeProgressBar", function() {
+			progress.remove();
+		});
+	});	
+	
 	return box;
-};var TitleArea = function (title) {
-	var thisObj = this;
+};var TagList = function(multirow,onRemoveTag) {
+	this.div = $("<div/>");
 	
-	var frame = $("<div/>").attr("class","titleArea");
+	this.appendTo = function(someFrame) {
+		this.div.appendTo(someFrame);
+		return this;
+	};
 	
-	var topPart = $("<div/>").appendTo(frame);
-	var bottomPart = $("<div/>").attr("class","titleBottomPart").appendTo(frame);
+	this.getTags = function(matches) {
+		var selector = ".TagClass";
+		
+		if(matches != null) {
+			if(matches.id != null) {
+				selector += "[id=\"" + matches.id + "\"]";
+			}
+			
+			if(matches.markedError == true) {
+				selector += ".TagErrorClass";
+			} else if(matches.markedError == false){
+				selector += ":not(.TagErrorClass)";
+			}
+			
+			if(matches.markedOK == true) {
+				selector += ".TagOKClass";
+			} else if(matches.markedOK == false){
+				selector += ":not(.TagOKClass)";
+			}
+			
+			if(matches.removable == true) {
+				selector += ":not(.TagNonRemoveable)";
+			} else if(matches.removable == false){
+				selector += ".TagNonRemoveable";
+			}
+		}		
+		
+		return this.div.children(selector);
+	};
+	
+	this.match = function(matches) {
+		var tags = this.getTags(matches);
+		
+		return {
+			each: function (applyThis) {
+				tags.each(function(i, thisTag) {
+					var tag = $(thisTag);
+					applyThis(tag.attr("id"),tag.data("tagData"));
+				});
+				
+				return this;
+			},
+			unremovable: function () {
+				tags.addClass("TagNonRemoveable");
+				return this;
+			},
+			removable: function () {
+				tags.removeClass("TagNonRemoveable");
+				return this;
+			},			
+			markError: function (error) {
+				tags.addClass("TagErrorClass")
+					.removeClass("TagOKClass")
+					.attr("title",error);
+				return this;
+			},			
+			unmarkError: function () {
+				tags.removeClass("TagErrorClass")
+					.attr("title",null);
+				return this;
+			},			
+			markOK: function () {
+				tags.addClass("TagOKClass")
+					.removeClass("TagErrorClass")
+					.attr("title","Successful");
+				return this;
+			},			
+			unmarkOK: function () {
+				tags.removeClass("TagOKClass")
+					.attr("title",null);
+				return this;
+			},			
+			unmark: function () {
+				tags.removeClass("TagErrorClass")
+					.removeClass("TagOKClass")
+					.attr("title",null);
+				return this;
+			},			
+			remove: function () {
+				tags.remove();
+				return this;
+			},			
+			initProgressBar: function () {
+				tags.each(function(i, thisTag) {
+					 $(thisTag).data("initProgressBar")();
+				});
+				
+				return this;
+			},			
+			setProgress: function (prec) {
+				tags.each(function(i, thisTag) {
+					var func = $(thisTag).data("setProgress");
+					if(func) {
+						return func(prec);
+					}
+				});
+				
+				return this;
+			},			
+			removeProgressBar: function () {				
+				tags.each(function(i, thisTag) {
+					var func = $(thisTag).data("removeProgressBar");
+					if(func) {
+						return func();
+					}
+				});
+				
+				return this;					
+			},			
+			setOnRemoveTag: function(newOnRemove) {
+				tags.data("onRemove",newOnRemove);
+				return this;
+			},			
+			setData: function (tagData) {
+				tags.data("tagData",tagData);
+				return this;
+			},
+			count: function () {
+				return tags.length;
+			},
+			isEmpty: function () {
+				return tags.length == 0;
+			},
+			getData: function () {
+				result = [];
+				tags.each(function(i, thisTag) {
+					result.push($(thisTag).data("tagData"));
+				});
+				
+				return result;
+			}
+		};
+	};
+	
+	this.addTag = function(id,tagData,tagText,removable) {
+		if( this.match({id:id}).isEmpty()) {
+			var newTagItem = new Tag(id,onRemoveTag,removable,multirow)
+				.attr("id",id)
+				.data("tagData",tagData)
+				.append(tagText);
+		
+			this.div.append(newTagItem);
+			
+			return true;
+		}				
+		
+		return false;
+	};
+	
+	this.removeTag = function (id) {
+		this.match({id:id}).remove();
+		return this;
+	};
+		
+	this.foreachTag = function (matches,applyThis) {
+		if(applyThis == null) {
+			applyThis =  matches;
+			matches = null;
+		}
+		
+		this.match(matches).each(applyThis);
+		
+		return this;
+	};
+	
+	this.setTagUnremovable = function (id) {
+		this.match({id:id}).unremovable();
+		return this;
+	};
+	
+	this.setTagRmovable = function (id) {
+		this.match({id:id}).removable();
+		return this;
+	};
+	
+	this.markTagError = function (id,error) {
+		this.match({id:id}).markError(error);
+		return this;
+	};	
+	
+	this.unmarkTagError = function (id) {
+		this.match({id:id}).unmarkError();
+		return this;
+	};
+	
+	this.markTagOK = function (id) {
+		this.match({id:id}).markOK();
+		return this;
+	};	
+	
+	this.unmarkTagOK = function (id) {
+		this.match({id:id}).unmarkOK();
+		return this;
+	};
+	
+	this.isEmpty = function() {
+		return this.match().isEmpty();
+	};
+	
+	this.tagCount = function(matches) {
+		return this.match(matches).count();
+	};
+	
+	this.unmarkTags = function (matches) {
+		this.match(matches).unmark();
+		return this;
+	};
+	
+	this.removeTags = function (matches) {
+		this.match(matches).remove();
+		return this;
+	};
+	
+	this.initProgressBar = function (id) {
+		this.match({id:id}).initProgressBar();
+		return this;
+	};
+	
+	this.setProgress = function (id, prec) {
+		this.match({id:id}).setProgress(prec);
+		return this;
+	};
+	
+	this.removeProgressBar = function (id) {
+		this.match({id:id}).removeProgressBar();		
+		return this;
+	};
+	
+	this.setOnRemoveTag = function(id,newOnRemove) {
+		this.match({id:id}).setOnRemoveTag(newOnRemove);
+		return this;
+	};
+	
+	this.setTagData = function (id,tagData) {
+		this.match({id:id}).setData(tagData);
+		return this;
+	};
+	
+	return this;
+};var TitleArea = function (title) {	
+	this.frame = $("<div/>").attr("class","titleArea");
+	
+	var topPart = $("<div/>").appendTo(this.frame);
+	var bottomPart = $("<div/>")
+		.attr("class","titleBottomPart")
+		.appendTo(this.frame);
 	
 	var table = $("<table/>").attr("class","titleTable").appendTo(topPart);
 	
@@ -591,11 +1051,11 @@ var WolfpackSearchList = function (minWidth) {
 	var titleFunctionsArea = $("<td>")
 		.attr("class","titleFunctionsArea").appendTo(row);
 	
+	var functions = new FunctionsArea().appendTo(titleFunctionsArea);
+	
 	var theTitle = $("<span/>").attr({
 		"class" : "eWolfTitle"
-	}).appendTo(titleTextArea);
-	
-	var functions = {};
+	}).appendTo(titleTextArea);	
 	
 	this.setTitle = function (newTitle) {
 		if(newTitle != null) {
@@ -603,63 +1063,47 @@ var WolfpackSearchList = function (minWidth) {
 		}
 	};
 	
-	this.setTitle(title);
-	
 	this.appendTo = function (container) {
-		frame.appendTo(container);
-		return thisObj;
+		this.frame.appendTo(container);
+		return this;
 	};
 	
 	this.appendAtTitleTextArea = function (obj) {
 		titleTextArea.append(obj);
-		return thisObj;
+		return this;
 	};
 	
 	this.appendAtTitleFunctionsArea = function (obj) {
 		titleFunctionsArea.append(obj);
-		return thisObj;
+		return this;
 	};
 	
 	this.appendAtBottomPart = function (obj) {
 		bottomPart.append(obj);
-		return thisObj;
+		return this;
 	};
 	
 	this.addFunction = function (functionName,functionOp) {
-		if(functions[functionName] == null) {
-			functions[functionName] = $("<input/>").attr({
-				"type": "button",
-				"value": functionName
-			}).click(functionOp).appendTo(titleFunctionsArea);
-		}
-		
+		functions.addFunction(functionName,functionOp);
 		return this;
 	};
 	
 	this.removeFunction = function (functionName) {
-		if(functions[functionName] != null) {
-			functions[functionName].remove();
-			functions[functionName] = null;
-		}
-		
+		functions.removeFunction(functionName);
 		return this;
 	};
 	
 	this.hideFunction = function (functionName) {
-		if(functions[functionName] != null) {
-			functions[functionName].hide(200);
-		}
-		
+		functions.hideFunction(functionName);		
 		return this;
 	};
 	
 	this.showFunction = function (functionName) {
-		if(functions[functionName] != null) {
-			functions[functionName].show(200);
-		}
-		
+		functions.showFunction(functionName);
 		return this;
 	};
+	
+	this.setTitle(title);
 	
 	return this;
 };var User = function(id,name) {
@@ -706,7 +1150,7 @@ var WolfpackSearchList = function (minWidth) {
 	}).text(name).click(function() {
 		eWolf.trigger("select",["__pack__"+name]);
 	});
-};var Wolfpacks = function (menu,request,applicationFrame) {
+};var Wolfpacks = function (menuList,request,applicationFrame) {
 	var thisObj = this;
 	
 	var wolfpacksApps = {},
@@ -715,8 +1159,6 @@ var WolfpackSearchList = function (minWidth) {
 	
 	this.wolfpacksArray = [];
 	this.friendsNameArray = [];
-	
-	var menuList = menu.createNewMenuList("wolfpacks","Wolfpacks");
 	
 	request.register(function() {
 		return {
@@ -802,1361 +1244,7 @@ var WolfpackSearchList = function (minWidth) {
 
 
 
-/*
-filedrag.js - HTML5 File Drag & Drop demonstration
-Featured on SitePoint.com
-Developed by Craig Buckler (@craigbuckler) of OptimalWorks.net
-*/
-var filedrag = function(uploaderArea) {
-	
-	var filesArray = [];
-
-	var fileselect = $("<input/>").attr({
-		"type": "file",
-		"id": "fileselect",
-		"name": "fileselect[]",
-		"multiple": "multiple"
-	}).appendTo(uploaderArea);
-	
-	var filedrag = $("<div/>")
-		.attr("id","filedrag")
-		.append("or drop files here")
-		.appendTo(uploaderArea);
-	
-	var filelist = $("<ul/>")
-		.attr({
-			"id":"filelist",
-			"class": "filesList"
-		}).appendTo(uploaderArea);
-
-
-	// output information
-	function Output(msg) {
-		var box = $("<input/>").attr({
-			"type": "checkbox",
-			"checked": "checked"
-		});		
-
-		$("<li/>").attr({
-			"class": "filelistItem"
-		}).append(box).append(msg).appendTo(filelist);
-	}
-	
-	// call initialization file
-	if (window.File && window.FileList && window.FileReader) {
-		Init();
-	}
-		
-	// getElementById
-	function $id(id) {
-		return document.getElementById(id);
-	}
-
-	// file drag hover
-	function FileDragHover(e) {
-		e.stopPropagation();
-		e.preventDefault();
-		e.target.className = (e.type == "dragover" ? "hover" : "");
-	}
-
-
-	// file selection
-	function FileSelectHandler(e) {
-		// cancel event and hover styling
-		FileDragHover(e);
-
-		// fetch FileList object
-		var files = e.target.files || e.dataTransfer.files;
-
-		// process all File objects
-		for (var i = 0, f; f = files[i]; i++) {
-			filesArray.push(f);
-			ParseFile(f);
-		}
-	}
-
-	// output file information
-	function ParseFile(file) {
-		Output(
-			"<strong>" + file.name +
-			"</strong> type: <strong>" + file.type +
-			"</strong> size: <strong>" + file.size +
-			"</strong> bytes"
-		);
-	}
-
-
-	// initialize
-	function Init() {
-	
-		// file select
-		fileselect[0].addEventListener("change", FileSelectHandler, false);
-
-		// is XHR2 available?
-		var xhr = new XMLHttpRequest();
-		if (xhr.upload) {
-
-			// file drop
-			filedrag[0].addEventListener("dragover", FileDragHover, false);
-			filedrag[0].addEventListener("dragleave", FileDragHover, false);
-			filedrag[0].addEventListener("drop", FileSelectHandler, false);
-			filedrag[0].style.display = "block";
-		}
-
-	}
-	
-	return {
-		getFiles: function() {
-			return files;
-		}
-	};
-};/**
- * http://github.com/valums/file-uploader
- * 
- * Multiple file upload component with progress-bar, drag-and-drop. 
- * © 2010 Andrew Valums ( andrew(at)valums.com ) 
- * 
- * Licensed under GNU GPL 2 or later and GNU LGPL 2 or later, see license.txt.
- */    
-
-//
-// Helper functions
-//
-
-var qq = qq || {};
-
 /**
- * Adds all missing properties from second obj to first obj
- */ 
-qq.extend = function(first, second){
-    for (var prop in second){
-        first[prop] = second[prop];
-    }
-};  
-
-/**
- * Searches for a given element in the array, returns -1 if it is not present.
- * @param {Number} [from] The index at which to begin the search
- */
-qq.indexOf = function(arr, elt, from){
-    if (arr.indexOf) return arr.indexOf(elt, from);
-    
-    from = from || 0;
-    var len = arr.length;    
-    
-    if (from < 0) from += len;  
-
-    for (; from < len; from++){  
-        if (from in arr && arr[from] === elt){  
-            return from;
-        }
-    }  
-    return -1;  
-}; 
-    
-qq.getUniqueId = (function(){
-    var id = 0;
-    return function(){ return id++; };
-})();
-
-//
-// Events
-
-qq.attach = function(element, type, fn){
-    if (element.addEventListener){
-        element.addEventListener(type, fn, false);
-    } else if (element.attachEvent){
-        element.attachEvent('on' + type, fn);
-    }
-};
-qq.detach = function(element, type, fn){
-    if (element.removeEventListener){
-        element.removeEventListener(type, fn, false);
-    } else if (element.attachEvent){
-        element.detachEvent('on' + type, fn);
-    }
-};
-
-qq.preventDefault = function(e){
-    if (e.preventDefault){
-        e.preventDefault();
-    } else{
-        e.returnValue = false;
-    }
-};
-
-//
-// Node manipulations
-
-/**
- * Insert node a before node b.
- */
-qq.insertBefore = function(a, b){
-    b.parentNode.insertBefore(a, b);
-};
-qq.remove = function(element){
-    element.parentNode.removeChild(element);
-};
-
-qq.contains = function(parent, descendant){       
-    // compareposition returns false in this case
-    if (parent == descendant) return true;
-    
-    if (parent.contains){
-        return parent.contains(descendant);
-    } else {
-        return !!(descendant.compareDocumentPosition(parent) & 8);
-    }
-};
-
-/**
- * Creates and returns element from html string
- * Uses innerHTML to create an element
- */
-qq.toElement = (function(){
-    var div = document.createElement('div');
-    return function(html){
-        div.innerHTML = html;
-        var element = div.firstChild;
-        div.removeChild(element);
-        return element;
-    };
-})();
-
-//
-// Node properties and attributes
-
-/**
- * Sets styles for an element.
- * Fixes opacity in IE6-8.
- */
-qq.css = function(element, styles){
-    if (styles.opacity != null){
-        if (typeof element.style.opacity != 'string' && typeof(element.filters) != 'undefined'){
-            styles.filter = 'alpha(opacity=' + Math.round(100 * styles.opacity) + ')';
-        }
-    }
-    qq.extend(element.style, styles);
-};
-qq.hasClass = function(element, name){
-    var re = new RegExp('(^| )' + name + '( |$)');
-    return re.test(element.className);
-};
-qq.addClass = function(element, name){
-    if (!qq.hasClass(element, name)){
-        element.className += ' ' + name;
-    }
-};
-qq.removeClass = function(element, name){
-    var re = new RegExp('(^| )' + name + '( |$)');
-    element.className = element.className.replace(re, ' ').replace(/^\s+|\s+$/g, "");
-};
-qq.setText = function(element, text){
-    element.innerText = text;
-    element.textContent = text;
-};
-
-//
-// Selecting elements
-
-qq.children = function(element){
-    var children = [],
-    child = element.firstChild;
-
-    while (child){
-        if (child.nodeType == 1){
-            children.push(child);
-        }
-        child = child.nextSibling;
-    }
-
-    return children;
-};
-
-qq.getByClass = function(element, className){
-    if (element.querySelectorAll){
-        return element.querySelectorAll('.' + className);
-    }
-
-    var result = [];
-    var candidates = element.getElementsByTagName("*");
-    var len = candidates.length;
-
-    for (var i = 0; i < len; i++){
-        if (qq.hasClass(candidates[i], className)){
-            result.push(candidates[i]);
-        }
-    }
-    return result;
-};
-
-/**
- * obj2url() takes a json-object as argument and generates
- * a querystring. pretty much like jQuery.param()
- * 
- * how to use:
- *
- *    `qq.obj2url({a:'b',c:'d'},'http://any.url/upload?otherParam=value');`
- *
- * will result in:
- *
- *    `http://any.url/upload?otherParam=value&a=b&c=d`
- *
- * @param  Object JSON-Object
- * @param  String current querystring-part
- * @return String encoded querystring
- */
-qq.obj2url = function(obj, temp, prefixDone){
-    var uristrings = [],
-        prefix = '&',
-        add = function(nextObj, i){
-            var nextTemp = temp 
-                ? (/\[\]$/.test(temp)) // prevent double-encoding
-                   ? temp
-                   : temp+'['+i+']'
-                : i;
-            if ((nextTemp != 'undefined') && (i != 'undefined')) {  
-                uristrings.push(
-                    (typeof nextObj === 'object') 
-                        ? qq.obj2url(nextObj, nextTemp, true)
-                        : (Object.prototype.toString.call(nextObj) === '[object Function]')
-                            ? encodeURIComponent(nextTemp) + '=' + encodeURIComponent(nextObj())
-                            : encodeURIComponent(nextTemp) + '=' + encodeURIComponent(nextObj)                                                          
-                );
-            }
-        }; 
-
-    if (!prefixDone && temp) {
-      prefix = (/\?/.test(temp)) ? (/\?$/.test(temp)) ? '' : '&' : '?';
-      uristrings.push(temp);
-      uristrings.push(qq.obj2url(obj));
-    } else if ((Object.prototype.toString.call(obj) === '[object Array]') && (typeof obj != 'undefined') ) {
-        // we wont use a for-in-loop on an array (performance)
-        for (var i = 0, len = obj.length; i < len; ++i){
-            add(obj[i], i);
-        }
-    } else if ((typeof obj != 'undefined') && (obj !== null) && (typeof obj === "object")){
-        // for anything else but a scalar, we will use for-in-loop
-        for (var i in obj){
-            add(obj[i], i);
-        }
-    } else {
-        uristrings.push(encodeURIComponent(temp) + '=' + encodeURIComponent(obj));
-    }
-
-    return uristrings.join(prefix)
-                     .replace(/^&/, '')
-                     .replace(/%20/g, '+'); 
-};
-
-//
-//
-// Uploader Classes
-//
-//
-
-var qq = qq || {};
-    
-/**
- * Creates upload button, validates upload, but doesn't create file list or dd. 
- */
-qq.FileUploaderBasic = function(o){
-    this._options = {
-        // set to true to see the server response
-        debug: false,
-        action: '/server/upload',
-        params: {},
-        button: null,
-        multiple: true,
-        maxConnections: 3,
-        // validation        
-        allowedExtensions: [],               
-        sizeLimit: 0,   
-        minSizeLimit: 0,                             
-        // events
-        // return false to cancel submit
-        onSubmit: function(id, fileName){},
-        onProgress: function(id, fileName, loaded, total){},
-        onComplete: function(id, fileName, responseJSON){},
-        onCancel: function(id, fileName){},
-        // messages                
-        messages: {
-            typeError: "{file} has invalid extension. Only {extensions} are allowed.",
-            sizeError: "{file} is too large, maximum file size is {sizeLimit}.",
-            minSizeError: "{file} is too small, minimum file size is {minSizeLimit}.",
-            emptyError: "{file} is empty, please select files again without it.",
-            onLeave: "The files are being uploaded, if you leave now the upload will be cancelled."            
-        },
-        showMessage: function(message){
-            alert(message);
-        }               
-    };
-    qq.extend(this._options, o);
-        
-    // number of files being uploaded
-    this._filesInProgress = 0;
-    this._handler = this._createUploadHandler(); 
-    
-    if (this._options.button){ 
-        this._button = this._createUploadButton(this._options.button);
-    }
-                        
-    this._preventLeaveInProgress();         
-};
-   
-qq.FileUploaderBasic.prototype = {
-    setParams: function(params){
-        this._options.params = params;
-    },
-    getInProgress: function(){
-        return this._filesInProgress;         
-    },
-    _createUploadButton: function(element){
-        var self = this;
-        
-        return new qq.UploadButton({
-            element: element,
-            multiple: this._options.multiple && qq.UploadHandlerXhr.isSupported(),
-            onChange: function(input){
-                self._onInputChange(input);
-            }        
-        });           
-    },    
-    _createUploadHandler: function(){
-        var self = this,
-            handlerClass;        
-        
-        if(qq.UploadHandlerXhr.isSupported()){           
-            handlerClass = 'UploadHandlerXhr';                        
-        } else {
-            handlerClass = 'UploadHandlerForm';
-        }
-
-        var handler = new qq[handlerClass]({
-            debug: this._options.debug,
-            action: this._options.action,         
-            maxConnections: this._options.maxConnections,   
-            onProgress: function(id, fileName, loaded, total){                
-                self._onProgress(id, fileName, loaded, total);
-                self._options.onProgress(id, fileName, loaded, total);                    
-            },            
-            onComplete: function(id, fileName, result){
-                self._onComplete(id, fileName, result);
-                self._options.onComplete(id, fileName, result);
-            },
-            onCancel: function(id, fileName){
-                self._onCancel(id, fileName);
-                self._options.onCancel(id, fileName);
-            }
-        });
-
-        return handler;
-    },    
-    _preventLeaveInProgress: function(){
-        var self = this;
-        
-        qq.attach(window, 'beforeunload', function(e){
-            if (!self._filesInProgress){return;}
-            
-            var e = e || window.event;
-            // for ie, ff
-            e.returnValue = self._options.messages.onLeave;
-            // for webkit
-            return self._options.messages.onLeave;             
-        });        
-    },    
-    _onSubmit: function(id, fileName){
-        this._filesInProgress++;  
-    },
-    _onProgress: function(id, fileName, loaded, total){        
-    },
-    _onComplete: function(id, fileName, result){
-        this._filesInProgress--;                 
-        if (result.error){
-            this._options.showMessage(result.error);
-        }             
-    },
-    _onCancel: function(id, fileName){
-        this._filesInProgress--;        
-    },
-    _onInputChange: function(input){
-        if (this._handler instanceof qq.UploadHandlerXhr){                
-            this._uploadFileList(input.files);                   
-        } else {             
-            if (this._validateFile(input)){                
-                this._uploadFile(input);                                    
-            }                      
-        }               
-        this._button.reset();   
-    },  
-    _uploadFileList: function(files){
-        for (var i=0; i<files.length; i++){
-            if ( !this._validateFile(files[i])){
-                return;
-            }            
-        }
-        
-        for (var i=0; i<files.length; i++){
-            this._uploadFile(files[i]);        
-        }        
-    },       
-    _uploadFile: function(fileContainer){      
-        var id = this._handler.add(fileContainer);
-        var fileName = this._handler.getName(id);
-        
-        if (this._options.onSubmit(id, fileName) !== false){
-            this._onSubmit(id, fileName);
-            this._handler.upload(id, this._options.params);
-        }
-    },      
-    _validateFile: function(file){
-        var name, size;
-        
-        if (file.value){
-            // it is a file input            
-            // get input value and remove path to normalize
-            name = file.value.replace(/.*(\/|\\)/, "");
-        } else {
-            // fix missing properties in Safari
-            name = file.fileName != null ? file.fileName : file.name;
-            size = file.fileSize != null ? file.fileSize : file.size;
-        }
-                    
-        if (! this._isAllowedExtension(name)){            
-            this._error('typeError', name);
-            return false;
-            
-        } else if (size === 0){            
-            this._error('emptyError', name);
-            return false;
-                                                     
-        } else if (size && this._options.sizeLimit && size > this._options.sizeLimit){            
-            this._error('sizeError', name);
-            return false;
-                        
-        } else if (size && size < this._options.minSizeLimit){
-            this._error('minSizeError', name);
-            return false;            
-        }
-        
-        return true;                
-    },
-    _error: function(code, fileName){
-        var message = this._options.messages[code];        
-        function r(name, replacement){ message = message.replace(name, replacement); }
-        
-        r('{file}', this._formatFileName(fileName));        
-        r('{extensions}', this._options.allowedExtensions.join(', '));
-        r('{sizeLimit}', this._formatSize(this._options.sizeLimit));
-        r('{minSizeLimit}', this._formatSize(this._options.minSizeLimit));
-        
-        this._options.showMessage(message);                
-    },
-    _formatFileName: function(name){
-        if (name.length > 33){
-            name = name.slice(0, 19) + '...' + name.slice(-13);    
-        }
-        return name;
-    },
-    _isAllowedExtension: function(fileName){
-        var ext = (-1 !== fileName.indexOf('.')) ? fileName.replace(/.*[.]/, '').toLowerCase() : '';
-        var allowed = this._options.allowedExtensions;
-        
-        if (!allowed.length){return true;}        
-        
-        for (var i=0; i<allowed.length; i++){
-            if (allowed[i].toLowerCase() == ext){ return true;}    
-        }
-        
-        return false;
-    },    
-    _formatSize: function(bytes){
-        var i = -1;                                    
-        do {
-            bytes = bytes / 1024;
-            i++;  
-        } while (bytes > 99);
-        
-        return Math.max(bytes, 0.1).toFixed(1) + ['kB', 'MB', 'GB', 'TB', 'PB', 'EB'][i];          
-    }
-};
-    
-       
-/**
- * Class that creates upload widget with drag-and-drop and file list
- * @inherits qq.FileUploaderBasic
- */
-qq.FileUploader = function(o){
-    // call parent constructor
-    qq.FileUploaderBasic.apply(this, arguments);
-    
-    // additional options    
-    qq.extend(this._options, {
-        element: null,
-        // if set, will be used instead of qq-upload-list in template
-        listElement: null,
-                
-        template: '<div class="qq-uploader">' + 
-                '<div class="qq-upload-drop-area"><span>Drop files here to upload</span></div>' +
-                '<div class="qq-upload-button">Upload a file</div>' +
-                '<ul class="qq-upload-list"></ul>' + 
-             '</div>',
-
-        // template for one item in file list
-        fileTemplate: '<li>' +
-                '<span class="qq-upload-file"></span>' +
-                '<span class="qq-upload-spinner"></span>' +
-                '<span class="qq-upload-size"></span>' +
-                '<a class="qq-upload-cancel" href="#">Cancel</a>' +
-                '<span class="qq-upload-failed-text">Failed</span>' +
-            '</li>',        
-        
-        classes: {
-            // used to get elements from templates
-            button: 'qq-upload-button',
-            drop: 'qq-upload-drop-area',
-            dropActive: 'qq-upload-drop-area-active',
-            list: 'qq-upload-list',
-                        
-            file: 'qq-upload-file',
-            spinner: 'qq-upload-spinner',
-            size: 'qq-upload-size',
-            cancel: 'qq-upload-cancel',
-
-            // added to list item when upload completes
-            // used in css to hide progress spinner
-            success: 'qq-upload-success',
-            fail: 'qq-upload-fail'
-        }
-    });
-    // overwrite options with user supplied    
-    qq.extend(this._options, o);       
-
-    this._element = this._options.element;
-    this._element.innerHTML = this._options.template;        
-    this._listElement = this._options.listElement || this._find(this._element, 'list');
-    
-    this._classes = this._options.classes;
-        
-    this._button = this._createUploadButton(this._find(this._element, 'button'));        
-    
-    this._bindCancelEvent();
-    this._setupDragDrop();
-};
-
-// inherit from Basic Uploader
-qq.extend(qq.FileUploader.prototype, qq.FileUploaderBasic.prototype);
-
-qq.extend(qq.FileUploader.prototype, {
-    /**
-     * Gets one of the elements listed in this._options.classes
-     **/
-    _find: function(parent, type){                                
-        var element = qq.getByClass(parent, this._options.classes[type])[0];        
-        if (!element){
-            throw new Error('element not found ' + type);
-        }
-        
-        return element;
-    },
-    _setupDragDrop: function(){
-        var self = this,
-            dropArea = this._find(this._element, 'drop');                        
-
-        var dz = new qq.UploadDropZone({
-            element: dropArea,
-            onEnter: function(e){
-                qq.addClass(dropArea, self._classes.dropActive);
-                e.stopPropagation();
-            },
-            onLeave: function(e){
-                e.stopPropagation();
-            },
-            onLeaveNotDescendants: function(e){
-                qq.removeClass(dropArea, self._classes.dropActive);  
-            },
-            onDrop: function(e){
-                dropArea.style.display = 'none';
-                qq.removeClass(dropArea, self._classes.dropActive);
-                self._uploadFileList(e.dataTransfer.files);    
-            }
-        });
-                
-        dropArea.style.display = 'none';
-
-        qq.attach(document, 'dragenter', function(e){     
-            if (!dz._isValidFileDrag(e)) return; 
-            
-            dropArea.style.display = 'block';            
-        });                 
-        qq.attach(document, 'dragleave', function(e){
-            if (!dz._isValidFileDrag(e)) return;            
-            
-            var relatedTarget = document.elementFromPoint(e.clientX, e.clientY);
-            // only fire when leaving document out
-            if ( ! relatedTarget || relatedTarget.nodeName == "HTML"){               
-                dropArea.style.display = 'none';                                            
-            }
-        });                
-    },
-    _onSubmit: function(id, fileName){
-        qq.FileUploaderBasic.prototype._onSubmit.apply(this, arguments);
-        this._addToList(id, fileName);  
-    },
-    _onProgress: function(id, fileName, loaded, total){
-        qq.FileUploaderBasic.prototype._onProgress.apply(this, arguments);
-
-        var item = this._getItemByFileId(id);
-        var size = this._find(item, 'size');
-        size.style.display = 'inline';
-        
-        var text; 
-        if (loaded != total){
-            text = Math.round(loaded / total * 100) + '% from ' + this._formatSize(total);
-        } else {                                   
-            text = this._formatSize(total);
-        }          
-        
-        qq.setText(size, text);         
-    },
-    _onComplete: function(id, fileName, result){
-        qq.FileUploaderBasic.prototype._onComplete.apply(this, arguments);
-
-        // mark completed
-        var item = this._getItemByFileId(id);                
-        qq.remove(this._find(item, 'cancel'));
-        qq.remove(this._find(item, 'spinner'));
-        
-        if (result.success){
-            qq.addClass(item, this._classes.success);    
-        } else {
-            qq.addClass(item, this._classes.fail);
-        }         
-    },
-    _addToList: function(id, fileName){
-        var item = qq.toElement(this._options.fileTemplate);                
-        item.qqFileId = id;
-
-        var fileElement = this._find(item, 'file');        
-        qq.setText(fileElement, this._formatFileName(fileName));
-        this._find(item, 'size').style.display = 'none';        
-
-        this._listElement.appendChild(item);
-    },
-    _getItemByFileId: function(id){
-        var item = this._listElement.firstChild;        
-        
-        // there can't be txt nodes in dynamically created list
-        // and we can  use nextSibling
-        while (item){            
-            if (item.qqFileId == id) return item;            
-            item = item.nextSibling;
-        }          
-    },
-    /**
-     * delegate click event for cancel link 
-     **/
-    _bindCancelEvent: function(){
-        var self = this,
-            list = this._listElement;            
-        
-        qq.attach(list, 'click', function(e){            
-            e = e || window.event;
-            var target = e.target || e.srcElement;
-            
-            if (qq.hasClass(target, self._classes.cancel)){                
-                qq.preventDefault(e);
-               
-                var item = target.parentNode;
-                self._handler.cancel(item.qqFileId);
-                qq.remove(item);
-            }
-        });
-    }    
-});
-    
-qq.UploadDropZone = function(o){
-    this._options = {
-        element: null,  
-        onEnter: function(e){},
-        onLeave: function(e){},  
-        // is not fired when leaving element by hovering descendants   
-        onLeaveNotDescendants: function(e){},   
-        onDrop: function(e){}                       
-    };
-    qq.extend(this._options, o); 
-    
-    this._element = this._options.element;
-    
-    this._disableDropOutside();
-    this._attachEvents();   
-};
-
-qq.UploadDropZone.prototype = {
-    _disableDropOutside: function(e){
-        // run only once for all instances
-        if (!qq.UploadDropZone.dropOutsideDisabled ){
-
-            qq.attach(document, 'dragover', function(e){
-                if (e.dataTransfer){
-                    e.dataTransfer.dropEffect = 'none';
-                    e.preventDefault(); 
-                }           
-            });
-            
-            qq.UploadDropZone.dropOutsideDisabled = true; 
-        }        
-    },
-    _attachEvents: function(){
-        var self = this;              
-                  
-        qq.attach(self._element, 'dragover', function(e){
-            if (!self._isValidFileDrag(e)) return;
-            
-            var effect = e.dataTransfer.effectAllowed;
-            if (effect == 'move' || effect == 'linkMove'){
-                e.dataTransfer.dropEffect = 'move'; // for FF (only move allowed)    
-            } else {                    
-                e.dataTransfer.dropEffect = 'copy'; // for Chrome
-            }
-                                                     
-            e.stopPropagation();
-            e.preventDefault();                                                                    
-        });
-        
-        qq.attach(self._element, 'dragenter', function(e){
-            if (!self._isValidFileDrag(e)) return;
-                        
-            self._options.onEnter(e);
-        });
-        
-        qq.attach(self._element, 'dragleave', function(e){
-            if (!self._isValidFileDrag(e)) return;
-            
-            self._options.onLeave(e);
-            
-            var relatedTarget = document.elementFromPoint(e.clientX, e.clientY);                      
-            // do not fire when moving a mouse over a descendant
-            if (qq.contains(this, relatedTarget)) return;
-                        
-            self._options.onLeaveNotDescendants(e); 
-        });
-                
-        qq.attach(self._element, 'drop', function(e){
-            if (!self._isValidFileDrag(e)) return;
-            
-            e.preventDefault();
-            self._options.onDrop(e);
-        });          
-    },
-    _isValidFileDrag: function(e){
-        var dt = e.dataTransfer,
-            // do not check dt.types.contains in webkit, because it crashes safari 4            
-            isWebkit = navigator.userAgent.indexOf("AppleWebKit") > -1;                        
-
-        // dt.effectAllowed is none in Safari 5
-        // dt.types.contains check is for firefox            
-        return dt && dt.effectAllowed != 'none' && 
-            (dt.files || (!isWebkit && dt.types.contains && dt.types.contains('Files')));
-        
-    }        
-}; 
-
-qq.UploadButton = function(o){
-    this._options = {
-        element: null,  
-        // if set to true adds multiple attribute to file input      
-        multiple: false,
-        // name attribute of file input
-        name: 'file',
-        onChange: function(input){},
-        hoverClass: 'qq-upload-button-hover',
-        focusClass: 'qq-upload-button-focus'                       
-    };
-    
-    qq.extend(this._options, o);
-        
-    this._element = this._options.element;
-    
-    // make button suitable container for input
-    qq.css(this._element, {
-        position: 'relative',
-        overflow: 'hidden',
-        // Make sure browse button is in the right side
-        // in Internet Explorer
-        direction: 'ltr'
-    });   
-    
-    this._input = this._createInput();
-};
-
-qq.UploadButton.prototype = {
-    /* returns file input element */    
-    getInput: function(){
-        return this._input;
-    },
-    /* cleans/recreates the file input */
-    reset: function(){
-        if (this._input.parentNode){
-            qq.remove(this._input);    
-        }                
-        
-        qq.removeClass(this._element, this._options.focusClass);
-        this._input = this._createInput();
-    },    
-    _createInput: function(){                
-        var input = document.createElement("input");
-        
-        if (this._options.multiple){
-            input.setAttribute("multiple", "multiple");
-        }
-                
-        input.setAttribute("type", "file");
-        input.setAttribute("name", this._options.name);
-        
-        qq.css(input, {
-            position: 'absolute',
-            // in Opera only 'browse' button
-            // is clickable and it is located at
-            // the right side of the input
-            right: 0,
-            top: 0,
-            fontFamily: 'Arial',
-            // 4 persons reported this, the max values that worked for them were 243, 236, 236, 118
-            fontSize: '118px',
-            margin: 0,
-            padding: 0,
-            cursor: 'pointer',
-            opacity: 0
-        });
-        
-        this._element.appendChild(input);
-
-        var self = this;
-        qq.attach(input, 'change', function(){
-            self._options.onChange(input);
-        });
-                
-        qq.attach(input, 'mouseover', function(){
-            qq.addClass(self._element, self._options.hoverClass);
-        });
-        qq.attach(input, 'mouseout', function(){
-            qq.removeClass(self._element, self._options.hoverClass);
-        });
-        qq.attach(input, 'focus', function(){
-            qq.addClass(self._element, self._options.focusClass);
-        });
-        qq.attach(input, 'blur', function(){
-            qq.removeClass(self._element, self._options.focusClass);
-        });
-
-        // IE and Opera, unfortunately have 2 tab stops on file input
-        // which is unacceptable in our case, disable keyboard access
-        if (window.attachEvent){
-            // it is IE or Opera
-            input.setAttribute('tabIndex', "-1");
-        }
-
-        return input;            
-    }        
-};
-
-/**
- * Class for uploading files, uploading itself is handled by child classes
- */
-qq.UploadHandlerAbstract = function(o){
-    this._options = {
-        debug: false,
-        action: '/upload.php',
-        // maximum number of concurrent uploads        
-        maxConnections: 999,
-        onProgress: function(id, fileName, loaded, total){},
-        onComplete: function(id, fileName, response){},
-        onCancel: function(id, fileName){}
-    };
-    qq.extend(this._options, o);    
-    
-    this._queue = [];
-    // params for files in queue
-    this._params = [];
-};
-qq.UploadHandlerAbstract.prototype = {
-    log: function(str){
-        if (this._options.debug && window.console) console.log('[uploader] ' + str);        
-    },
-    /**
-     * Adds file or file input to the queue
-     * @returns id
-     **/    
-    add: function(file){},
-    /**
-     * Sends the file identified by id and additional query params to the server
-     */
-    upload: function(id, params){
-        var len = this._queue.push(id);
-
-        var copy = {};        
-        qq.extend(copy, params);
-        this._params[id] = copy;        
-                
-        // if too many active uploads, wait...
-        if (len <= this._options.maxConnections){               
-            this._upload(id, this._params[id]);
-        }
-    },
-    /**
-     * Cancels file upload by id
-     */
-    cancel: function(id){
-        this._cancel(id);
-        this._dequeue(id);
-    },
-    /**
-     * Cancells all uploads
-     */
-    cancelAll: function(){
-        for (var i=0; i<this._queue.length; i++){
-            this._cancel(this._queue[i]);
-        }
-        this._queue = [];
-    },
-    /**
-     * Returns name of the file identified by id
-     */
-    getName: function(id){},
-    /**
-     * Returns size of the file identified by id
-     */          
-    getSize: function(id){},
-    /**
-     * Returns id of files being uploaded or
-     * waiting for their turn
-     */
-    getQueue: function(){
-        return this._queue;
-    },
-    /**
-     * Actual upload method
-     */
-    _upload: function(id){},
-    /**
-     * Actual cancel method
-     */
-    _cancel: function(id){},     
-    /**
-     * Removes element from queue, starts upload of next
-     */
-    _dequeue: function(id){
-        var i = qq.indexOf(this._queue, id);
-        this._queue.splice(i, 1);
-                
-        var max = this._options.maxConnections;
-        
-        if (this._queue.length >= max && i < max){
-            var nextId = this._queue[max-1];
-            this._upload(nextId, this._params[nextId]);
-        }
-    }        
-};
-
-/**
- * Class for uploading files using form and iframe
- * @inherits qq.UploadHandlerAbstract
- */
-qq.UploadHandlerForm = function(o){
-    qq.UploadHandlerAbstract.apply(this, arguments);
-       
-    this._inputs = {};
-};
-// @inherits qq.UploadHandlerAbstract
-qq.extend(qq.UploadHandlerForm.prototype, qq.UploadHandlerAbstract.prototype);
-
-qq.extend(qq.UploadHandlerForm.prototype, {
-    add: function(fileInput){
-        fileInput.setAttribute('name', 'qqfile');
-        var id = 'qq-upload-handler-iframe' + qq.getUniqueId();       
-        
-        this._inputs[id] = fileInput;
-        
-        // remove file input from DOM
-        if (fileInput.parentNode){
-            qq.remove(fileInput);
-        }
-                
-        return id;
-    },
-    getName: function(id){
-        // get input value and remove path to normalize
-        return this._inputs[id].value.replace(/.*(\/|\\)/, "");
-    },    
-    _cancel: function(id){
-        this._options.onCancel(id, this.getName(id));
-        
-        delete this._inputs[id];        
-
-        var iframe = document.getElementById(id);
-        if (iframe){
-            // to cancel request set src to something else
-            // we use src="javascript:false;" because it doesn't
-            // trigger ie6 prompt on https
-            iframe.setAttribute('src', 'javascript:false;');
-
-            qq.remove(iframe);
-        }
-    },     
-    _upload: function(id, params){                        
-        var input = this._inputs[id];
-        
-        if (!input){
-            throw new Error('file with passed id was not added, or already uploaded or cancelled');
-        }                
-
-        var fileName = this.getName(id);
-                
-        var iframe = this._createIframe(id);
-        var form = this._createForm(iframe, params);
-        form.appendChild(input);
-
-        var self = this;
-        this._attachLoadEvent(iframe, function(){                                 
-            self.log('iframe loaded');
-            
-            var response = self._getIframeContentJSON(iframe);
-
-            self._options.onComplete(id, fileName, response);
-            self._dequeue(id);
-            
-            delete self._inputs[id];
-            // timeout added to fix busy state in FF3.6
-            setTimeout(function(){
-                qq.remove(iframe);
-            }, 1);
-        });
-
-        form.submit();        
-        qq.remove(form);        
-        
-        return id;
-    }, 
-    _attachLoadEvent: function(iframe, callback){
-        qq.attach(iframe, 'load', function(){
-            // when we remove iframe from dom
-            // the request stops, but in IE load
-            // event fires
-            if (!iframe.parentNode){
-                return;
-            }
-
-            // fixing Opera 10.53
-            if (iframe.contentDocument &&
-                iframe.contentDocument.body &&
-                iframe.contentDocument.body.innerHTML == "false"){
-                // In Opera event is fired second time
-                // when body.innerHTML changed from false
-                // to server response approx. after 1 sec
-                // when we upload file with iframe
-                return;
-            }
-
-            callback();
-        });
-    },
-    /**
-     * Returns json object received by iframe from server.
-     */
-    _getIframeContentJSON: function(iframe){
-        // iframe.contentWindow.document - for IE<7
-        var doc = iframe.contentDocument ? iframe.contentDocument: iframe.contentWindow.document,
-            response;
-        
-        this.log("converting iframe's innerHTML to JSON");
-        this.log("innerHTML = " + doc.body.innerHTML);
-                        
-        try {
-            response = eval("(" + doc.body.innerHTML + ")");
-        } catch(err){
-            response = {};
-        }        
-
-        return response;
-    },
-    /**
-     * Creates iframe with unique name
-     */
-    _createIframe: function(id){
-        // We can't use following code as the name attribute
-        // won't be properly registered in IE6, and new window
-        // on form submit will open
-        // var iframe = document.createElement('iframe');
-        // iframe.setAttribute('name', id);
-
-        var iframe = qq.toElement('<iframe src="javascript:false;" name="' + id + '" />');
-        // src="javascript:false;" removes ie6 prompt on https
-
-        iframe.setAttribute('id', id);
-
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-
-        return iframe;
-    },
-    /**
-     * Creates form, that will be submitted to iframe
-     */
-    _createForm: function(iframe, params){
-        // We can't use the following code in IE6
-        // var form = document.createElement('form');
-        // form.setAttribute('method', 'post');
-        // form.setAttribute('enctype', 'multipart/form-data');
-        // Because in this case file won't be attached to request
-        var form = qq.toElement('<form method="post" enctype="multipart/form-data"></form>');
-
-        var queryString = qq.obj2url(params, this._options.action);
-
-        form.setAttribute('action', queryString);
-        form.setAttribute('target', iframe.name);
-        form.style.display = 'none';
-        document.body.appendChild(form);
-
-        return form;
-    }
-});
-
-/**
- * Class for uploading files using xhr
- * @inherits qq.UploadHandlerAbstract
- */
-qq.UploadHandlerXhr = function(o){
-    qq.UploadHandlerAbstract.apply(this, arguments);
-
-    this._files = [];
-    this._xhrs = [];
-    
-    // current loaded size in bytes for each file 
-    this._loaded = [];
-};
-
-// static method
-qq.UploadHandlerXhr.isSupported = function(){
-    var input = document.createElement('input');
-    input.type = 'file';        
-    
-    return (
-        'multiple' in input &&
-        typeof File != "undefined" &&
-        typeof (new XMLHttpRequest()).upload != "undefined" );       
-};
-
-// @inherits qq.UploadHandlerAbstract
-qq.extend(qq.UploadHandlerXhr.prototype, qq.UploadHandlerAbstract.prototype)
-
-qq.extend(qq.UploadHandlerXhr.prototype, {
-    /**
-     * Adds file to the queue
-     * Returns id to use with upload, cancel
-     **/    
-    add: function(file){
-        if (!(file instanceof File)){
-            throw new Error('Passed obj in not a File (in qq.UploadHandlerXhr)');
-        }
-                
-        return this._files.push(file) - 1;        
-    },
-    getName: function(id){        
-        var file = this._files[id];
-        // fix missing name in Safari 4
-        return file.fileName != null ? file.fileName : file.name;       
-    },
-    getSize: function(id){
-        var file = this._files[id];
-        return file.fileSize != null ? file.fileSize : file.size;
-    },    
-    /**
-     * Returns uploaded bytes for file identified by id 
-     */    
-    getLoaded: function(id){
-        return this._loaded[id] || 0; 
-    },
-    /**
-     * Sends the file identified by id and additional query params to the server
-     * @param {Object} params name-value string pairs
-     */    
-    _upload: function(id, params){
-        var file = this._files[id],
-            name = this.getName(id),
-            size = this.getSize(id);
-                
-        this._loaded[id] = 0;
-                                
-        var xhr = this._xhrs[id] = new XMLHttpRequest();
-        var self = this;
-                                        
-        xhr.upload.onprogress = function(e){
-            if (e.lengthComputable){
-                self._loaded[id] = e.loaded;
-                self._options.onProgress(id, name, e.loaded, e.total);
-            }
-        };
-
-        xhr.onreadystatechange = function(){            
-            if (xhr.readyState == 4){
-                self._onComplete(id, xhr);                    
-            }
-        };
-
-        // build query string
-        params = params || {};
-        params['qqfile'] = name;
-        var queryString = qq.obj2url(params, this._options.action);
-
-        xhr.open("POST", queryString, true);
-        xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-        xhr.setRequestHeader("X-File-Name", encodeURIComponent(name));
-        xhr.setRequestHeader("Content-Type", "application/octet-stream");
-        xhr.send(file);
-    },
-    _onComplete: function(id, xhr){
-        // the request was aborted/cancelled
-        if (!this._files[id]) return;
-        
-        var name = this.getName(id);
-        var size = this.getSize(id);
-        
-        this._options.onProgress(id, name, size, size);
-                
-        if (xhr.status == 200){
-            this.log("xhr - server response received");
-            this.log("responseText = " + xhr.responseText);
-                        
-            var response;
-                    
-            try {
-                response = eval("(" + xhr.responseText + ")");
-            } catch(err){
-                response = {};
-            }
-            
-            this._options.onComplete(id, name, response);
-                        
-        } else {                   
-            this._options.onComplete(id, name, {});
-        }
-                
-        this._files[id] = null;
-        this._xhrs[id] = null;    
-        this._dequeue(id);                    
-    },
-    _cancel: function(id){
-        this._options.onCancel(id, this.getName(id));
-        
-        this._files[id] = null;
-        
-        if (this._xhrs[id]){
-            this._xhrs[id].abort();
-            this._xhrs[id] = null;                                   
-        }
-    }
-});/**
  * Version: 1.0 Alpha-1 
  * Build Date: 13-Nov-2007
  * Copyright (c) 2006-2007, Coolite Inc. (http://www.coolite.com/). All rights reserved.
@@ -2827,6 +1915,8 @@ var menuItemSpinnerOpts = {
 var SideMenu = function(menu, mainFrame,topbarFrame) {
 	menu.data('menuObj', this);
 	mainFrame.data('menuObj', this);
+	var itemSpace = menu.children("#menuItemsSpace");
+	
 	var toggleButton = menu.children("#toggleButtons");
 
 	var hideBtn = toggleButton.children("#btnHideMenu")
@@ -2887,24 +1977,37 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 
 	function menuOut() {
 		menu.stop();
+		itemSpace.stop();
 
 		menu.animate({
 			opacity : 0.25,
 			left : '-175px',
 		}, 200, function() {
-			// Animation complete.
+			itemSpace.animate({
+				opacity : 0
+			}, 200, function() {
+				// Animation complete
+			});
 		});
 	};
 
 	function menuIn() {
 		menu.stop();
+		itemSpace.stop();
 
 		menu.animate({
 			opacity : 0.7,
 			left : '-35px',
 		}, 200, function() {
-			// Animation complete.
+			// Animation complete
 		});
+		
+		itemSpace.animate({
+			opacity : 1,
+		}, 400, function() {
+			// Animation complete
+		});
+		
 	};
 
 	function mainFrameGrow() {
@@ -2935,11 +2038,11 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 	
 	return {
 		append : function(item) {
-			menu.append(item);
+			itemSpace.append(item);
 		},
 		createNewMenuList : function(id, title) {
 			var menuLst = new MenuList(this,id,title,topbarFrame)
-							.appendTo(menu);
+							.appendTo(itemSpace);
 			menuLists.push(menuLst);
 			return menuLst;
 		}
@@ -3202,102 +2305,51 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(father
 	var thisObj = this;
 	this.frame = $("<span/>");
 	
-	var madeChanges = false;
+	madeChanges = false;	
 
-	addMembersQuery = new FriendsSearchList(400).appendTo(this.frame);
+	addMembersQuery = new FriendsQueryTagList(400).appendTo(this.frame);
 	
 	$.each(existingMemebers, function(i, item) {
-		addMembersQuery.addTag(item,false);
+		addMembersQuery.addTagByQuery(item,false);
 	});
 	
-	var applyBtn = $("<input/>").attr({
+	applyBtn = $("<input/>").attr({
 		"type": "button",
 		"value": "Apply"
-	}).click(apply).appendTo(this.frame);
+	}).appendTo(this.frame);
 	
-	var cancelBtn = $("<input/>").attr({
+	cancelBtn = $("<input/>").attr({
 		"type": "button",
 		"value": "Cancel"
-	}).click(cancel).appendTo(this.frame);
+	}).appendTo(this.frame);
 	
-	var errorMessage = $("<div/>").attr("class","errorArea").appendTo(this.frame);
+	errorMessage = $("<div/>").addClass("errorArea").appendTo(this.frame);
 	
-	function apply() {
-		if(addMembersQuery.removableTagCount() <= 0) {
+	responseHandler = new ResponseHandler("addWolfpackMember",[],null);
+	
+	this.apply = function() {
+		var itemsToAdd = addMembersQuery.tagList.match({removable:true});
+		
+		if(itemsToAdd.isEmpty()) {
 			errorMessage.html("Please add new members...");
-			return false;
-		}
-		
-		applyBtn.hide(200);
-		cancelBtn.hide(200);
-		
-		errorMessage.html("");
-		
-		var idsToAdd = [];
-		
-		addMembersQuery.foreachRemovableTag(function(term) {
-			idsToAdd.push(term);
-		});
-		
-		var responseHandler = new ResponseHandler("addWolfpackMember",[],null);
-		
-		responseHandler.success(function(data, textStatus, postData) {
-			madeChanges = true;
-			cancel();
-		});
-		
-		responseHandler.error(function(data, textStatus, postData) {
-			var errorMsg = null;
+		} else {
+			applyBtn.hide(200);
+			cancelBtn.hide(200);
 			
-			if(data.wolfpacksResult == null) {
-				console.log("No wolfpacksResult in response");
-			} else if(data.wolfpacksResult[0] != "success") {
-				errorMsg = "Error: " + data.wolfpacksResult[0];
-				errorMessage.append(errorMsg+"<br>");
-			}
+			errorMessage.html("");
 			
-			if(data.usersResult == null) {
-				console.log("No usersResult in response");
-			} else {
-				$.each(data.usersResult, function(i, item) {
-					if(item == "success") {
-						madeChanges = true;
-						sendToQuery.removeTag(postData.userID[i]);
-					} else {
-						var errorMsg = "Failed to add: " +
-								postData.userID[i] +
-								" with error: " + item;
-						errorMessage.append(errorMsg+"<br>");
-						
-						sendToQuery.markTag(item,errorMsg);	
-					}					
-				});
-			}
-			
-			if(errorMsg == null) {
-				errorMessage.append("Unknown error...<br>");
-			}			
-		});
+			request.request({
+				addWolfpackMember: {
+					wolfpackNames: [wolfpack],
+					userIDs: itemsToAdd.getData()
+				}
+			},responseHandler.getHandler());
+		}		
 		
-		responseHandler.complete(function (textStatus, postData) {
-			if(madeChanges) {
-				madeChanges = false;
-				eWolf.trigger("needRefresh."+fatherID);
-			}
-			
-			applyBtn.show(200);
-			cancelBtn.show(200);
-		});
-		
-		request.request({
-			addWolfpackMember: {
-				wolfpackName: [wolfpack],
-				userID: idsToAdd
-			}
-		},responseHandler.getHandler());
-	}
+		return thisObj;
+	};
 	
-	function cancel() {
+	this.cancel = function() {
 		if(onFinish != null) {
 			onFinish();
 		}
@@ -3305,11 +2357,69 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(father
 		thisObj.frame.remove();
 		
 		if(madeChanges) {
+			madeChanges = false;
 			eWolf.trigger("needRefresh."+fatherID);
 		}
 		
 		delete thisObj;
-	}
+	};
+	
+	this.success = function(data, textStatus, postData) {
+		madeChanges = true;
+		this.cancel();
+	};
+	
+	this.error = function(data, textStatus, postData) {
+		var errorMsg = null;
+		
+		if(data.wolfpacksResult == null) {
+			console.log("No wolfpacksResult in response");
+		} else if(data.wolfpacksResult[0] != "success") {
+			errorMsg = "Error: " + data.wolfpacksResult[0];
+			errorMessage.append(errorMsg+"<br>");
+		}
+		
+		if(data.usersResult == null) {
+			console.log("No usersResult in response");
+		} else {
+			$.each(data.usersResult, function(i, result) {
+				var itemID = postData.userID[i];
+				var item = addMembersQuery.tagList.match({id:itemID});
+				
+				if(result == "success") {
+					madeChanges = true;
+					item.unremovable().markOK();
+				} else {
+					var errorMsg = "Failed to add: " + itemID +
+							" with error: " + result;
+					errorMessage.append(errorMsg+"<br>");
+					
+					item.markError(errorMsg);
+				}					
+			});
+		}
+		
+		if(errorMsg == null) {
+			errorMessage.append("Unknown error...<br>");
+		}			
+	};
+	
+	this.complete = function (textStatus, postData) {
+		if(madeChanges) {
+			madeChanges = false;
+			eWolf.trigger("needRefresh."+fatherID);
+		}
+		
+		applyBtn.show(200);
+		cancelBtn.show(200);
+	};
+	
+	applyBtn.click(this.apply);	
+	cancelBtn.click(this.cancel);
+	
+	responseHandler.success(this.success)	
+		.error(this.error)	
+		.complete(this.complete);
 	
 	return this;
 };var AddToWolfpack = function(id, frame, activator, request, packsAlreadyIn) {
@@ -3327,7 +2437,10 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(father
 		});
 		
 		if(packsAlreadyIn.indexOf(pack) >= 0) {
-			box.attr("checked","checked");
+			box.attr({
+				"checked" : "checked",
+				"disabled" : true
+			});
 			box.data("isMember",true);
 		} else {
 			box.data("isMember",false);
@@ -3389,6 +2502,13 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(father
 		}, 0);	
 	});
 	
+	function trimSpaces(s) {
+		s = s.replace(/(^\s*)|(\s*$)/gi,"");
+		s = s.replace(/[ ]{2,}/gi," ");
+		s = s.replace(/\n /,"\n");
+		return s;
+	}
+	
 	$("<hr/>").css({
 		"margin":"0"
 	}).appendTo(popUp);
@@ -3406,7 +2526,7 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(father
 			if(itsBox.is(':checked') == true) {
 				if(itsBox.data("isMember") != true) {
 					if(itsBox.data("isNew") == true) {
-						var packName = itsBox.data("itsInput").val();
+						var packName = trimSpaces(itsBox.data("itsInput").val());
 						add.push(packName);
 						create.push(packName);
 					} else {
@@ -3447,7 +2567,7 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(father
 			
 			request.request({
 				createWolfpack: {
-					wolfpackName: create
+					wolfpackNames: create
 				}
 			},responseHandler.getHandler());
 			
@@ -3465,8 +2585,8 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(father
 				
 				request.request({
 					addWolfpackMember: {
-						wolfpackName: add,
-						userID: [id]
+						wolfpackNames: add,
+						userIDs: [id]
 					}
 				},response.getHandler());
 			}			
@@ -3575,20 +2695,17 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(father
 var NewMail = function(id,applicationFrame,title,
 		createRequestObj,handleResponseCategory,
 		allowAttachment,sendTo,sendToQuery) {
-	var obj = this;
+	var thisObj = this;
 	var thisID = "__newmessage__"+id;
 	
 	var appContainer = new AppContainer(thisID,applicationFrame);
-	var frame = appContainer.getFrame();
+	this.frame = appContainer.getFrame();
 	
 	var request = new PostRequestHandler(thisID,"/json",0);
 		
-	var titleArea = new TitleArea(title)
-		.appendTo(frame)
-		.addFunction("Send", send)
-		.addFunction("Cancel",cancel);
+	var titleArea = new TitleArea(title).appendTo(this.frame);
 	
-	var base = $("<table/>").appendTo(frame);
+	var base = $("<table/>").appendTo(this.frame);
 	
 	var queryRaw = $("<tr/>").appendTo(base);
 	$("<td/>").attr("class","newMailAlt").append("To:").appendTo(queryRaw);	
@@ -3597,7 +2714,7 @@ var NewMail = function(id,applicationFrame,title,
 	sendToQuery.appendTo(userIdCell);
 	
 	if(sendTo != null) {
-		sendToQuery.addTag(sendTo,true);
+		sendToQuery.addTagByQuery(sendTo,true);
 	}
 	
 	var msgRaw = $("<tr/>").appendTo(base);
@@ -3606,37 +2723,26 @@ var NewMail = function(id,applicationFrame,title,
 	var messageText = $("<textarea/>").attr({
 		"id": "textileMessage",
 		"placeholder": "What is on your mind...",
-		"style": "min-width:300px !important;height:300px  !important;"
+		"style": "min-width:300px !important;height:100px  !important;"
 	});
 	
 	$("<td/>").append(messageText).appendTo(msgRaw);
 	
+	var files = null;
 	if(allowAttachment) {
 		var attacheRaw = $("<tr/>").appendTo(base);
 		$("<td/>").attr("class","newMailAlt").append("Attachment:").appendTo(attacheRaw);
 		
 		var uploaderArea = $("<td/>").appendTo(attacheRaw);
-		/*var files = */new filedrag(uploaderArea);
-	}	
+		files = new FilesBox(uploaderArea);
+	}
 
 	var btnRaw = $("<tr/>").appendTo(base);
 	
 	$("<td/>").appendTo(btnRaw);
 	var btnBox = $("<td/>").appendTo(btnRaw);
 	
-	$("<input/>").attr({
-		"id": "sendMessageBtn",
-		"type": "button",
-		"value": "Send"
-	}).appendTo(btnBox).click(send);
-	
-	btnBox.append("&nbsp;");
-	
-	$("<input/>").attr({
-		"id": "sabortBtn",
-		"type": "button",
-		"value": "Cancel"
-	}).appendTo(btnBox).click(cancel);
+	var operations = new FunctionsArea().appendTo(btnBox);
 	
 	var errorRaw = $("<tr/>").appendTo(base);
 	
@@ -3646,113 +2752,147 @@ var NewMail = function(id,applicationFrame,title,
 	var errorMessage = $("<span/>").attr({
 		"class": "errorArea"
 	}).appendTo(errorBox);
-		
-	function cancel() {
-		obj.destroy();
-	}
-	
-	function send() {
-		if(sendToQuery.isEmpty()) {
-			errorMessage.html("Please select a destination(s)");
-			return false;
-		}
-		
-		sendToQuery.unmarkAll();
-		
-		function updateSend() {
-			if(sendToQuery.unmarkedTagCount() > 0) {
-				titleArea.removeFunction("Send");
-				titleArea.removeFunction("Cancel");
-				btnBox.hide();
-			} else {
-				titleArea.addFunction("Send",send);
-				titleArea.addFunction("Cancel",cancel);
-				btnBox.show();
-			}
-			
-			if(sendToQuery.isEmpty()) {
-				eWolf.trigger("needRefresh."+id,[id]);
-				obj.destroy();
-			}
-		}
-		
-		updateSend();
-		
-//		var uploader = new qq.FileUploaderBasic({
-//		    // path to server-side upload script
-//		    action: '/sfsupload',
-//		    params: {
-//		    	wolfpacks: "someWolfpack"
-//		    }
-//		});
-//		
-//		uploader._uploadFileList(files.getFiles());
-		
-		var msg = messageText.val();
-		var mailObject = {
-				text: msg,
-				attachment: [{
-					filename: "testfile.doc",
-					contentType: "document",
-					path: "http://www.google.com"
-				},
-				{
-					filename: "image.jpg",
-					contentType: "image/jpeg",
-					path: "https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"					
-				}]
-		};
-		
-		var mailString = JSON.stringify(mailObject);
-		
-		errorMessage.html("");
-		
-		sendToQuery.foreachTag(function(term) {			
-			var responseHandler = new ResponseHandler(handleResponseCategory,[],null);
-			
-			responseHandler.success(function(data, textStatus, postData) {
-				sendToQuery.removeTag(term);				
-				updateSend();
-			}).error(function(data, textStatus, postData) {
-				var errorMsg = "Failed to arrive at destination: " +
-						term + " with error: " + data.result;
-				errorMessage.append(errorMsg+"<br>");
-				
-				sendToQuery.markTag(term,errorMsg);				
-				updateSend();
-			});
-			
-			request.request(
-					createRequestObj(term,mailString),
-					responseHandler.getHandler());
-		});		
-	}
 	
 	eWolf.bind("refresh",function(event,eventID) {
 		if(eventID == thisID) {
-//			if(sendTo != null) {				
-//				window.setTimeout(function () {
-//					messageText.focus();
-//				}, 0);				
-//			} else {
-//				window.setTimeout(function () {
-//					sendToQuery.focus();
-//				}, 0);
-//			}
-			
-			window.setTimeout(function () {
-				messageText.focus();
-			}, 0);
+			if(sendTo != null) {				
+				window.setTimeout(function () {
+					messageText.focus();
+				}, 0);				
+			} else {
+				window.setTimeout(function () {
+					sendToQuery.focus();
+				}, 0);
+			}
 		}
 	});
 	
 	eWolf.bind("select."+id,function(event,eventId) {
 		if(eventId != thisID) {
 			appContainer.destroy();
-			delete obj;
+			delete thisObj;
 		}
 	});
+		
+	function showDeleteSuccessfulDialog(event) {
+		var diag = $("<div/>").attr({
+			"id" : "dialog-confirm",
+			"title" : "Resend to all destinations?"
+		}).addClass("DialogClass");
+		
+		$("<p/>").appendTo(diag).append(
+				"You are reseding the message after its failed to arraive to some of its destinations.<br>" + 
+				"The message already arrived to some of its destinations.");
+		$("<p/>").appendTo(diag).append(
+				"<b>Do you want to resend the message to these destinations?</b>");
+		
+		diag.dialog({
+			resizable: true,
+			modal: true,
+			width: 550,
+			buttons: {
+				"Send only to failed": function() {
+					$( this ).dialog( "close" );
+					thisObj.send(event,true);
+				},
+				"Resend to all": function() {
+					$( this ).dialog( "close" );
+					sendToQuery.tagList.unmarkTags();
+					thisObj.send(event,true);
+				},
+				Cancel: function() {
+					$( this ).dialog( "close" );
+				}
+			}
+		});
+	}
 	
+	this.updateSend = function() {
+		if(sendToQuery.tagList.tagCount({markedError:false,markedOK:false}) > 0) {
+			titleArea.hideFunction("Send");
+			titleArea.hideFunction("Cancel");
+			operations.hideAll();
+		} else if(sendToQuery.tagList.tagCount({markedError:true})) {
+			titleArea.showFunction("Send");
+			titleArea.showFunction("Cancel");
+			operations.showAll();
+		} else {			
+			eWolf.trigger("needRefresh."+id,[id]);
+			this.destroy();
+		}		
+	};
+	
+	this.send = function (event,resend) {
+		if(sendToQuery.tagList.isEmpty()) {
+			errorMessage.html("Please select a destination(s)");
+			return false;
+		}
+
+		if(!resend) {
+			if(sendToQuery.tagList.match({markedOK:true}).count() > 0) {
+				showDeleteSuccessfulDialog(event);
+				return false;
+			}
+		}
+			
+		sendToQuery.tagList.unmarkTags({markedError:true});		
+		thisObj.updateSend();		
+		errorMessage.html("");		
+		
+		thisObj.sendToAll();
+		
+//		mailObject.attachment.push({
+//			filename: "testfile.doc",
+//			contentType: "document",
+//			path: "http://www.google.com"
+//		});		
+//		mailObject.attachment.push({
+//			filename: "image.jpg",
+//			contentType: "image/jpeg",
+//			path: "https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"					
+//		});	
+	};
+	
+	this.sendToAll = function () {		
+		var msg = messageText.val();
+		var mailObject = {
+				text: msg
+		};
+		
+		sendToQuery.tagList.foreachTag({markedOK:false},function(destId) {
+			if(allowAttachment && files) {
+				files.uploadFile(destId, function(success, uploadedFiles) {
+					if(success) {
+						mailObject.attachment = uploadedFiles;
+						thisObj.sendTo(destId,JSON.stringify(mailObject));
+					}		
+				});			
+			} else {
+				thisObj.sendTo(destId,JSON.stringify(mailObject));
+			}			
+		});	
+	};
+	
+	this.sendTo = function(destId,data) {
+		var responseHandler = new ResponseHandler(handleResponseCategory,[],null);
+		
+		responseHandler.success(function(data, textStatus, postData) {
+			sendToQuery.tagList.markTagOK(destId);				
+			thisObj.updateSend();
+		}).error(function(data, textStatus, postData) {
+			var errorMsg = "Failed to arrive at destination: " +
+			destId + " with error: " + data.result;
+			errorMessage.append(errorMsg+"<br>");
+			
+			sendToQuery.tagList.markTagError(destId,errorMsg);
+			thisObj.updateSend();
+		});
+		
+		request.request(
+				createRequestObj(destId,data),
+				responseHandler.getHandler());
+	};
+		
 	this.select = function() {
 		eWolf.trigger("select",[thisID]);
 	};
@@ -3760,6 +2900,13 @@ var NewMail = function(id,applicationFrame,title,
 	this.destroy = function() {
 		eWolf.trigger("select",[id]);
 	};
+	
+	titleArea
+		.addFunction("Send", this.send)
+		.addFunction("Cancel",this.destroy);
+	operations
+		.addFunction("Send", this.send)
+		.addFunction("Cancel", this.destroy);
 
 	return this;
 };
@@ -3775,8 +2922,8 @@ var NewMessage = function(id,applicationFrame,sendToID,sendToName) {
 	}
 	
 	return new NewMail(id,applicationFrame,"New Message",
-			createNewMessageRequestObj,"sendMessage",true,
-			sendToName,new FriendsSearchList(300));
+			createNewMessageRequestObj,"sendMessage",false,
+			sendToName,new FriendsQueryTagList(300));
 };
 
 var NewPost = function(id,applicationFrame,wolfpack) {	
@@ -3791,7 +2938,7 @@ var NewPost = function(id,applicationFrame,wolfpack) {
 	
 	return new NewMail(id,applicationFrame,"New Post",
 			createNewPostRequestObj,"post",true,
-			wolfpack,new WolfpackSearchList(300));
+			wolfpack,new WolfpackQueryTagList(300));
 };
 var Profile = function (id,name,applicationFrame) {
 	var obj = this;
