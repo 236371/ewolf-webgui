@@ -37,6 +37,11 @@ public class SendMessageHandler implements JsonDataHandler {
 		public SendMessageResponse(String result) {
 			super(result);
 		}
+
+		public SendMessageResponse(String result, String errorMessage) {
+			super(result, errorMessage);
+		}
+
 		public SendMessageResponse(){
 		}
 	}
@@ -56,8 +61,8 @@ public class SendMessageHandler implements JsonDataHandler {
 		}
 
 		if (jsonReqParams.message == null || jsonReqParams.userID == null) {
-			return new SendMessageResponse(RES_BAD_REQUEST +
-					": must specify both user ID and message body.");
+			return new SendMessageResponse(RES_BAD_REQUEST,
+					"Must specify both user ID and message body.");
 		}
 
 		Profile profile;
@@ -66,10 +71,10 @@ public class SendMessageHandler implements JsonDataHandler {
 			profile = socialFS.findProfile(uid);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
-			return new SendMessageResponse(RES_NOT_FOUND + ": user with given ID wasn't found.");
+			return new SendMessageResponse(RES_NOT_FOUND, "User with given ID wasn't found.");
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
-			return new SendMessageResponse(RES_BAD_REQUEST + ": illegal user ID.");
+			return new SendMessageResponse(RES_BAD_REQUEST, "Illegal user ID.");
 		}
 		
 		ContentMessage msg = smail.createContentMessage().setMessage(jsonReqParams.message);
