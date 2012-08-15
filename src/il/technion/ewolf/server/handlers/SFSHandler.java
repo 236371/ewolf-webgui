@@ -3,14 +3,16 @@ package il.technion.ewolf.server.handlers;
 import il.technion.ewolf.server.ServerResources;
 import il.technion.ewolf.server.ewolfHandlers.DownloadFileFromSFS;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.apache.http.Consts;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.ByteArrayEntity;
@@ -44,22 +46,35 @@ public class SFSHandler implements HttpRequestHandler {
 				}
 			}
 			if (userID == null || fileName == null) {
-				//TODO reply bad request
+				setResponse(res, HttpStatus.SC_NOT_FOUND);
 				return;
 			}
 			Serializable fileData = handler.handleData(userID, fileName);
-			if (fileData == null) {
-				//TODO what?
-			}
 			String mimeType = ServerResources.getFileTypeMap().getContentType(fileName);
 			res.setHeader(HTTP.CONTENT_TYPE, mimeType);
 			res.setHeader( "Content-Disposition", "attachment; filename=" + fileName );
 			res.setEntity(new ByteArrayEntity((byte[]) fileData));
-		} catch (URISyntaxException e) {
-			// TODO Auto-generated catch block
+		} catch (Exception e) {
 			e.printStackTrace();
+			setResponse(res, HttpStatus.SC_NOT_FOUND);
+			return;
 		}
 
+	}
+
+	private void setResponse(HttpResponse res, int resStatus) {
+		res.setStatusCode(resStatus);
+		if (resStatus == HttpStatus.SC_NOT_FOUND) {
+			try {
+				String path = "/www/404.html";
+				JarResourceHandler handler = new JarResourceHandler();
+				InputStream is = handler.getResourceAsStream(path);
+				if (is == null) return;
+				handler.setResponseEntity(res, is, path);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	public void addHandler(DownloadFileFromSFS handler) {

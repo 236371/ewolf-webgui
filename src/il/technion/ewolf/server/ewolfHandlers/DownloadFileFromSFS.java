@@ -22,27 +22,14 @@ public class DownloadFileFromSFS {
 		this.userIDFactory = userIDFactory;
 	}
 	
-	public Serializable handleData(String userID, String fileName) {
+	public Serializable handleData(String userID, String fileName)
+			throws ProfileNotFoundException, FileNotFoundException {
 		Profile profile;
 		Serializable fileData;
-		try {
-			UserID uid = userIDFactory.getFromBase64(userID);
-			profile = socialFS.findProfile(uid);
-			SFSFile sharedFolder = profile.getRootFile().getSubFile("sharedFolder");
-			fileData = sharedFolder.getSubFile(fileName).getData();
-		} catch (ProfileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		}  catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		}
+		UserID uid = userIDFactory.getFromBase64(userID);
+		profile = socialFS.findProfile(uid);
+		SFSFile sharedFolder = profile.getRootFile().getSubFile("sharedFolder");
+		fileData = sharedFolder.getSubFile(fileName).getData();
 		return fileData;
 	}
 
