@@ -77,9 +77,8 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 		try {
 			snet.getWall().publish(textPostProvider.get().setText(jsonReqParams.post), socialGroup);
 		} catch (GroupNotFoundException e) {
-			System.out.println("Wolfpack " + socialGroup + " not found");
+			System.out.println("Wolfpack " + socialGroup.getName() + " not found");
 			e.printStackTrace();
-			//TODO check what I should response here?
 			return new PostToNewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (WallNotFound e) {
 			System.out.println("Wall not found.");

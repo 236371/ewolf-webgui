@@ -56,7 +56,6 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 
 		List<EWolfResponse> wolfpacksResult = new ArrayList<EWolfResponse>();
 		for (String wolfpackName : jsonReqParams.wolfpackNames) {
-			//TODO do we want to get feedback about this?
 			if (socialGroupsManager.findSocialGroup(wolfpackName) != null) {
 				wolfpacksResult.add(new EWolfResponse(RES_BAD_REQUEST + ": wolfpack already exists"));
 				continue;
