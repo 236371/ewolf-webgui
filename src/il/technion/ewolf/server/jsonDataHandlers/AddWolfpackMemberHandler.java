@@ -111,7 +111,6 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 			try {
 				for (Profile profile : profiles) {
 					socialGroup.addMember(profile);
-					//TODO check if allowed to add member several times
 					socialGroupsManager.findSocialGroup("wall-readers").addMember(profile);
 				}
 				wolfpacksResult.add(new EWolfResponse());
