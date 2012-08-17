@@ -101,7 +101,7 @@ function createMainApps() {
 	};
 	
 	return this;
-};var FileItem = function(file) {
+};function CreateFileItemBox(file) {
 	var left = $("<div/>").css({
 		"text-align" : "left",
 		"display": "inline-block"
@@ -124,12 +124,62 @@ function createMainApps() {
 	return $("<div/>").css({
 		"display": "inline-block"
 	}).append(left).append(right);
-};var FilesBox = function(uploaderArea) {
+}DATE_FORMAT = "dd/MM/yyyy (HH:mm)";
+
+function CreateTimestampBox(timestamp) {	
+	return $("<span/>").addClass("timestampBox")
+		.append(new Date(timestamp).toString(DATE_FORMAT));
+}function CreateUserBox(id,name) {
+	var link = $("<a/>").attr({
+		"style": "width:1%;",
+		"class": "selectableBox",
+		"title": id
+	}).click(function() {
+		if(id != eWolf.data("userID")) {
+			eWolf.trigger("search",[id,name]);
+		} else {
+			eWolf.trigger("select",[id]);
+		}
+	});
+	
+	if (id == null && name != null) {
+		id = eWolf.wolfpacks.getFriendID(name);
+	} else if (id != null && name == null) {
+		name = eWolf.wolfpacks.getFriendName(id);
+		if(name == null) {
+			name = id;
+			var request = new PostRequestHandler(id,"/json",0).request({
+						profile: {
+							userID: id
+						}
+					  },
+					new ResponseHandler("profile",["name"],
+							function(data, textStatus, postData) {
+						name = data.name;
+						link.text(name);
+					}).getHandler());
+		}
+	} else if (id == null && name == null) {
+		return null;
+	}
+	
+	link.text(name);
+
+	return link;
+}function CreateWolfpackBox(name) {
+	return $("<span/>").attr({
+		"style": "width:1%;",
+		"class": "selectableBox"
+	}).text(name).click(function() {
+		eWolf.trigger("select",["__pack__"+name]);
+	});
+}var FilesBox = function(uploaderArea) {
 	var thisObj = this;
 	
 	var fileselect;
 	var filedrag;
 	var filelist = null;
+	var errorBox = null;
 	
 	// file unique ID
 	var UID = 0;
@@ -156,6 +206,10 @@ function createMainApps() {
 		filedrag[0].addEventListener("dragleave", FileDragHover, false);
 		filedrag[0].addEventListener("drop", FileSelectHandler, false);
 		filedrag[0].style.display = "block";
+		
+		errorBox = $("<div/>")
+			.addClass("errorArea")
+			.appendTo(uploaderArea);
 	}
 
 	// file drag hover
@@ -173,9 +227,20 @@ function createMainApps() {
 		var files = e.target.files || e.dataTransfer.files;
 
 		// process all File objects
+		var emptyFile = false;
 		for ( var i = 0, f; f = files[i]; i++) {
-			filelist.addTag(UID, f, new FileItem(f), true);
-			UID += 1;
+			if(f.size != 0) {
+				filelist.addTag(UID, f, CreateFileItemBox(f), true);
+				UID += 1;
+			} else {
+				emptyFile = true;
+			}
+		}
+		
+		if(emptyFile) {
+			errorBox.html("Can't upload an empty file or a folder.");
+		} else {
+			errorBox.html("");
 		}
 	}
 	
@@ -225,7 +290,7 @@ function createMainApps() {
 			xhr.addEventListener("load", function (evt) {
 				var obj = JSON.parse(xhr.responseText);
 				
-				if(obj.result != "success") {
+				if(obj.result != RESPONSE_RESULT.SUCCESS) {
 					thisObj.markError(id);
 				} else {
 					thisObj.markOK(id,{
@@ -545,7 +610,7 @@ var FriendsQueryTagList = function (minWidth) {
 		
 		return {
 			term: id,
-			display: new User(id,query)
+			display: CreateUserBox(id,query)
 		};
 	}
 	
@@ -559,7 +624,7 @@ var WolfpackQueryTagList = function (minWidth) {
 		if(idx != -1) {
 			return {
 				term: pack,
-				display: new Wolfpack(pack)
+				display: CreateWolfpackBox(pack)
 			};
 		} else {
 			return null;
@@ -568,7 +633,9 @@ var WolfpackQueryTagList = function (minWidth) {
 	
 	return new QueryTagList(minWidth,"Type wolfpack name...",
 			eWolf.wolfpacks.wolfpacksArray,false,sendToFuncReplace);
-};var BasicRequestHandler = function(id,requestAddress,refreshIntervalSec) {
+};var BasicRequestHandler = function(id,requestAddress,
+		refreshIntervalSec) {
+	var self = this;
 	
 	var observersRequestFunction = [];
 	var observersHandleDataFunction = [];
@@ -586,101 +653,118 @@ var WolfpackQueryTagList = function (minWidth) {
 			timer = setTimeout(trigger,refreshIntervalSec*1000);
 		}
 	}
+		
+	this.getId = function() {
+		return id;
+	};
 	
-	var _makeRequest = function(address,data,success) {
-		// Not implemented
-	};	
-
+	this.setRequestAddress = function(inputRequestAddress) {
+		requestAddress = inputRequestAddress;
+		return self;
+	};
 	
-	return {		
-		getId : function() {
-			return id;
-		},
-		setRequestAddress : function(inputRequestAddress) {
-			requestAddress = inputRequestAddress;
-			return this;
-		},
-		_makeRequest: function (address,data,success) {
-			// Not implemented
-		},
-		request: function(data,handleDataFunction) {
-			clearTimeout(timer);
-			eWolf.trigger("loading",[id]);
+	this._makeRequest = function (address,data,success) {
+		return self;
+	};
+	
+	this.request = function(data,handleDataFunction) {
+		clearTimeout(timer);
+		eWolf.trigger("loading",[id]);
+		
+		self._makeRequest(requestAddress,data,
+			function(receivedData,textStatus) {
+				handleDataFunction(receivedData,textStatus,data);
+			}).complete(onPostComplete);
+		
+		return self;
+	};
+	
+	this.requestAll = function() {
+		var data = {};
+		
+		$.each(observersRequestFunction, function(i, func) {
+			var res = func();
 			
-			this._makeRequest(requestAddress,data,
-				function(receivedData,textStatus) {
-					handleDataFunction(receivedData,textStatus,data);
-				}).complete(onPostComplete);
-			
-			return this;
-		},
-		requestAll: function() {
-			var data = {};
-			
-			$.each(observersRequestFunction, function(i, func) {
-				var res = func();
-				
-				if(res != null) {
-					$.extend(data,res);
-				}				
+			if(res != null) {
+				$.extend(data,res);
+			}				
+		});
+		
+		this.request(data,function(receivedData,textStatus,data) {
+			$.each(observersHandleDataFunction, function(i, func) {
+				func(receivedData,textStatus,data);			
 			});
-			
-			this.request(data,function(receivedData,textStatus,data) {
-				$.each(observersHandleDataFunction, function(i, func) {
-					func(receivedData,textStatus,data);			
-				});
-			});
-			
-			return this;
-		},
-		register: function(requestFunction,handleDataFunction) {
-			if(requestFunction != null && handleDataFunction != null) {
-				observersRequestFunction.push(requestFunction);
-				observersHandleDataFunction.push(handleDataFunction);
-			}
-			
-			return this;
-		},
-		listenToRefresh: function() {
-			var req = this;
-			eWolf.bind("refresh."+id,function(event,eventId) {
-				if(id == eventId) {
-					req.requestAll();
-				}
-			});
-			
-			return this;
+		});
+		
+		return self;
+	};
+	
+	this.register = function(requestFunction,handleDataFunction) {
+		if(requestFunction != null && handleDataFunction != null) {
+			observersRequestFunction.push(requestFunction);
+			observersHandleDataFunction.push(handleDataFunction);
 		}
 		
+		return self;
 	};
+	
+	this.listenToRefresh = function() {
+		eWolf.bind("refresh."+id,function(event,eventId) {
+			if(id == eventId) {
+				self.requestAll();
+			}
+		});
+		
+		return self;
+	};
+		
+	return this;
 };
 
 var PostRequestHandler = function(id,requestAddress,refreshIntervalSec) {
-	var res = new BasicRequestHandler(id,requestAddress,refreshIntervalSec);
+	BasicRequestHandler.call(this,id,requestAddress,refreshIntervalSec);
 	
-	res._makeRequest = function (address,data,success) {
+	this._makeRequest = function (address,data,success) {
 		return $.post(address,JSON.stringify(data),success,"json");
 	};
 	
-	return res;
+	return this;
 };
 
 var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
-	var res = new BasicRequestHandler(id,requestAddress,refreshIntervalSec);
+	BasicRequestHandler.call(this,id,requestAddress,refreshIntervalSec);
 	
-	res._makeRequest = function (address,data,success) {		
+	this._makeRequest = function (address,data,success) {		
 		return $.getJSON(address,data,success);
 	};
 	
-	return res;
-};var ResponseHandler = function(category, requiredFields, handler) {
+	return this;
+};RESPONSE_RESULT = {
+		SUCCESS :				"SUCCESS",
+			//	if everything went well.
+		BAD_REQUEST :			"BAD_REQUEST",
+			//	Missing an obligatory parameter.
+			//	Wrong type or format parameter.
+		INTERNAL_SERVER_ERROR :	"INTERNAL_SERVER_ERROR", 
+			//for any internal server error.
+		ITEM_NOT_FOUND :		"ITEM_NOT_FOUND",
+			//	if the requested item did not found (for any reason).
+		GENERAL_ERROR :			"GENERAL_ERROR",
+			// for errors from unknown reason (no one of above)
+		UNAVAILBLE_REQUEST :	"UNAVAILBLE_REQUEST",
+			// if the request category is unavailable or not exists.
+};
+
+var ResponseHandler = function(category, requiredFields, handler) {
+	var thisObj = this;
+	
 	var errorHandler = null;
 	var completeHandler = null;
 	var badResponseHandler = null;
 	
 	function theHandler(data, textStatus, postData) {
 		if (data[category] != null) {
-			if (data[category].result == "success") {
+			if (data[category].result == RESPONSE_RESULT.SUCCESS) {
 				var valid = true;
 				$.each(requiredFields, function(i, field) {
 					if (field == null) {
@@ -714,27 +798,32 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 		}		
 	};
 	
-	return {
-		getHandler: function() {
-			return theHandler;
-		},
-		error: function (newErrorHandler) {
-			errorHandler = newErrorHandler;
-			return this;
-		},		
-		success: function (newSuccessHandler) {
-			handler = newSuccessHandler;
-			return this;
-		},		
-		complete: function (newCompleteHandler) {
-			completeHandler = newCompleteHandler;
-			return this;
-		},
-		badResponseHandler: function (newBadResponseHandler) {
-			badResponseHandler = newBadResponseHandler;
-			return this;
-		}
+
+	this.getHandler = function() {
+		return theHandler;
 	};
+	
+	this.error = function (newErrorHandler) {
+		errorHandler = newErrorHandler;
+		return thisObj;
+	};
+	
+	this.success = function (newSuccessHandler) {
+		handler = newSuccessHandler;
+		return thisObj;
+	};
+	
+	this.complete = function (newCompleteHandler) {
+		completeHandler = newCompleteHandler;
+		return thisObj;
+	};
+	
+	this.badResponseHandler = function (newBadResponseHandler) {
+		badResponseHandler = newBadResponseHandler;
+		return thisObj;
+	};
+	
+	return this;
 };var Tag = function(id,onRemove,removable,multirow) {
 	var box = $("<p/>").attr({
 		"class" : "TagClass"
@@ -1106,52 +1195,8 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 	this.setTitle(title);
 	
 	return this;
-};var User = function(id,name) {
-	var link = $("<a/>").attr({
-		"style": "width:1%;",
-		"class": "selectableBox",
-		"title": id
-	}).click(function() {
-		if(id != eWolf.data("userID")) {
-			eWolf.trigger("search",[id,name]);
-		} else {
-			eWolf.trigger("select",[id]);
-		}
-	});
-	
-	if (id == null && name != null) {
-		id = eWolf.wolfpacks.getFriendID(name);
-	} else if (id != null && name == null) {
-		name = eWolf.wolfpacks.getFriendName(id);
-		if(name == null) {
-			name = id;
-			var request = new PostRequestHandler(id,"/json",0).request({
-						profile: {
-							userID: id
-						}
-					  },
-					new ResponseHandler("profile",["name"],
-							function(data, textStatus, postData) {
-						name = data.name;
-						link.text(name);
-					}).getHandler());
-		}
-	} else if (id == null && name == null) {
-		return null;
-	}
-	
-	link.text(name);
-
-	return link;
-};var Wolfpack = function(name) {
-	return $("<span/>").attr({
-		"style": "width:1%;",
-		"class": "selectableBox"
-	}).text(name).click(function() {
-		eWolf.trigger("select",["__pack__"+name]);
-	});
 };var Wolfpacks = function (menuList,request,applicationFrame) {
-	var thisObj = this;
+	var self = this;
 	
 	var wolfpacksApps = {},
 		friendsMapByName = {},
@@ -1178,10 +1223,10 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 			var app = new WolfpackPage("__pack__"+pack,pack,applicationFrame);			
 			
 			wolfpacksApps[pack] = app;
-			thisObj.wolfpacksArray.push(pack);
+			self.wolfpacksArray.push(pack);
 		}
 		
-		return thisObj;
+		return self;
 	};
 	
 	this.removeWolfpack = function(pack) {
@@ -1196,27 +1241,29 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 			}
 		}
 		
-		return thisObj;
+		return self;
 	};
 	
 	this.addFriend = function(userID,userName) {
-		friendsMapByName[userName] = userID;
-		friendsMapByID[userID] = userName;
-		thisObj.friendsNameArray.push(userName);
+		if(friendsMapByName[userName] == null) {
+			friendsMapByName[userName] = userID;
+			friendsMapByID[userID] = userName;
+			self.friendsNameArray.push(userName);
+		}		
 		
-		return thisObj;
+		return self;
 	};
 	
 	this.removeFriend = function(userID,userName) {
 		friendsMapByName[userName] = null;
 		friendsMapByID[userID] = null;
 		
-		var idx = thisObj.friendsNameArray.indexOf(userName);
+		var idx = self.friendsNameArray.indexOf(userName);
 		if(idx != -1){
-			thisObj.friendsNameArray.splice(idx, 1);
+			self.friendsNameArray.splice(idx, 1);
 		}
 		
-		return thisObj;
+		return self;
 	};
 	
 	this.getFriendID = function (userName) {
@@ -1229,13 +1276,13 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 		
 	function handleWolfpacks(data, textStatus, postData) {
 		$.each(data.wolfpacksList, function(i,pack){
-			thisObj.addWolfpack(pack);
+			self.addWolfpack(pack);
 		});
 	}
 	
 	function handleMembers(data, textStatus, postData) {
 		$.each(data.membersList, function(i,userObj){
-			thisObj.addFriend(userObj.id,userObj.name);
+			self.addFriend(userObj.id,userObj.name);
 		});
 	}
 	
@@ -1685,23 +1732,21 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 
 })(jQuery);//fgnass.github.com/spin.js#v1.2.5
 (function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);var MenuItem = function(id,title,messageText,topbarFrame) {
+	var thisObj = this;
 	var isLoading = false;
 	var selected = false;	
-	var message = new MenuMessage(id+"Message","menuItemMessageClass",
-			messageText,topbarFrame);
+	var message = new MenuMessage(messageText,topbarFrame);
 	
-	var listItem = $("<li/>").attr({"id": id});
+	var listItem = $("<li/>");
 		
 	var aObj = $("<a/>").appendTo(listItem);
 	
 	var titleBox = $("<span/>").attr({
-		"id": id,
 		"style": "width:1%;"
 	}).appendTo(aObj);
 	
 	var refreshContainer = $("<div/>").attr({
-		"class": "refreshButtonArea",
-		"id": id,
+		"class": "refreshButtonArea"
 	})	.appendTo(aObj).hide();
 	
 	var loadingContainer = $("<div/>").attr({
@@ -1710,7 +1755,6 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 	})	.appendTo(aObj).hide();
 	
 	var refresh = $("<img/>").attr({
-		"id": id,
 		"src": "refresh.svg",
 		"class": "refreshButton"
 	})	.appendTo(refreshContainer);
@@ -1727,13 +1771,8 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 		}	
 	});
 	
-	listItem.mouseover(function() {
-		message.show();
-	});
-
-	listItem.mouseout(function() {
-		message.hide();
-	});
+	listItem.mouseover(message.show);
+	listItem.mouseout(message.hide);
 	
 	function updateView() {
 		var w = 145;
@@ -1787,27 +1826,29 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 			isLoading = false;
 			updateView();
 			loadingContainer.data('spinner').stop();
-		}	
+		}
 	});
 	
-	return {
-		appendTo: function(place) {
-			listItem.appendTo(place);
-			updateView();
-			return this;
-		},
-		getId : function() {
-			return id;
-		},
-		renameTitle : function(newTitle) {
-			title = newTitle;
-			updateView();
-		},
-		destroy: function() {
-			message.destroy();
-			listItem.remove();
-			delete this;
-		}
+	this.appendTo = function(place) {
+		listItem.appendTo(place);
+		updateView();
+		return thisObj;
+	};
+	
+	this.getId = function() {
+		return id;
+	};
+	
+	this.renameTitle = function(newTitle) {
+		title = newTitle;
+		updateView();
+		return thisObj;
+	};
+	
+	this.destroy = function() {
+		message.destroy();
+		listItem.remove();
+		delete thisObj;
 	};
 	
 	return this;
@@ -1828,132 +1869,123 @@ var menuItemSpinnerOpts = {
 		  zIndex: 2e9, // The z-index (defaults to 2000000000)
 		  top: 0, // Top position relative to parent in px
 		  left: 0 // Left position relative to parent in px
-		};var MenuList = function(menu,id,title,topbarFrame) {
+		};var MenuList = function(id,title,topbarFrame) {
+	var thisObj = this;
+	
 	var items = [];
 	
 	var frame = $("<div/>").attr({
-		"class" : "menuList",
-		"id" : id+"Frame"
+		"class" : "menuList"
 	}).hide();
 	
 	$("<div/>").attr({
-		"class" : "menuListTitle",
-		"id" : id+"Title"
+		"class" : "menuListTitle"
 	})	.append(title)
 		.appendTo(frame);
 
-	var list = $("<ul/>").attr({
-		"id" : id
-	})	.appendTo(frame);
+	var list = $("<ul/>").appendTo(frame);	
 	
-	return {
-		addMenuItem : function(id,title) {
-			if(items[id] == null) {
-				var menuItem = new MenuItem(id,title,
-						"Click to show "+title.toLowerCase(),topbarFrame).appendTo(list);
-				
-				items[id] = menuItem;
-				
-				if(Object.keys(items).length > 0) {
-					frame.show();
-				}
-			} else {
-				console.log("[Menu Error] Item with id: "+ id +" already exist");
-			}
+	this.addMenuItem = function(id,title) {
+		if(items[id] == null) {
+			var menuItem = new MenuItem(id,title,
+					"Click to show "+title.toLowerCase(),topbarFrame)
+					.appendTo(list);
 			
-		},
-		removeMenuItem: function(removeId) {
-			if(items[removeId] != null) {
-				items[removeId].destroy();
-				delete items[removeId];
-			}
+			items[id] = menuItem;
 			
-			if(Object.keys(items).length <= 0) {
-				frame.hide();
+			if(Object.keys(items).length > 0) {
+				frame.show();
 			}
-		},
-		renameMenuItem : function(id,newTitle) {
-			if(items[id] != null) {
-				items[id].renameTitle(newTitle);
-			}
-		},
-		appendTo : function(container) {
-			frame.appendTo(container);
-			return this;
+		} else {
+			console.log("[Menu Error] Item with id: "+ id +" already exist");
+		}
+		
+	};
+	
+	this.removeMenuItem = function(removeId) {
+		if(items[removeId] != null) {
+			items[removeId].destroy();
+			delete items[removeId];
+		}
+		
+		if(Object.keys(items).length <= 0) {
+			frame.hide();
 		}
 	};
-};var MenuMessage = function(id,itemclass,text,container) {
+	
+	this.renameMenuItem = function(id,newTitle) {
+		if(items[id] != null) {
+			items[id].renameTitle(newTitle);
+		}
+	};
+	
+	this.appendTo = function(container) {
+		frame.appendTo(container);
+		return thisObj;
+	};
+	
+	return this;
+};var MenuMessage = function(text,container) {
+	var thisObj = this;	
 	var message = null;
 	
-	return {
-		show : function() {
-			if(message == null) {
-				message = $("<div/>").attr({
-					"id": id,
-					"class": itemclass
-				}).text(text).appendTo(container);
-			} else {
-				message.show();
-			}
-		},
-		hide : function() {
-			if(message != null) {
-				message.remove();
-				message = null;
-			}
-		},
-		destroy : function() {
-			if(message != null) {
-				message.remove();
-				message = null;
-				delete this;
-			}
+	this.show = function() {
+		if(message == null) {
+			message = $("<div/>").attr({
+				"class": "menuItemMessageClass"
+			}).text(text).appendTo(container);
+		} else {
+			message.show();
 		}
 	};
+	
+	this.hide = function() {
+		if(message != null) {
+			message.remove();
+			message = null;
+		}
+	};
+	
+	this.destroy = function() {
+		if(message != null) {
+			message.remove();
+			message = null;
+			delete thisObj;
+		}
+	};
+	
+	return this;
 };
 
 var SideMenu = function(menu, mainFrame,topbarFrame) {
-	menu.data('menuObj', this);
-	mainFrame.data('menuObj', this);
+	var thisObj = this;
+	
 	var itemSpace = menu.children("#menuItemsSpace");
 	
 	var toggleButton = menu.children("#toggleButtons");
 
-	var hideBtn = toggleButton.children("#btnHideMenu")
-			.data('menuObj', this).click(function() {
-				hideMenu();
-			}),
-		showBtn = toggleButton.children("#btnShowMenu")
-			.data('menuObj', this).click(function() {
-				showMenu();
-			}),
-		pinBtn = toggleButton.children("#btnPin")
-			.data('menuObj', this).click(function() {
-				pinMenu();
-			}),
-		unpinBtn = toggleButton.children("#btnUnPin")
-			.data('menuObj', this).click(function() {
-				unpinMenu();
-			}),
-
+	var hideBtn = toggleButton.children("#btnHideMenu"),
+		showBtn = toggleButton.children("#btnShowMenu"),
+		pinBtn = toggleButton.children("#btnPin"),
+		unpinBtn = toggleButton.children("#btnUnPin"),
 		menuLists = [];
 	
-	function showMenu() {
+	this.showMenu = function (){
 		showBtn.hide();
-		menuIn();
-		mainFrameShrink();
+		thisObj.menuIn();
+		thisObj.mainFrameShrink();
 		hideBtn.show();
 	};
 
-	function hideMenu() {
+	this.hideMenu = function () {
 		hideBtn.hide();
-		menuOut();
-		mainFrameGrow();
+		thisObj.menuOut();
+		thisObj.mainFrameGrow();
 		showBtn.show();
 	};
 
-	function pinMenu() {
-		mainFrameShrink();
+	this.pinMenu = function () {
+		thisObj.mainFrameShrink();
 		pinBtn.hide();
 		unpinBtn.show();
 		hideBtn.show();
@@ -1961,21 +1993,16 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 		menu.unbind("mouseout");
 	};
 
-	function unpinMenu() {
-		mainFrameGrow();
+	this.unpinMenu = function () {
+		thisObj.mainFrameGrow();
 		unpinBtn.hide();
 		pinBtn.show();
 		hideBtn.hide();
-		menu.mouseover(function() {
-			menuIn();
-		});
-
-		menu.mouseout(function() {
-			menuOut();
-		});
+		menu.mouseover(thisObj.menuIn);
+		menu.mouseout(thisObj.menuOut);
 	};
 
-	function menuOut() {
+	this.menuOut = function () {
 		menu.stop();
 		itemSpace.stop();
 
@@ -1991,7 +2018,7 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 		});
 	};
 
-	function menuIn() {
+	this.menuIn = function () {
 		menu.stop();
 		itemSpace.stop();
 
@@ -2010,7 +2037,7 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 		
 	};
 
-	function mainFrameGrow() {
+	this.mainFrameGrow = function () {
 		mainFrame.stop();
 
 		mainFrame.animate({
@@ -2021,7 +2048,7 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 		});
 	};
 
-	function mainFrameShrink() {
+	this.mainFrameShrink = function () {
 		mainFrame.stop();
 
 		mainFrame.animate({
@@ -2036,20 +2063,70 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 		eWolf.trigger("mainFrameResize",["window"]);
 	});
 	
-	return {
-		append : function(item) {
-			itemSpace.append(item);
-		},
-		createNewMenuList : function(id, title) {
-			var menuLst = new MenuList(this,id,title,topbarFrame)
-							.appendTo(itemSpace);
-			menuLists.push(menuLst);
-			return menuLst;
-		}
+	this.append = function(item) {
+		itemSpace.append(item);
 	};
-};var GenericItem = function(senderID,senderName,timestamp,mail,
-		listClass,msgBoxClass,preMessageTitle,allowShrink) {
+	
+	this.createNewMenuList = function(id, title) {
+		var menuLst = new MenuList(id,title,topbarFrame)
+			.appendTo(itemSpace);
+		menuLists.push(menuLst);
+		return menuLst;
+	};
+	
+	hideBtn.click(this.hideMenu);
+	showBtn.click(this.showMenu);
+	pinBtn.click(this.pinMenu);
+	unpinBtn.click(this.unpinMenu);
+	
+	return this;
+};function CreateMailItemBox(mailObj) {
+	var text = mailObj.text.replace("<","&lt").replace(">","&gt").replace(/\n/g,"<br>");
+	var canvas = $("<div/>").html(text);
+
+	if(mailObj.attachment != null) {
+		var imageCanvas = $("<div/>");
+		var attachCanvas = $("<ul/>");
 		
+		$.each(mailObj.attachment, function(i, attach) {
+			if(attach.contentType.substring(0,5) == "image") {
+				var aObj = $("<a/>").attr({
+					href: attach.path,
+					target: "_TRG_"+attach.filename
+				}).appendTo(imageCanvas);
+				
+				$("<img/>").attr({
+					"src": attach.path,
+					style: "padding:5px 5px 5px 5px; height:130px;"
+				}).appendTo(aObj);				
+				
+				
+				$("<em/>").append("&nbsp;").appendTo(imageCanvas);
+			} else {
+				var li = $("<li/>").appendTo(attachCanvas);
+				
+				$("<a/>").attr({
+					href: attach.path,
+					target: "_TRG_"+attach.filename
+				}).append(attach.filename).appendTo(li);
+			}
+		});
+		
+		if(! imageCanvas.is(":empty")) {
+			imageCanvas.appendTo(canvas);
+		}
+		
+		if(! attachCanvas.is(":empty")) {
+			canvas.append("Attachments:");
+			attachCanvas.appendTo(canvas);
+		}
+	}	
+	
+	return canvas;
+}
+var GenericItem = function(senderID,senderName,timestamp,mail,
+		listClass,msgBoxClass,preMessageTitle,allowShrink) {
+	var thisObj = this;
 	var itemSpan = $("<span/>");
 	
 	var listItem = $("<li/>").attr({
@@ -2062,7 +2139,7 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 	}).append(preMessageTitle).appendTo(listItem);	
 	
 	var isOnSender = false;
-	var senderBox = User(senderID,senderName)
+	var senderBox = CreateUserBox(senderID,senderName)
 		.appendTo(listItem)
 		.hover(function() {
 			isOnSender = true;
@@ -2071,11 +2148,11 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 		});
 	
 	
-	var timestampBox = TimestampBox(timestamp).appendTo(listItem);
+	var timestampBox = CreateTimestampBox(timestamp).appendTo(listItem);
 		
 	var itsMessage = $("<li/>").attr({
 		 "class": msgBoxClass
-	 })	.append(MailItem(JSON.parse(mail)))
+	 })	.append(CreateMailItemBox(JSON.parse(mail)))
 	 	.insertAfter(listItem);
 	
 	if(allowShrink) {
@@ -2097,36 +2174,38 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 		updateView();
 	});
 	
-	return {
-		appendTo: function(place) {
-			itemSpan.appendTo(place);
-			updateView();
-			return this;
-		},
-		prependTo: function(place) {
-			itemSpan.prependTo(place);
-			updateView();
-			return this;
-		},
-		insertAfter: function(place) {
-			itemSpan.insertAfter(place);
-			updateView();
-			return this;
-		},
-		getListItem : function() {
-			return itemSpan;
-		},
-		destroy: function() {
-			message.destroy();
-			itemSpan.remove();
-			delete this;
-		}
+	this.appendTo = function(place) {
+		itemSpan.appendTo(place);
+		updateView();
+		return thisObj;
+	};
+	
+	this.prependTo = function(place) {
+		itemSpan.prependTo(place);
+		updateView();
+		return thisObj;
+	};
+	
+	this.insertAfter = function(place) {
+		itemSpan.insertAfter(place);
+		updateView();
+		return thisObj;
+	};
+	
+	this.getListItem = function() {
+		return itemSpan;
+	};
+	
+	this.destroy = function() {
+		message.destroy();
+		itemSpan.remove();
+		delete thisObj;
 	};
 	
 	return this;
 };var GenericMailList = function(mailType,request,serverSettings,
 		listClass,msgBoxClass,preMessageTitle,allowShrink) {
-	var obj = this;
+	var thisObj = this;
 	
 	var newestDate = null;
 	var oldestDate = null;
@@ -2194,12 +2273,12 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 	request.register(this.updateFromServer ,responseHandler.getHandler());
 	
 	var showMore = new ShowMore(frame,function() {
-		request.request(obj.updateFromServer (true),responseHandler.getHandler());
+		request.request(thisObj.updateFromServer (true),responseHandler.getHandler());
 	}).draw();
 	
 	function handleNewData(data, textStatus, postData) {
 		$.each(data.mailList, function(j, mailItem) {
-			obj.addItem(mailItem.senderID,mailItem.senderName,
+			thisObj.addItem(mailItem.senderID,mailItem.senderName,
 					mailItem.timestamp, mailItem.mail);
 		});
 		
@@ -2224,83 +2303,29 @@ var InboxList = function (request,serverSettings) {
 	
 	return new GenericMailList("inbox",request,serverSettings,
 			"messageListItem","messageBox", ">> ",true);
-};var MailItem = function(item) {
-	var text = item.text.replace("<","&lt").replace(">","&gt").replace(/\n/g,"<br>");
-	var canvas = $("<div/>").html(text);
-
-	if(item.attachment != null) {
-		var imageCanvas = $("<div/>");
-
-		var attachCanvas = $("<ul/>");
-		
-		$.each(item.attachment, function(i, attach) {
-			if(attach.contentType.substring(0,5) == "image") {
-				var aObj = $("<a/>").attr({
-					href: attach.path,
-					target: "_TRG_"+attach.filename
-				}).appendTo(imageCanvas);
-				
-				$("<img/>").attr({
-					"src": attach.path,
-					style: "padding:5px 5px 5px 5px; height:130px;"
-				}).appendTo(aObj);				
-				
-				
-				$("<em/>").append("&nbsp;").appendTo(imageCanvas);
-			} else {
-				var li = $("<li/>").appendTo(attachCanvas);
-				
-				$("<a/>").attr({
-					href: attach.path,
-					target: "_TRG_"+attach.filename
-				}).append(attach.filename).appendTo(li);
-			}
-		});
-		
-		if(! imageCanvas.is(":empty")) {
-			imageCanvas.appendTo(canvas);
-		}
-		
-		if(! attachCanvas.is(":empty")) {
-			canvas.append("Attachments:");
-			attachCanvas.appendTo(canvas);
-		}
-	}	
-	
-	return canvas;
-};
-var ShowMore = function (frame,onClick) {
+};var ShowMore = function (frame,onClick) {
+	var thisObj = this;
 	var element = null;
 	
-	return {
-		remove : function() {
-			if(element != null) {
-				element.remove();
-			}
-			
-			return this;
-		},
-		draw : function() {
-			this.remove();
-			
-			element = $("<div/>").attr({
-				"class": "showMoreClass"
-			}).append("Show More...").click(onClick);
-			
-			frame.append(element);
-			
-			return this;
+	this.remove = function() {
+		if(element != null) {
+			element.remove();
 		}
+		
+		return thisObj;
 	};
-};var TimestampBox = function(timestamp) {
-	var itsTime = new Date(timestamp);
 	
-	return $("<span/>").attr({
-		"class": "timestampBox"
-	}).append(itsTime.toString(dateFormat));
-};
-
-var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(fatherID,wolfpack, existingMemebers,
+	this.draw = function() {
+		thisObj.remove();
+		
+		element = $("<div/>").addClass("showMoreClass")
+			.append("Show More...")
+			.click(onClick)
+			.appendTo(frame);
+		
+		return thisObj;
+	};
+};var AddMembersToWolfpack = function(fatherID,wolfpack, existingMemebers,
 		onFinish,request) {
 	var thisObj = this;
 	this.frame = $("<span/>");
@@ -2366,7 +2391,7 @@ var dateFormat = "dd/MM/yyyy (HH:mm)";var AddMembersToWolfpack = function(father
 	
 	this.success = function(data, textStatus, postData) {
 		madeChanges = true;
-		this.cancel();
+		thisObj.cancel();
 	};
 	
 	this.error = function(data, textStatus, postData) {
@@ -2720,10 +2745,14 @@ var NewMail = function(id,applicationFrame,title,
 	var msgRaw = $("<tr/>").appendTo(base);
 	$("<td/>").attr("class","newMailAlt").append("Content:").appendTo(msgRaw);
 	
+	var height = 300;
+	if(allowAttachment) {
+		height = 100;
+	}
+	
 	var messageText = $("<textarea/>").attr({
-		"id": "textileMessage",
 		"placeholder": "What is on your mind...",
-		"style": "min-width:300px !important;height:100px  !important;"
+		"style" : "min-width:300px !important;height:"+height+"px  !important"
 	});
 	
 	$("<td/>").append(messageText).appendTo(msgRaw);
@@ -2840,17 +2869,6 @@ var NewMail = function(id,applicationFrame,title,
 		errorMessage.html("");		
 		
 		thisObj.sendToAll();
-		
-//		mailObject.attachment.push({
-//			filename: "testfile.doc",
-//			contentType: "document",
-//			path: "http://www.google.com"
-//		});		
-//		mailObject.attachment.push({
-//			filename: "image.jpg",
-//			contentType: "image/jpeg",
-//			path: "https://www.cia.gov/library/publications/the-world-factbook/graphics/flags/large/is-lgflag.gif"					
-//		});	
 	};
 	
 	this.sendToAll = function () {		
@@ -2921,9 +2939,11 @@ var NewMessage = function(id,applicationFrame,sendToID,sendToName) {
 		  };
 	}
 	
-	return new NewMail(id,applicationFrame,"New Message",
+	NewMail.call(this,id,applicationFrame,"New Message",
 			createNewMessageRequestObj,"sendMessage",false,
 			sendToName,new FriendsQueryTagList(300));
+	
+	return this;
 };
 
 var NewPost = function(id,applicationFrame,wolfpack) {	
@@ -2936,9 +2956,11 @@ var NewPost = function(id,applicationFrame,wolfpack) {
 		  };
 	}	
 	
-	return new NewMail(id,applicationFrame,"New Post",
-			createNewPostRequestObj,"post",true,
-			wolfpack,new WolfpackQueryTagList(300));
+	NewMail.call(this,id,applicationFrame,"New Post",
+				createNewPostRequestObj,"post",true,
+				wolfpack,new WolfpackQueryTagList(300));
+	
+	return this;
 };
 var Profile = function (id,name,applicationFrame) {
 	var obj = this;
@@ -3017,7 +3039,7 @@ var Profile = function (id,name,applicationFrame) {
 	var wolfpackData = null;
 	
 	function handleProfileData(data, textStatus, postData) {
-		topTitle.setTitle(new User(data.id,data.name));
+		topTitle.setTitle(CreateUserBox(data.id,data.name));
 		idRow.html(data.id);
 		
 		name = data.name;
@@ -3031,7 +3053,7 @@ var Profile = function (id,name,applicationFrame) {
 		wolfpacksContainer.removeAll();		 
 
 		 $.each(data.wolfpacksList,function(i,pack) {
-			 wolfpacksContainer.addItem(new Wolfpack(pack),pack);
+			 wolfpacksContainer.addItem(CreateWolfpackBox(pack),pack);
 		 });
 	  }
 	
@@ -3219,7 +3241,7 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 	topTitle.appendAtBottomPart(members.getList());
 	
 	if(wolfpackName != null) {
-		topTitle.setTitle(new Wolfpack(wolfpackName));
+		topTitle.setTitle(CreateWolfpackBox(wolfpackName));
 		newsFeedRequestObj["wolfpackName"] = wolfpackName;
 		
 		request.register(getWolfpacksMembersData,
@@ -3252,7 +3274,7 @@ var SearchApp = function(id,menu,applicationFrame,query,searchBtn) {
 		members.removeAll();
 
 		$.each(list, function(i, member) {
-			members.addItem(new User(member.id, member.name),member.name);
+			members.addItem(CreateUserBox(member.id, member.name),member.name);
 		});
 	}
 	
