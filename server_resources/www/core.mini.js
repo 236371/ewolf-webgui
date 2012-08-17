@@ -3,14 +3,38 @@ var eWolfMaster = new function() {
 
 var eWolf = $(eWolfMaster);
 
-$(document).ready(function () {
-	new Loading($("#loadingFrame"));
-	eWolf.applicationFrame = $("#applicationFrame");
+IDENTIFIERS = {
+	LOADING_FRAME : "loadingFrame",
+	APPLICATION_FRAME : "applicationFrame",
+	MAIN_FRAME : "mainFrame",
+	MENU_FRAME : "menu",
+	TOPBAR_FRAME : "topbarID",
 	
-	eWolf.sideMenu = new SideMenu($("#menu"),$("#mainFrame"),$("#topbarID"));
-	eWolf.welcome = eWolf.sideMenu.createNewMenuList("welcome","Welcome");
-	eWolf.mainApps = eWolf.sideMenu.createNewMenuList("mainapps","Main");
-	eWolf.wolfpacksMenuList = eWolf.sideMenu.createNewMenuList("wolfpacks","Wolfpacks");
+	WELCOME_MENU_ID : "__welcome_menu__",
+	MAINAPPS_MENU_ID : "__mainapps_menu__",
+	WOLFPACKS_MENU_ID : "__wolfpacks_menu__",
+	
+	NEWSFEED_APP_ID : "__newsFeed_mainApp__",
+	INBOX_APP_ID : "__inbox_mainApp__",
+	LOGIN_APP_ID : "__login_welcome_screen__"
+};
+
+$(document).ready(function () {
+	new Loading($("#"+IDENTIFIERS.LOADING_FRAME));
+	eWolf.applicationFrame = $("#"+IDENTIFIERS.APPLICATION_FRAME);
+	
+	eWolf.sideMenu = new SideMenu($("#"+IDENTIFIERS.MENU_FRAME),
+			$("#"+IDENTIFIERS.MAIN_FRAME),
+			$("#"+IDENTIFIERS.TOPBAR_FRAME));
+	
+	eWolf.welcome = eWolf.sideMenu.createNewMenuList(
+			IDENTIFIERS.WELCOME_MENU_ID,"Welcome");
+	
+	eWolf.mainApps = eWolf.sideMenu.createNewMenuList(
+			IDENTIFIERS.MAINAPPS_MENU_ID,"Main");
+	
+	eWolf.wolfpacksMenuList = eWolf.sideMenu.createNewMenuList(
+			IDENTIFIERS.WOLFPACKS_MENU_ID,"Wolfpacks");
 	
 	getUserInformation();
 });
@@ -41,22 +65,23 @@ function createMainApps() {
 	eWolf.wolfpacks.addFriend(eWolf.data("userID"), eWolf.data("userName"));
 	
 	eWolf.mainApps.addMenuItem(eWolf.data("userID"),"My Profile");
-	new Profile(eWolf.data("userID"),eWolf.data('userName'),eWolf.applicationFrame);
+	new Profile(eWolf.data("userID"),eWolf.data('userName'),
+			eWolf.applicationFrame);
 	
-	eWolf.mainApps.addMenuItem("newsFeedApp","News Feed");
-	new WolfpackPage("newsFeedApp",null,eWolf.applicationFrame);
+	eWolf.mainApps.addMenuItem(IDENTIFIERS.NEWSFEED_APP_ID,"News Feed");
+	new WolfpackPage(IDENTIFIERS.NEWSFEED_APP_ID,null,eWolf.applicationFrame);
 	
-	eWolf.mainApps.addMenuItem("messages","Messages");
-	new Inbox("messages",eWolf.applicationFrame);
+	eWolf.mainApps.addMenuItem(IDENTIFIERS.INBOX_APP_ID,"Messages");
+	new Inbox(IDENTIFIERS.INBOX_APP_ID,eWolf.applicationFrame);
 	
-	new SearchApp("search",eWolf.sideMenu,eWolf.applicationFrame,
-			$("#topbarID"));
+	new SearchApp(eWolf.sideMenu,
+			eWolf.applicationFrame,$("#"+IDENTIFIERS.TOPBAR_FRAME));
 	
 	// Welcome
-	eWolf.welcome.addMenuItem("login_welcome_screen","Login");
-	new Login("login_welcome_screen",eWolf.applicationFrame);
+	eWolf.welcome.addMenuItem(IDENTIFIERS.LOGIN_APP_ID,"Login");
+	new Login(IDENTIFIERS.LOGIN_APP_ID,eWolf.applicationFrame);
 	
-	eWolf.trigger("select",["newsFeedApp"]);
+	eWolf.trigger("select",[IDENTIFIERS.NEWSFEED_APP_ID]);
 }var Application = function(id,container) {
 	var self = this;
 	var selected = false;
@@ -2393,8 +2418,10 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 
 var NewsFeedList = function (request,serverSettings) {
 	$.extend(serverSettings,{maxMessages:2});
+
+	var pow = "<img src='wolf-paw.svg' height='18px' style='padding-right:5px;'></img>";
 	GenericMailList.call(this,"newsFeed",request,serverSettings,
-			"postListItem","postBox","",false);
+			"postListItem","postBox",pow,false);
 	
 	return this;
 };
@@ -2429,6 +2456,7 @@ var ProfileNewsFeedList = function (request,profileID) {
 
 var InboxList = function (request,serverSettings) {	
 	$.extend(serverSettings,{maxMessages:2});
+	
 	GenericMailList.call(this,"inbox",request,serverSettings,
 			"messageListItem","messageBox", ">> ",true);
 	
@@ -3208,7 +3236,7 @@ var Profile = function (id,name,applicationFrame) {
 	
 	return this;
 };
-var SearchApp = function(id,menu,applicationFrame,container) {
+var SearchApp = function(menu,applicationFrame,container) {
 	var self = this;
 	
 	var menuList = menu.createNewMenuList("search","Searches");
@@ -3289,7 +3317,7 @@ var SearchApp = function(id,menu,applicationFrame,container) {
 		self.search(query.val());	
 	});
 	
-	eWolf.bind("select."+id,function(event,eventId) {
+	eWolf.bind("select",function(event,eventId) {
 		if(eventId != lastSearch && eventId != "__newmessage__"+lastSearch) {
 			removeLastSearch();
 		}
