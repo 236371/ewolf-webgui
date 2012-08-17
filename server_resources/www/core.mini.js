@@ -475,7 +475,7 @@ $.fn.spin = function(opts) {
 	});
 	return this;
 };var PopUp = function(frame, activator) {
-	var thisObj = this;
+	var self = this;
 	
 	var pos = $(activator).position();
 
@@ -496,19 +496,19 @@ $.fn.spin = function(opts) {
 	}).appendTo(frame).hide();
 	
 	function clickFunc() {
-		if(! thisObj.frame.is(":hover")) {
-			thisObj.destroy();
+		if(! self.frame.is(":hover")) {
+			self.destroy();
 		}		
 	};
 	
 	$(document).bind("click",clickFunc);
 	
 	this.destroy = function () {
-		thisObj.frame.hide(200,function() {
-			thisObj.frame.remove();
+		self.frame.hide(200,function() {
+			self.frame.remove();
 		});
 		 $(document).unbind("click",clickFunc);
-		 delete thisObj;
+		 delete self;
 	};
 	
 	this.frame.show(200);
@@ -739,7 +739,7 @@ var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
 	};
 	
 	return this;
-};RESPONSE_RESULT = {
+};var RESPONSE_RESULT = {
 		SUCCESS :				"SUCCESS",
 			//	if everything went well.
 		BAD_REQUEST :			"BAD_REQUEST",
@@ -2448,12 +2448,12 @@ var InboxList = function (request,serverSettings) {
 	
 	return this;
 };var AddToWolfpack = function(id, frame, activator, request, packsAlreadyIn) {
-	var popUpApp = new PopUp(frame,activator);
-	var popUp = popUpApp.frame;
+	var self = this;
+	PopUp.call(this,frame,activator);
 	
 	var packList = $("<ul/>").attr({
 		"class": "packListSelect"
-	}).appendTo(popUp);	
+	}).appendTo(this.frame);	
 
 	$.each(eWolf.wolfpacks.wolfpacksArray,function(i,pack) {
 		var box = $("<input/>").attr({
@@ -2536,204 +2536,220 @@ var InboxList = function (request,serverSettings) {
 	
 	$("<hr/>").css({
 		"margin":"0"
-	}).appendTo(popUp);
+	}).appendTo(this.frame);
 	
-	$("<span/>").attr({
+	var applyBtn = $("<span/>").attr({
 		"class": "aLink applyLink"
-	}).append("Apply").appendTo(popUp).click(function() {
-		var add = [],
-			create = [],
-			remove = [];
-		
+	}).append("Apply").appendTo(this.frame);
+	
+	this.getSelection = function () {
+		var result = {
+			add : [],
+			create : [],
+			remove : []	
+		};
+	
 		$.each(packList.find("input"),function(i,item) {
 			var itsBox = $(item);
-
+	
 			if(itsBox.is(':checked') == true) {
 				if(itsBox.data("isMember") != true) {
 					if(itsBox.data("isNew") == true) {
 						var packName = trimSpaces(itsBox.data("itsInput").val());
-						add.push(packName);
-						create.push(packName);
+						result.add.push(packName);
+						result.create.push(packName);
 					} else {
-						add.push(itsBox.attr("value"));
+						result.add.push(itsBox.attr("value"));
 					}		
 				}
 			} else {
 				if(itsBox.data("isMember") == true) {
-					remove.push(itsBox.attr("value"));
+					result.remove.push(itsBox.attr("value"));
 				}
 			}
 		});
 		
-		popUpApp.destroy();
-			
-		if(create.length > 0) {			
+		return result;	
+	};
+	
+	this.createWolfpacks = function(wolfpacks,onComplete) {
+		if(wolfpacks.length > 0) {			
 			var responseHandler = new ResponseHandler("createWolfpack",[],null);
 			
 			responseHandler.success(function(data, textStatus, postData) {
-				$.each(create,function(i,pack) {
+				$.each(wolfpacks,function(i,pack) {
 					eWolf.wolfpacks.addWolfpack(pack);
 				});
-				
-				addToAllWolfpacks();
 			}).error(function(data, textStatus, postData) {				
 				if(data.wolfpacksResult == null) {
 					console.log("No wolfpacksResult in response");
 				} else {
-					$.each(data.wolfpacksResult, function(i,item) {
-						if(item == "success")
-							eWolf.wolfpacks.addWolfpack(postData.wolfpackName[i]);
+					$.each(data.wolfpacksResult, function(i,response) {
+						if(response.result == RESPONSE_RESULT.SUCCESS) {
+							eWolf.wolfpacks.addWolfpack(postData.wolfpackNames[i]);
+						}
 					});
 					
 				}
-				
-				addToAllWolfpacks();
-			});
+			}).complete(onComplete);
 			
 			request.request({
 				createWolfpack: {
-					wolfpackNames: create
+					wolfpackNames: wolfpacks
 				}
 			},responseHandler.getHandler());
 			
 		} else {
-			addToAllWolfpacks();
+			onComplete();
 		}
+	};
+	
+	this.addToAllWolfpacks = function (wolfpacks) {
+		if(wolfpacks.length > 0) {
+			var response = new ResponseHandler("addWolfpackMember",[],null);
+			
+			response.complete(function (textStatus, postData) {
+				eWolf.trigger("needRefresh."+id);
+			});			
+			
+			request.request({
+				addWolfpackMember: {
+					wolfpackNames: wolfpacks,
+					userIDs: [id]
+				}
+			},response.getHandler());
+		}
+	};
+	
+	this.apply = function() {
+		result = self.getSelection();
 		
-		function addToAllWolfpacks() {
-			if(add.length > 0) {
-				var response = new ResponseHandler("addWolfpackMember",[],null);
-				
-				response.complete(function (textStatus, postData) {
-					eWolf.trigger("needRefresh."+id);
-				});			
-				
-				request.request({
-					addWolfpackMember: {
-						wolfpackNames: add,
-						userIDs: [id]
-					}
-				},response.getHandler());
-			}			
-		}		
-	});
+		self.destroy();
+		
+		self.createWolfpacks(result.create, function () {
+			self.addToAllWolfpacks(result.add);
+		});
+	};
+	
+	applyBtn.click(this.apply);
 		
 	return this;
 };var AppContainer = function(id,container) {
-		var selected = false;
-		var needRefresh = true;
-		
-		var frame = $("<div/>").attr({
-			"id": id+"ApplicationFrame",
-			"class": "applicationContainer"
-		})	.appendTo(container)
-			.hide(0);
-		
-		eWolf.bind("select."+id,function(event,eventId) {
-			if(id == eventId) {	
-				if(!selected) {
-					frame.show(0);
-					frame.animate({
-						opacity : 1,
-					}, 700, function() {
-					});
-					
-					selected = true;
-				}
+	var self = this;
+	var selected = false;
+	var needRefresh = true;
+	
+	this.frame = $("<div/>").attr({
+		"id": id+"ApplicationFrame",
+		"class": "applicationContainer"
+	})	.appendTo(container)
+		.hide();
+	
+	eWolf.bind("select."+id,function(event,eventId) {
+		if(id == eventId) {	
+			if(!selected) {
+				self.frame.show(0);
+				self.frame.animate({
+					opacity : 1,
+				}, 700, function() {
+				});
 				
-				if(needRefresh) {
-					eWolf.trigger("refresh",[id]);
-				}
-			} else {
-				if(selected) {
-					frame.animate({
-						opacity : 0,
-					}, 300, function() {
-						frame.hide(0);
-					});
-					
-					selected = false;
-				}				
-			}			
-		});
-		
-		eWolf.bind("refresh."+id,function(event,eventId) {	
-			if(id == eventId) {
-				needRefresh = false;
+				selected = true;
 			}
-		});
-		
-		eWolf.bind("needRefresh."+id,function(event,eventId) {
-			needRefresh = true;
 			
+			if(needRefresh) {
+				eWolf.trigger("refresh",[id]);
+			}
+		} else {
 			if(selected) {
-				eWolf.trigger("refresh."+id,[id]);
-			}
-		});
+				self.frame.animate({
+					opacity : 0,
+				}, 300, function() {
+					self.frame.hide(0);
+				});
+				
+				selected = false;
+			}				
+		}			
+	});
+	
+	eWolf.bind("refresh."+id,function(event,eventId) {	
+		if(id == eventId) {
+			needRefresh = false;
+		}
+	});
+	
+	eWolf.bind("needRefresh."+id,function(event,eventId) {
+		needRefresh = true;
 		
-		return {
-			getFrame : function() {
-				return frame;
-			},
-			getId : function() {
-				return id;
-			},
-			isSelected : function() {
-				return selected;
-			},
-			destroy : function() {
-				eWolf.unbind("select."+id);
-				frame.remove();
-				delete this;
-			}
-		};
+		if(selected) {
+			eWolf.trigger("refresh."+id,[id]);
+		}
+	});
+	
+	
+	this.getFrame = function() {
+		return self.frame;
+	};
+	
+	this.getId = function() {
+		return id;
+	};
+	
+	this.isSelected = function() {
+		return selected;
+	};
+	
+	this.destroy = function() {
+		eWolf.unbind("select."+id);
+		self.frame.remove();
+		delete self;
+	};
+	
+	return this;
 };var Inbox = function (id,applicationFrame) {
-	var appContainer = new AppContainer(id,applicationFrame);
-	var frame = appContainer.getFrame();
+	AppContainer.call(this,id,applicationFrame);
 	
 	var request = new PostRequestHandler(id,"/json",60)
 		.listenToRefresh();
 	
 	new TitleArea("Inbox")
-		.appendTo(frame)
+		.appendTo(this.frame)
 		.addFunction("New Message...", function() {
-			var box = new NewMessage(id,applicationFrame);
-			box.select();
+			new NewMessage(id,applicationFrame).select();
 		});
 	
-	new InboxList(request,{}).appendTo(frame);
+	new InboxList(request,{}).appendTo(this.frame);
 	
-	return {
-		getId : function() {
-			return id;
-		},
-		isSelected : function() {
-			return appContainer.isSelected();
-		},
-		destroy : function() {
-			eWolf.unbind("refresh."+id);
-			appContainer.destroy();
-			delete this;
-		}
-	};
+	return this;
 };
-var NewMail = function(id,applicationFrame,title,
+NEW_MAIL_DESCRIPTION_DAFAULTS = {
+	TITLE : "New Mail",
+	TO : "To",
+	CONTENT : "Content",
+	ATTACHMENT : "Attachment"
+};
+
+var NewMail = function(callerID,applicationFrame,options,		
 		createRequestObj,handleResponseCategory,
 		allowAttachment,sendTo,sendToQuery) {
-	var thisObj = this;
-	var thisID = "__newmessage__"+id;
+	var self = this;
+	var id = "__newmessage__"+callerID;
 	
-	var appContainer = new AppContainer(thisID,applicationFrame);
-	this.frame = appContainer.getFrame();
+	AppContainer.call(this,id,applicationFrame);
 	
-	var request = new PostRequestHandler(thisID,"/json",0);
+	var settings = $.extend({}, NEW_MAIL_DESCRIPTION_DAFAULTS, options);
 		
-	var titleArea = new TitleArea(title).appendTo(this.frame);
+	var request = new PostRequestHandler(id,"/json",0);
+		
+	var titleArea = new TitleArea(settings.TITLE).appendTo(this.frame);
 	
 	var base = $("<table/>").appendTo(this.frame);
 	
 	var queryRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("class","newMailAlt").append("To:").appendTo(queryRaw);	
+	$("<td/>").attr("class","newMailAlt")
+		.append(settings.TO+":")
+		.appendTo(queryRaw);	
 	var userIdCell = $("<td/>").appendTo(queryRaw);
 	
 	sendToQuery.appendTo(userIdCell);
@@ -2743,7 +2759,9 @@ var NewMail = function(id,applicationFrame,title,
 	}
 	
 	var msgRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("class","newMailAlt").append("Content:").appendTo(msgRaw);
+	$("<td/>").attr("class","newMailAlt")
+		.append(settings.CONTENT+":")
+		.appendTo(msgRaw);
 	
 	var height = 300;
 	if(allowAttachment) {
@@ -2760,7 +2778,9 @@ var NewMail = function(id,applicationFrame,title,
 	var files = null;
 	if(allowAttachment) {
 		var attacheRaw = $("<tr/>").appendTo(base);
-		$("<td/>").attr("class","newMailAlt").append("Attachment:").appendTo(attacheRaw);
+		$("<td/>").attr("class","newMailAlt")
+			.append(settings.ATTACHMENT+":")
+			.appendTo(attacheRaw);
 		
 		var uploaderArea = $("<td/>").appendTo(attacheRaw);
 		files = new FilesBox(uploaderArea);
@@ -2783,7 +2803,7 @@ var NewMail = function(id,applicationFrame,title,
 	}).appendTo(errorBox);
 	
 	eWolf.bind("refresh",function(event,eventID) {
-		if(eventID == thisID) {
+		if(eventID == id) {
 			if(sendTo != null) {				
 				window.setTimeout(function () {
 					messageText.focus();
@@ -2796,10 +2816,9 @@ var NewMail = function(id,applicationFrame,title,
 		}
 	});
 	
-	eWolf.bind("select."+id,function(event,eventId) {
-		if(eventId != thisID) {
-			appContainer.destroy();
-			delete thisObj;
+	eWolf.bind("select."+callerID,function(event,eventId) {
+		if(eventId != id) {
+			self.destroy();
 		}
 	});
 		
@@ -2822,12 +2841,12 @@ var NewMail = function(id,applicationFrame,title,
 			buttons: {
 				"Send only to failed": function() {
 					$( this ).dialog( "close" );
-					thisObj.send(event,true);
+					self.send(event,true);
 				},
 				"Resend to all": function() {
 					$( this ).dialog( "close" );
 					sendToQuery.tagList.unmarkTags();
-					thisObj.send(event,true);
+					self.send(event,true);
 				},
 				Cancel: function() {
 					$( this ).dialog( "close" );
@@ -2846,8 +2865,8 @@ var NewMail = function(id,applicationFrame,title,
 			titleArea.showFunction("Cancel");
 			operations.showAll();
 		} else {			
-			eWolf.trigger("needRefresh."+id,[id]);
-			this.destroy();
+			eWolf.trigger("needRefresh."+callerID,[callerID]);
+			this.cancel();
 		}		
 	};
 	
@@ -2865,10 +2884,10 @@ var NewMail = function(id,applicationFrame,title,
 		}
 			
 		sendToQuery.tagList.unmarkTags({markedError:true});		
-		thisObj.updateSend();		
+		self.updateSend();		
 		errorMessage.html("");		
 		
-		thisObj.sendToAll();
+		self.sendToAll();
 	};
 	
 	this.sendToAll = function () {		
@@ -2882,11 +2901,11 @@ var NewMail = function(id,applicationFrame,title,
 				files.uploadFile(destId, function(success, uploadedFiles) {
 					if(success) {
 						mailObject.attachment = uploadedFiles;
-						thisObj.sendTo(destId,JSON.stringify(mailObject));
+						self.sendTo(destId,JSON.stringify(mailObject));
 					}		
 				});			
 			} else {
-				thisObj.sendTo(destId,JSON.stringify(mailObject));
+				self.sendTo(destId,JSON.stringify(mailObject));
 			}			
 		});	
 	};
@@ -2896,14 +2915,14 @@ var NewMail = function(id,applicationFrame,title,
 		
 		responseHandler.success(function(data, textStatus, postData) {
 			sendToQuery.tagList.markTagOK(destId);				
-			thisObj.updateSend();
+			self.updateSend();
 		}).error(function(data, textStatus, postData) {
 			var errorMsg = "Failed to arrive at destination: " +
 			destId + " with error: " + data.result;
 			errorMessage.append(errorMsg+"<br>");
 			
 			sendToQuery.tagList.markTagError(destId,errorMsg);
-			thisObj.updateSend();
+			self.updateSend();
 		});
 		
 		request.request(
@@ -2912,19 +2931,19 @@ var NewMail = function(id,applicationFrame,title,
 	};
 		
 	this.select = function() {
-		eWolf.trigger("select",[thisID]);
+		eWolf.trigger("select",[id]);
 	};
 	
-	this.destroy = function() {
-		eWolf.trigger("select",[id]);
+	this.cancel = function() {
+		eWolf.trigger("select",[callerID]);
 	};
 	
 	titleArea
 		.addFunction("Send", this.send)
-		.addFunction("Cancel",this.destroy);
+		.addFunction("Cancel",this.cancel);
 	operations
 		.addFunction("Send", this.send)
-		.addFunction("Cancel", this.destroy);
+		.addFunction("Cancel", this.cancel);
 
 	return this;
 };
@@ -2939,9 +2958,10 @@ var NewMessage = function(id,applicationFrame,sendToID,sendToName) {
 		  };
 	}
 	
-	NewMail.call(this,id,applicationFrame,"New Message",
-			createNewMessageRequestObj,"sendMessage",false,
-			sendToName,new FriendsQueryTagList(300));
+	NewMail.call(this,id,applicationFrame,{
+			TITLE : "New Message"
+		},createNewMessageRequestObj,"sendMessage",false,
+		sendToName,new FriendsQueryTagList(300));
 	
 	return this;
 };
@@ -2956,17 +2976,19 @@ var NewPost = function(id,applicationFrame,wolfpack) {
 		  };
 	}	
 	
-	NewMail.call(this,id,applicationFrame,"New Post",
-				createNewPostRequestObj,"post",true,
-				wolfpack,new WolfpackQueryTagList(300));
+	NewMail.call(this,id,applicationFrame,{
+			TITLE : "New Post",
+			TO : "Post to",
+			CONTENT: "Post"
+		},createNewPostRequestObj,"post",true,
+			wolfpack,new WolfpackQueryTagList(300));
 	
 	return this;
 };
 var Profile = function (id,name,applicationFrame) {
-	var obj = this;
+	var self = this;
 	
-	var appContainer = new AppContainer(id,applicationFrame);
-	var frame = appContainer.getFrame();
+	AppContainer.call(this,id,applicationFrame);
 	
 	var waitingForName = [];
 	
@@ -2994,14 +3016,7 @@ var Profile = function (id,name,applicationFrame) {
 		request.request(getProfileData(),handleProfileResonse.getHandler());
 	}		
 	
-	var topTitle = new TitleArea(name).appendTo(frame);
-	
-	if(id != eWolf.data("userID")) {
-		topTitle.addFunction("Send message...", function (event) {
-			var box = new NewMessage(id,applicationFrame,id,name);
-			box.select();
-		});
-	}
+	var topTitle = new TitleArea(name).appendTo(this.frame);
 	
 	var idRow = $("<span/>").attr("class","idBox");
 	topTitle.appendAtTitleTextArea("&nbsp;");
@@ -3011,20 +3026,12 @@ var Profile = function (id,name,applicationFrame) {
 	topTitle.appendAtBottomPart(wolfpacksContainer.getList());
 	
 	if(id != eWolf.data("userID")) {
+		topTitle.addFunction("Send message...", function (event) {
+			new NewMessage(id,applicationFrame,id,name).select();
+		});
+		
 		topTitle.addFunction("Add to wolfpack...", function () {
-			// TODO: add to any wolfpack (not just wall-readers) 
-//			request.request({
-//				addWolfpackMember: {
-//					wolfpackName: "wall-readers",
-//					userID: id
-//				}
-//			},new ResponseHandler("addWolfpackMember",
-//					[],function (data, textStatus, postData) {
-//				request.requestAll();
-//				eWolf.trigger("needRefresh.__pack__"+postData.wolfpackName);
-//			}).getHandler());
-			
-			new AddToWolfpack(id, frame,this, request, wolfpacksContainer.getItemNames());
+			new AddToWolfpack(id, self.frame, this, request, wolfpacksContainer.getItemNames());
 			return false;
 		});
 	} else {
@@ -3033,7 +3040,7 @@ var Profile = function (id,name,applicationFrame) {
 		});
 	}
 	
-	new NewsFeedList(request,newsFeedObj).appendTo(frame);
+	new NewsFeedList(request,newsFeedObj).appendTo(this.frame);
 	
 	var profileData = null;
 	var wolfpackData = null;
@@ -3104,13 +3111,7 @@ var Profile = function (id,name,applicationFrame) {
 			waitingForName.push(nameHandler);
 		}
 		
-		return obj;
-	};
-	
-	this.destroy = function() {
-		eWolf.unbind("refresh."+id);
-		appContainer.destroy();
-		delete obj;
+		return self;
 	};
 	
 	return this;
