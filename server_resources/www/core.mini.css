@@ -672,12 +672,13 @@ h1, h2
 }
 
 .main-eWolf-title {
-	padding-left:15px;
 	float:left;
 	width:160px;
 	font-size:40px;
 	font-weight:bold;
 	color:black;
+	text-align:center;
+	margin-right:15px;
 }
 
 .main-eWolf-title A:link {

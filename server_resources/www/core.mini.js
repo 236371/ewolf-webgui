@@ -116,9 +116,8 @@ var eWolf = new function() {
 	};
 	
 	this.onHashChange = function() {
-		var selected = null;
 		if(window.location.hash && window.location.hash != "") {
-			selected = window.location.hash.replace("#", "");
+			var selected = window.location.hash.replace("#", "");
 			
 			var found = false;
 			
@@ -1764,91 +1763,12 @@ return g._start.call({},s);};}());Date._parse=Date.parse;Date.parse=function(s){
 try{r=Date.Grammar.start.call({},s);}catch(e){return null;}
 return((r[1].length===0)?r[0]:null);};Date.getParseFunction=function(fx){var fn=Date.Grammar.formats(fx);return function(s){var r=null;try{r=fn.call({},s);}catch(e){return null;}
 return((r[1].length===0)?r[0]:null);};};Date.parseExact=function(s,fx){return Date.getParseFunction(fx)(s);};
-{ // a dummy block, so I can collapse all the meta stuff in the editor
-
-/*
- * Shorten, a jQuery plugin to automatically shorten text to fit in a block or a pre-set width and configure how the text ends.
- * Copyright (C) 2009-2011  Marc Diethelm
- * License: (GPL 3, http://www.gnu.org/licenses/gpl-3.0.txt) see license.txt
- */
-
-
-/****************************************************************************
-This jQuery plugin automatically shortens text to fit in a block or pre-set width while you can configure how the text ends. The default is an ellipsis  ("…", &hellip;, Unicode: 2026) but you can use anything you want, including markup.
-
-This is achieved using either of two methods: First the the text width of the 'selected' element (eg. span or div) is measured using Canvas or by placing it inside a temporary table cell. If it's too big to big to fit in the element's parent block it is shortened and measured again until it (and the appended ellipsis or text) fits inside the block. A tooltip on the 'selected' element displays the full original text.
-
-If the browser supports truncating text with CSS ('text-overflow:ellipsis') then that is used (but only if the text to append is the default ellipsis). http://www.w3.org/TR/2003/CR-css3-text-20030514/#text-overflow-props
-
-If the text is truncated by the plugin any markup in the text will be stripped (eg: "<a" starts stripping, "< a" does not). This behaviour is dictated by the jQuery .text(val) method. The appended text may contain HTML however (a link or span for example).
-
-
-Usage Example ('selecting' a div with an id of "element"):
-
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
-<script type="text/javascript" src="jquery.shorten.js"></script>
-<script type="text/javascript">
-    $(function() {
-        $("#element").shorten();
-    });
-</script>
-
-
-By default the plugin will use the parent block's width as the maximum width and an ellipsis as appended text when the text is truncated.
-
-There are three ways of configuring the plugin:
-
-1) Passing a configuration hash as the plugin's argument, eg:
-
-.shorten({
-    width: 300,
-    tail: ' <a href="#">more</a>',
-    tooltip: false
-});
-
-2) Using two optional arguments (deprecated!):
-width = the desired pixel width, integer
-tail = text/html to append when truncating
-
-3) By changing the plugin defaults, eg:
-
-
-$.fn.shorten.defaults.tail = ' <a href="#">more</a>';
-
-
-Notes:
-
-There is no default width (unless you create one).
-
-You may want to set the element's CSS to {visibility:hidden;} so it won't
-initially flash at full width in slow browsers.
-
-jQuery < 1.4.4: Shorten doesn't work for elements who's parents have display:none, because .width() is broken. (Returns negative values)
-http://bugs.jquery.com/ticket/7225
-Workarounds:
-- Use jQuery 1.4.4+
-- Supply a target width in options.
-- Use better timing: Don't use display:none when shortening (maybe you can use visibility:hidden). Or shorten after changing display.
-
-Only supports ltr text for now.
-
-Tested with jQuery 1.3+
-
-
-Based on a creation by M. David Green (www.mdavidgreen.com) in 2009.
-
-Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
-
-****************************************************************************/
-}
-
-
 (function ($) {
 
 	//var $c = console;
 	var
 		_native = false,
-		is_canvasTextSupported,
+		is_canvasTextSupported = null,
 		measureContext, // canvas context or table cell
 		measureText, // function that measures text width
 		info_identifier = "shorten-info",
@@ -1858,7 +1778,7 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 
 		var userOptions = {},
 			args = arguments, // for better minification
-			func = args.callee // dito; and shorter than $.fn.shorten
+			func = args.callee; // dito; and shorter than $.fn.shorten
 
 		if ( args.length ) {
 
@@ -1870,7 +1790,7 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 				userOptions = {
 					width: parseInt(args[0]),
 					tail: args[1]
-				}
+				};
 			}
 		}
 
@@ -1885,8 +1805,7 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 		 **/
 		return this.each(function () {
 
-			var
-				$this = $(this),
+			var	$this = $(this),
 				text = $this.text(),
 				numChars = text.length,
 				targetWidth,
@@ -1895,7 +1814,7 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 				info = {
 					shortened: false,
 					textOverflow: false
-				}
+				};
 
 			if ($this.css("float") != "none") {
 				targetWidth = options.width || $this.width(); // this let's correctly shorten text in floats, but fucks up the rest
@@ -2143,7 +2062,6 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 		obj = '<object '
 				+'width="' + vidWidth + '" ' 
 				+ 'height="' + vidHeight + '" '
-				//+ 'id="' + playerID + '" '
 				+ '>'
 					+ '<param name="movie" value="http://www.youtube.com/v/[vid]&hl=en&fs=1"></param>'
 					+ '<param name="allowFullScreen" value="true"></param>'
@@ -2168,6 +2086,7 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 
 		links.each(function(i, link) {
 			var vid = $(link).attr("href").match(/((\?v=)(\w[\w|-]*))/g); // end up with ?v=oHg5SJYRHA0
+			that.append("<br>");
 			if (vid.length != 0) {
 				var ytid = vid[0].replace(/\?v=/, ''); // end up with oHg5SJYRHA0
 				var player = obj.replace(/\[vid\]/g, ytid).replace(/\[UID\]/g, UID);
@@ -2183,7 +2102,7 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 	};
 	
 	$.fn.stopAllYouTubePlayers = function() {
-		var players = $("embed[id^="+playerID+"]");
+		var players = this.find("embed[id^="+playerID+"]");
 		if(players && players.length > 0) {
 			players.each(function(i, p) {
 				p.stopVideo();
