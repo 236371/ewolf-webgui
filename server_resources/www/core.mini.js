@@ -1,8 +1,3 @@
-var eWolfMaster = new function() {
-};
-
-var eWolf = $(eWolfMaster);
-
 IDENTIFIERS = {
 	LOADING_FRAME : "loadingFrame",
 	APPLICATION_FRAME : "applicationFrame",
@@ -19,70 +14,99 @@ IDENTIFIERS = {
 	LOGIN_APP_ID : "__login_welcome_screen__"
 };
 
+var eWolfMaster = new function() {
+	var self = this;
+	
+	this.userID = null;
+	this.userName = null;
+	
+	this.init = function() {
+		new Loading($("#"+IDENTIFIERS.LOADING_FRAME));
+		self.applicationFrame = $("#"+IDENTIFIERS.APPLICATION_FRAME);
+		
+		self.sideMenu = new SideMenu($("#"+IDENTIFIERS.MENU_FRAME),
+				$("#"+IDENTIFIERS.MAIN_FRAME),
+				$("#"+IDENTIFIERS.TOPBAR_FRAME));
+		
+		self.welcome = self.sideMenu.createNewMenuList(
+				IDENTIFIERS.WELCOME_MENU_ID,"Welcome");
+		
+		self.mainApps = self.sideMenu.createNewMenuList(
+				IDENTIFIERS.MAINAPPS_MENU_ID,"Main");
+		
+		self.wolfpacksMenuList = self.sideMenu.createNewMenuList(
+				IDENTIFIERS.WOLFPACKS_MENU_ID,"Wolfpacks");
+		
+		// Welcome
+		self.welcome.addMenuItem(IDENTIFIERS.LOGIN_APP_ID,"Login");
+		new Login(IDENTIFIERS.LOGIN_APP_ID,self.applicationFrame);
+		
+		//self.getUserInformation();
+		eWolf.trigger("select",[IDENTIFIERS.LOGIN_APP_ID]);
+	};
+	
+	this.getUserInformation = function () {
+		var responseHandler = new ResponseHandler("profile",
+				["id","name"]);
+		
+		var request = new PostRequestHandler("eWolf","/json",0)
+			.register(function() {
+				return {
+					profile: {}
+				};
+			},responseHandler.getHandler());
+		
+		function onLoggedIn(data, textStatus, postData) {
+			document.title = "eWolf - " + data.name;
+			
+			self.userID = data.id;
+			self.userName = data.name;
+			eWolf.data('userID',data.id);
+			eWolf.data('userName',data.name);
+				
+			self.createMainApps();
+		}
+		
+		function onNotLoggedIn(data, textStatus, postData) {
+			eWolf.trigger("select",[IDENTIFIERS.LOGIN_APP_ID]);
+		}
+		
+		responseHandler.success(onLoggedIn);	
+		responseHandler.error(onNotLoggedIn).badResponseHandler(onNotLoggedIn);
+		
+		request.requestAll();
+	};
+	
+	this.createMainApps = function () {
+		self.welcome.hideMenu();
+		
+		self.wolfpacks = new Wolfpacks(self.wolfpacksMenuList,self.applicationFrame);
+		self.wolfpacks.addFriend(self.userID, self.userName);
+		self.wolfpacks.requestWolfpacks();
+		
+		self.mainApps.addMenuItem(self.userID,"My Profile");
+		new Profile(self.userID,self.userName,
+				self.applicationFrame);
+		
+		self.mainApps.addMenuItem(IDENTIFIERS.NEWSFEED_APP_ID,"News Feed");
+		new WolfpackPage(IDENTIFIERS.NEWSFEED_APP_ID,null,self.applicationFrame);
+		
+		self.mainApps.addMenuItem(IDENTIFIERS.INBOX_APP_ID,"Messages");
+		new Inbox(IDENTIFIERS.INBOX_APP_ID,self.applicationFrame);
+		
+		new SearchApp(self.sideMenu,
+				self.applicationFrame,$("#"+IDENTIFIERS.TOPBAR_FRAME));
+		
+		eWolf.trigger("select",[IDENTIFIERS.NEWSFEED_APP_ID]);
+	};
+};
+
+var eWolf = $(eWolfMaster);
+
 $(document).ready(function () {
-	new Loading($("#"+IDENTIFIERS.LOADING_FRAME));
-	eWolf.applicationFrame = $("#"+IDENTIFIERS.APPLICATION_FRAME);
-	
-	eWolf.sideMenu = new SideMenu($("#"+IDENTIFIERS.MENU_FRAME),
-			$("#"+IDENTIFIERS.MAIN_FRAME),
-			$("#"+IDENTIFIERS.TOPBAR_FRAME));
-	
-	eWolf.welcome = eWolf.sideMenu.createNewMenuList(
-			IDENTIFIERS.WELCOME_MENU_ID,"Welcome");
-	
-	eWolf.mainApps = eWolf.sideMenu.createNewMenuList(
-			IDENTIFIERS.MAINAPPS_MENU_ID,"Main");
-	
-	eWolf.wolfpacksMenuList = eWolf.sideMenu.createNewMenuList(
-			IDENTIFIERS.WOLFPACKS_MENU_ID,"Wolfpacks");
-	
-	getUserInformation();
+	eWolfMaster.init();
 });
-
-function getUserInformation() {
-	var request = new PostRequestHandler("eWolf","/json",0)
-		.register(function() {
-			return {
-				profile: {}
-			};
-		},new ResponseHandler("profile",
-					["id","name"],handleProfileData).getHandler());
-	
-	eWolf.wolfpacks = new Wolfpacks(eWolf.wolfpacksMenuList,request,eWolf.applicationFrame);
-	request.requestAll();
-	
-	function handleProfileData(data, textStatus, postData) {
-		document.title = "eWolf - " + data.name;
-			
-		eWolf.data('userID',data.id);
-		eWolf.data('userName',data.name);
-			
-		createMainApps();
-	}	
-}
-
-function createMainApps() {
-	eWolf.wolfpacks.addFriend(eWolf.data("userID"), eWolf.data("userName"));
-	
-	eWolf.mainApps.addMenuItem(eWolf.data("userID"),"My Profile");
-	new Profile(eWolf.data("userID"),eWolf.data('userName'),
-			eWolf.applicationFrame);
-	
-	eWolf.mainApps.addMenuItem(IDENTIFIERS.NEWSFEED_APP_ID,"News Feed");
-	new WolfpackPage(IDENTIFIERS.NEWSFEED_APP_ID,null,eWolf.applicationFrame);
-	
-	eWolf.mainApps.addMenuItem(IDENTIFIERS.INBOX_APP_ID,"Messages");
-	new Inbox(IDENTIFIERS.INBOX_APP_ID,eWolf.applicationFrame);
-	
-	new SearchApp(eWolf.sideMenu,
-			eWolf.applicationFrame,$("#"+IDENTIFIERS.TOPBAR_FRAME));
-	
-	// Welcome
-	eWolf.welcome.addMenuItem(IDENTIFIERS.LOGIN_APP_ID,"Login");
-	new Login(IDENTIFIERS.LOGIN_APP_ID,eWolf.applicationFrame);
-	
-	eWolf.trigger("select",[IDENTIFIERS.NEWSFEED_APP_ID]);
-}var Application = function(id,container) {
+var Application = function(id,container) {
 	var self = this;
 	var selected = false;
 	var needRefresh = true;
@@ -206,29 +230,64 @@ function createMainApps() {
 	};
 	
 	return this;
-};function CreateFileItemBox(file) {
-	var left = $("<div/>").css({
-		"text-align" : "left",
+};function CreateFileItemBox(name,type,size,file) {
+	var box =  $("<div/>").css({
 		"display": "inline-block"
-	}).append(file.name);
+	});
 	
-	var fileSize = 0;
-    if (file.size > 1024 * 1024) {
-    	fileSize = (Math.round(file.size * 100 / (1024 * 1024)) / 100).toString() + 'MB';
-    } else {
-    	fileSize = (Math.round(file.size * 100 / 1024) / 100).toString() + 'KB';
-    } 
+	var attachImage = $("<img/>").attr({
+		"src" : "/Paperclip.png",
+		"align" : "absmiddle",
+		"vertical-align" : "middle"
+	}).css({
+		"margin-right" : "3px"
+	}).appendTo(box);
 	
-	var right = $("<div/>").css({
-		"text-align" : "right",
-		"font-size" : "10px",
-		"display": "inline-block",
-		"margin-left" : "5px"
-	}).append("(" + fileSize + ")");
+	$("<span/>").css({
+		"white-space" : "normal"
+	}).append(name).appendTo(box);
 	
-	return $("<div/>").css({
-		"display": "inline-block"
-	}).append(left).append(right);
+	if(type) {
+		$("<span/>").css({
+			"text-align" : "right",
+			"font-size" : "10px",
+			"margin-left" : "5px"
+		}).append("(" + type + ")").appendTo(box);
+	}
+	
+	if(size) {
+		var fileSize = 0;
+	    if (size > 1024 * 1024) {
+	    	fileSize = (Math.round(size * 100 / (1024 * 1024)) / 100).toString() + 'MB';
+	    } else {
+	    	fileSize = (Math.round(size * 100 / 1024) / 100).toString() + 'KB';
+	    }
+	    
+	   if(!type) {
+		   fileSize =  "(" + fileSize + ")";
+	   }
+		
+		$("<span/>").css({
+			"text-align" : "right",
+			"font-size" : "10px",
+			"margin-left" : "5px"
+		}).append(fileSize).appendTo(box);
+	}
+	
+	if(file && file.type.substring(0,5) == "image") {
+		new ThumbnailImageFromFile(file,file.name,
+				0.7,100,50,function(img) {
+			attachImage.remove();
+			img.attr({
+				"align" : "absmiddle"
+			}).css({
+				"margin-right" : "3px"
+			});
+			box.prepend(img);
+		});
+	}
+	
+	return box;
 }DATE_FORMAT = "dd/MM/yyyy (HH:mm)";
 
 function CreateTimestampBox(timestamp) {	
@@ -279,7 +338,7 @@ function CreateTimestampBox(timestamp) {
 		eWolf.trigger("select",["__pack__"+name]);
 	});
 }var FilesBox = function(uploaderArea) {
-	var thisObj = this;
+	var self = this;
 	
 	var fileselect;
 	var filedrag;
@@ -302,7 +361,7 @@ function CreateTimestampBox(timestamp) {
 			.append("drop files here")
 			.appendTo(uploaderArea);
 
-		filelist = new TagList(true).appendTo(uploaderArea);
+		filelist = new TagList(true,null,true).appendTo(uploaderArea);
 
 		fileselect[0].addEventListener("change", FileSelectHandler, false);
 
@@ -335,8 +394,10 @@ function CreateTimestampBox(timestamp) {
 		var emptyFile = false;
 		for ( var i = 0, f; f = files[i]; i++) {
 			if(f.size != 0) {
-				filelist.addTag(UID, f, CreateFileItemBox(f), true);
+				var itemBox = CreateFileItemBox(f.name,f.type,f.size,f);
+				var thisUID = UID;
 				UID += 1;
+				filelist.addTag(thisUID, f, itemBox, true);
 			} else {
 				emptyFile = true;
 			}
@@ -348,7 +409,7 @@ function CreateTimestampBox(timestamp) {
 			errorBox.html("");
 		}
 	}
-	
+		
 	this.markError = function (id) {
 		filelist.match({id:id})
 			.removeProgressBar()
@@ -370,83 +431,105 @@ function CreateTimestampBox(timestamp) {
 		}		
 	};
 	
-	this.uploadFile = function(wolfpackName,onComplete) {
+	this.getCallbackAddress = function (wolfpackName, fileName, fileType) {
+		return  "/sfsupload?" + "wolfpackName=" + wolfpackName
+			+ "&fileName=" + fileName
+			+ "&contentType=" + fileType;
+	};
+	
+	this.initProgress = function (id) {
+		filelist.initProgressBar(id);
+	};
+	
+	this.showProgress = function (id,percentComplete) {
+		filelist.setProgress(id,percentComplete);
+	};
+	
+	this.uploadFileViaXML = function (id,file,wolfpackName,
+			onSuccess,onError,onComplete) {
+		var xhr = new XMLHttpRequest();
+		
+		self.initProgress(id);
+		
+		/* event listners */
+		xhr.upload.addEventListener("progress", function(evt) {			
+			if (evt.lengthComputable) {
+				var percentComplete = Math.round(evt.loaded * 100
+						/ evt.total);
+				self.showProgress(id, percentComplete);
+			}
+		}, false);
+		
+		xhr.addEventListener("load", function (evt) {
+			var response = JSON.parse(xhr.responseText);
+			if(response.result != RESPONSE_RESULT.SUCCESS) {
+				onError(response);
+			} else {
+				onSuccess(response);
+			}
+			
+			onComplete(response);
+		}, false);
+		
+		xhr.addEventListener("error", function (evt) {
+			var response = JSON.parse(xhr.responseText);
+			onError(response);
+			onComplete(response);
+		}, false);
+		
+		xhr.addEventListener("abort", function (evt) {
+			var response = JSON.parse(xhr.responseText);
+			onError(response);
+			onComplete(response);
+		}, false);
+		
+		filelist.setOnRemoveTag(id, function(id) {
+			xhr.abort();
+		});
+
+		xhr.open("POST",self.getCallbackAddress(wolfpackName,
+				file.name, file.type));
+		xhr.send(file);
+	};
+	
+	this.uploadFile = this.uploadFileViaXML;
+	
+	this.uploadAllFiles = function(wolfpackName,onComplete) {
 		if(!filelist || filelist.match({markedOK:false}).isEmpty()) {
 			onComplete(true,[]);
 			return this;
 		}
 		
-		filelist.match({markedOK:false}).each(function(id,file) {
-			var xhr = new XMLHttpRequest();
-
-			filelist.initProgressBar(id);
-			
-			/* event listners */
-			xhr.upload.addEventListener("progress", function(evt) {
-				if (evt.lengthComputable) {
-					var percentComplete = Math.round(evt.loaded * 100
-							/ evt.total);
-					filelist.setProgress(id,percentComplete);
-				} else {
-					// TODO: waiting animation
-				}
-			}, false);
-			
-			xhr.addEventListener("load", function (evt) {
-				var obj = JSON.parse(xhr.responseText);
-				
-				if(obj.result != RESPONSE_RESULT.SUCCESS) {
-					thisObj.markError(id);
-				} else {
-					thisObj.markOK(id,{
-						filename: file.name,
-						contentType: file.type,
-						path: obj.path
-					});
+		function onCompleteOneFile() {
+			if(filelist.match({markedOK:false,markedError:false}).isEmpty()) {
+				var success = false;
+				if(filelist.match({markedError:true}).isEmpty()) {
+					success = true;
 				}
 				
-				isComplete();
-			}, false);
-			
-			xhr.addEventListener("error", function (evt) {
-				thisObj.markError(id);
-				isComplete();
-			}, false);
-			
-			xhr.addEventListener("abort", function (evt) {
-				thisObj.markError(id);
-				isComplete();
-			}, false);
-			
-			filelist.setOnRemoveTag(id, function(id) {
-				xhr.abort();
-			});
-			
-			function isComplete() {
-				if(filelist.match({markedOK:false,markedError:false}).isEmpty()) {
-					var success = false;
-					if(filelist.match({markedError:true}).isEmpty()) {
-						success = true;
-					}
-					
-					return onComplete(success,thisObj.getUploadedFiles());
-				}				
+				return onComplete(success,self.getUploadedFiles());
 			}
-
-			var addr = "/sfsupload?" + "wolfpackName=" + wolfpackName
-					+ "&fileName=" + file.name 
-					+ "&contentType=" + file.type;
-
-
-			xhr.open("POST", addr);
-			xhr.send(file);
+		}
+		
+		filelist.match({markedOK:false}).each(function(id,file) {			
+			self.uploadFile(id, file, wolfpackName, function(response) {
+				self.markOK(id,{
+					filename: file.name,
+					contentType: file.type,
+					size: file.size,
+					path: response.path
+				});
+			},function(response) {
+				self.markError(id);
+			},onCompleteOneFile);
 		});
 		
 		return this;
 	};
 	
 	return this;
-};var FunctionsArea = function () {
+};
+var FunctionsArea = function () {
 	var self = this;
 	
 	this.frame = $("<div/>");
@@ -928,10 +1011,8 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	};
 	
 	return this;
-};var Tag = function(id,onRemove,removable,multirow) {
-	var box = $("<p/>").attr({
-		"class" : "TagClass"
-	});
+};var Tag = function(id,onRemove,removable,multirow,withImage) {
+	var box = $("<p/>").addClass("TagClass");
 	
 	if(!removable) {
 		box.addClass("TagNonRemoveable");
@@ -941,15 +1022,20 @@ var ResponseHandler = function(category, requiredFields, handler) {
 		box.addClass("TagNoMultiRow");
 	}
 
-	$("<div/>").attr({
-		"class" : "TagDeleteClass"
-	}).append("&times;").appendTo(box).click(function() {
-		box.remove();
+	$("<div/>").addClass("TagDeleteClass")
+		.append("&times;")
+		.appendTo(box)
+		.click(function() {
+			box.remove();
 		
-		if(onRemove) {
-			onRemove(id);
-		}
-	});
+			if(onRemove) {
+				onRemove(id);
+			}
+		});
+	
+	if(withImage) {
+		box.addClass("TagWithImage");
+	}
 	
 	box.data("initProgressBar", function() {
 		var progress = $("<div/>").appendTo(box);
@@ -981,7 +1067,7 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	});	
 	
 	return box;
-};var TagList = function(multirow,onRemoveTag) {
+};var TagList = function(multirow,onRemoveTag,withImages) {
 	this.div = $("<div/>");
 	
 	this.appendTo = function(someFrame) {
@@ -1125,7 +1211,8 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	
 	this.addTag = function(id,tagData,tagText,removable) {
 		if( this.match({id:id}).isEmpty()) {
-			var newTagItem = new Tag(id,onRemoveTag,removable,multirow)
+			var newTagItem = new Tag(id,onRemoveTag,removable,
+					multirow,withImages)
 				.attr("id",id)
 				.data("tagData",tagData)
 				.append(tagText);
@@ -1228,6 +1315,60 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	};
 	
 	return this;
+};var ThumbnailImage = function (src,altText,quality,maxWidth,maxHeight,onReady) {
+	var image = new Image();
+	image.src = src;
+
+	image.onload = function() {
+		var imageWidth = image.width,
+			imageHeight = image.height;
+
+		if (imageWidth > imageHeight) {
+			if (imageWidth > maxWidth) {
+				imageHeight *= maxWidth / imageWidth;
+				imageWidth = maxWidth;
+			}
+		} else {
+			if (imageHeight > maxHeight) {
+				imageWidth *= maxHeight / imageHeight;
+				imageHeight = maxHeight;
+			}
+		}
+
+		var canvas = document.createElement('canvas');
+		canvas.width = imageWidth;
+		canvas.height = imageHeight;
+
+		var ctx = canvas.getContext("2d");
+		ctx.drawImage(image, 0, 0, imageWidth, imageHeight);
+
+		var data;
+		try {
+			data = canvas.toDataURL("image/jpeg",quality);
+		} catch(e) {
+			data = src;
+		}
+		
+		var result = $("<img/>").attr({
+			"src": data,
+			"alt" : altText
+		}).css({
+			"max-width" : maxWidth+"px",
+			"max-height" : maxHeight+"px"
+		});
+		
+		onReady(result);
+	};
+};
+
+var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,onReady) {
+	var reader = new FileReader();
+
+	reader.onloadend = function() {
+		ThumbnailImage.call(this,reader.result,altText,quality,maxWidth,maxHeight,onReady);
+	};
+
+	reader.readAsDataURL(file);
 };var TitleArea = function (title) {
 	var self = this;
 	
@@ -1315,8 +1456,10 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	this.setTitle(title);
 	
 	return this;
-};var Wolfpacks = function (menuList,request,applicationFrame) {
+};var Wolfpacks = function (menuList,applicationFrame) {
 	var self = this;
+	
+	var request = new PostRequestHandler("eWolf","/json",0);
 	
 	var wolfpacksApps = {},
 		friendsMapByName = {},
@@ -1336,7 +1479,19 @@ var ResponseHandler = function(category, requiredFields, handler) {
 			wolfpackMembers:{}
 		};
 	},new ResponseHandler("wolfpackMembers",["membersList"],handleMembers).getHandler());
-		
+	
+	function handleWolfpacks(data, textStatus, postData) {
+		$.each(data.wolfpacksList, function(i,pack){
+			self.addWolfpack(pack);
+		});
+	}
+	
+	function handleMembers(data, textStatus, postData) {
+		$.each(data.membersList, function(i,userObj){
+			self.addFriend(userObj.id,userObj.name);
+		});
+	}
+	
 	this.addWolfpack = function (pack) {
 		if(wolfpacksApps[pack] == null) {		
 			menuList.addMenuItem("__pack__"+pack,pack);			
@@ -1393,18 +1548,10 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	this.getFriendName = function (userID) {
 		return friendsMapByID[userID];
 	};
-		
-	function handleWolfpacks(data, textStatus, postData) {
-		$.each(data.wolfpacksList, function(i,pack){
-			self.addWolfpack(pack);
-		});
-	}
 	
-	function handleMembers(data, textStatus, postData) {
-		$.each(data.membersList, function(i,userObj){
-			self.addFriend(userObj.id,userObj.name);
-		});
-	}
+	this.requestWolfpacks = function() {
+		request.requestAll();
+	};	
 	
 	return this;
 };
@@ -1850,7 +1997,44 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 		tooltip: true
 	};
 
-})(jQuery);//fgnass.github.com/spin.js#v1.2.5
+})(jQuery);(function($){
+
+  var url1 = /(^|&lt;|\s)(www\..+?\..+?)(\s|&gt;|$)/g,
+      url2 = /(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,
+      target = 'target="_blank"',
+
+      linkifyThis = function () {
+        var childNodes = this.childNodes,
+            i = childNodes.length;
+        while(i--)
+        {
+          var n = childNodes[i];
+          if (n.nodeType == 3) {
+            var html = $.trim(n.nodeValue);
+            if (html)
+            {
+              html = html.replace(/&/g, '&amp;')
+                         .replace(/</g, '&lt;')
+                         .replace(/>/g, '&gt;')
+                         .replace(url1, '$1<a href="http://$2" ' + 
+                        		 target + '>$2</a>$3')
+                         .replace(url2, '$1<a href="$2" ' +
+                        		 target + '>$2</a>$5');
+              $(n).after(html).remove();
+            }
+          }
+          else if (n.nodeType == 1  &&  !/^(a|button|textarea)$/i.test(n.tagName)) {
+            linkifyThis.call(n);
+          }
+        }
+      };
+
+  $.fn.linkify = function () {
+    return this.each(linkifyThis);
+  };
+})(jQuery);
+
+//fgnass.github.com/spin.js#v1.2.5
 (function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);var MenuItem = function(id,title,messageText,topbarFrame) {
 	var thisObj = this;
 	var isLoading = false;
@@ -1990,17 +2174,14 @@ var menuItemSpinnerOpts = {
 		  top: 0, // Top position relative to parent in px
 		  left: 0 // Left position relative to parent in px
 		};var MenuList = function(id,title,topbarFrame) {
-	var thisObj = this;
+	var self = this;
 	
 	var items = [];
 	
-	var frame = $("<div/>").attr({
-		"class" : "menuList"
-	}).hide();
+	var frame = $("<div/>").addClass("menuList").hide();
 	
-	$("<div/>").attr({
-		"class" : "menuListTitle"
-	})	.append(title)
+	$("<div/>").addClass("menuListTitle")
+		.append(title)
 		.appendTo(frame);
 
 	var list = $("<ul/>").appendTo(frame);	
@@ -2039,9 +2220,19 @@ var menuItemSpinnerOpts = {
 		}
 	};
 	
+	this.hideMenu = function () {
+		frame.hide();
+	};
+	
+	this.showMenu = function () {
+		if(Object.keys(items).length > 0) {
+			frame.show();
+		}
+	};
+	
 	this.appendTo = function(container) {
 		frame.appendTo(container);
-		return thisObj;
+		return self;
 	};
 	
 	return this;
@@ -2203,10 +2394,13 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 };function CreateMailItemBox(mailObj) {
 	var text = mailObj.text.replace("<","&lt").replace(">","&gt").replace(/\n/g,"<br>");
 	var canvas = $("<div/>").html(text);
+	canvas.linkify();
 
 	if(mailObj.attachment != null) {
 		var imageCanvas = $("<div/>");
-		var attachCanvas = $("<ul/>");
+		var attachList = $("<div/>").css({
+			"margin-left" : "5px"
+		});
 		
 		$.each(mailObj.attachment, function(i, attach) {
 			if(attach.contentType.substring(0,5) == "image") {
@@ -2215,20 +2409,24 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 					target: "_TRG_"+attach.filename
 				}).appendTo(imageCanvas);
 				
-				$("<img/>").attr({
-					"src": attach.path,
-					style: "padding:5px 5px 5px 5px; height:130px;"
-				}).appendTo(aObj);				
+				new ThumbnailImage(attach.path,attach.filename,
+						0.7,200,100,function(img) {
+					img.css({
+						"padding" : "5px 5px 5px 5px"
+					}).appendTo(aObj);
+					
+					$("<em/>").append("&nbsp;").appendTo(imageCanvas);
+				});
 				
-				
-				$("<em/>").append("&nbsp;").appendTo(imageCanvas);
 			} else {
-				var li = $("<li/>").appendTo(attachCanvas);
+				var li = $("<li/>").appendTo(attachList);
 				
 				$("<a/>").attr({
 					href: attach.path,
 					target: "_TRG_"+attach.filename
-				}).append(attach.filename).appendTo(li);
+				}).append(CreateFileItemBox(attach.filename,
+						attach.contentType,attach.size))
+					.appendTo(li);
 			}
 		});
 		
@@ -2236,9 +2434,19 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 			imageCanvas.appendTo(canvas);
 		}
 		
-		if(! attachCanvas.is(":empty")) {
-			canvas.append("Attachments:");
-			attachCanvas.appendTo(canvas);
+		if(! attachList.is(":empty")) {
+			var line = $("<hr/>").css({
+				"color" : "#AAA",
+				"background-color" : "#AAA",
+				"height" : "1px",
+				"border" : "0"
+			});
+			
+			$("<div/>")
+				.append(line)
+				//.append("Attachments:")
+				.append(attachList)
+				.appendTo(canvas);
 		}
 	}	
 	
@@ -2812,10 +3020,22 @@ var InboxList = function (request,serverSettings) {
 var Login = function(id,applicationFrame) {
 	Application.call(this,id,applicationFrame);
 	
+	new LoginArea(id).appendTo(this.frame);
+	
+	this.frame.append("<br>");
+	
+	new SignUpArea(id).appendTo(this.frame);
+	
+	return this;
+};
+
+var LoginArea = function(id) {
+	var self = this;
+	
 	var login = new TitleArea("Login").appendTo(this.frame);
 	login.addFunction("Login",function() {
 		// TODO: Login
-		alert("Option unavailible");
+		eWolfMaster.getUserInformation();
 	});
 	
 	var username = $("<input/>").attr({
@@ -2848,8 +3068,211 @@ var Login = function(id,applicationFrame) {
 	
 	login.appendAtBottomPart(base);
 	
-	this.frame.append("<br>");
-	new TitleArea("Sign Up").appendTo(this.frame);
+	this.appendTo = function (someFrame) {
+		login.appendTo(someFrame);
+		return self;
+	};
+	
+	return this;
+};
+
+var SignUpArea = function(id) {
+	var self = this;
+	
+	var signup = new TitleArea("Sign Up");
+	
+	var fullName = $("<input/>").attr({
+		"type" : "text",
+		"placeholder" : "Full Name"
+	});
+	
+	var fullNameError = $("<span/>").addClass("errorArea");
+	
+	var username = $("<input/>").attr({
+		"type" : "text",
+		"placeholder" : "Username"
+	});
+	
+	var usernameError = $("<span/>").addClass("errorArea");
+	
+	var password = $("<input/>").attr({
+		"type" : "password",
+		"placeholder" : "Password"
+	});
+	
+	var verifyPassword = $("<input/>").attr({
+		"type" : "password",
+		"placeholder" : "Verify Password"
+	});
+	
+	var passwordError = $("<span/>").addClass("errorArea");
+	
+	var base = $("<table/>");
+	
+	var fullNameRaw = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("newMailAlt")
+		.append("Full Name:")
+		.appendTo(fullNameRaw);	
+	$("<td/>")
+		.append(fullName)
+		.append(fullNameError)
+		.appendTo(fullNameRaw);
+	
+	var usernameRaw = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("newMailAlt")
+		.append("Username:")
+		.appendTo(usernameRaw);	
+	$("<td/>")
+		.append(username)
+		.append(usernameError)
+		.appendTo(usernameRaw);
+	
+	var passwordRaw = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("newMailAlt")
+		.append("Password:")
+		.appendTo(passwordRaw);	
+	$("<td/>")
+		.append(password)
+		.append(passwordError)
+		.appendTo(passwordRaw);
+	
+	var passwordRaw = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("newMailAlt")
+		.append("Verify Password:")
+		.appendTo(passwordRaw);	
+	$("<td/>")
+		.append(verifyPassword)
+		.appendTo(passwordRaw);
+	
+	signup.appendAtBottomPart(base);
+	
+	function handleSignUp(data, textStatus, postData) {
+		eWolfMaster.getUserInformation();
+		self.clearAll();
+	}
+	
+	signup.addFunction("Sign Up",function() {
+		var error = false;
+		
+		if(fullName.val() == "") {
+			error = true;
+		}
+		
+		if(username.val() == "") {
+			error = true;
+		}
+		
+		if(password.val() == "") {
+			error = true;
+		} else if(password.val() != verifyPassword.val()) {
+			error = true;
+		}
+		
+		if(error) {
+			self.showErrors();
+		} else {
+			new PostRequestHandler(id, "/json", 0).request({
+				createAccount : {
+					name : fullName.val(),
+					username : username.val(),
+					password : password.val()
+				}
+			}, new ResponseHandler("createAccount", 
+					[],handleSignUp).getHandler());
+		}
+	});
+	
+	this.showErrors = function() {
+		fullNameError.animate({
+			"opacity" : "0"
+		},500,function() {
+			if(fullName.val() == "") {
+				fullNameError.html("* Must specify a name.");
+				fullNameError.animate({
+					"opacity" : "1"
+				},1000);
+				
+				fullName.animate({
+					"background-color" : "#debdbd"
+				},1000);
+			} else {
+				fullName.animate({
+					"background-color" : "#bddec0"
+				},1000);
+			}
+		});
+		
+		usernameError.animate({
+			"opacity" : "0"
+		},500,function() {
+			if(username.val() == "") {
+				usernameError.html("* Must specify a user name.");
+				usernameError.animate({
+					"opacity" : "1"
+				},1000);
+				
+				username.animate({
+					"background-color" : "#debdbd"
+				},1000);
+			} else {
+				username.animate({
+					"background-color" : "#bddec0"
+				},1000);
+			}
+		});;
+		
+		passwordError.animate({
+			"opacity" : "0"
+		},500,function() {
+			if(password.val() == "") {
+				passwordError.html("* Must specify a password.");
+				passwordError.animate({
+					"opacity" : "1"
+				},1000);
+				
+				password.animate({
+					"background-color" : "#debdbd"
+				},1000);
+			} else if(password.val() != verifyPassword.val()) {
+				passwordError.html("* Password do not mach.");
+				passwordError.animate({
+					"opacity" : "1"
+				},1000);
+				
+				password.animate({
+					"background-color" : "#debdbd"
+				},1000);
+				verifyPassword.animate({
+					"background-color" : "#debdbd"
+				},1000);
+			} else {
+				password.animate({
+					"background-color" : "#bddec0"
+				},1000);
+				verifyPassword.animate({
+					"background-color" : "#bddec0"
+				},1000);
+			}
+		});
+	};
+	
+	this.clearAll = function() {
+		fullName.val("");
+		fullNameError.val("");
+		
+		username.val("");
+		usernameError.val("");
+		
+		password.val("");
+		passwordError.val("");
+		
+		verifyPassword.val("");
+	};
+	
+	this.appendTo = function (someFrame) {
+		signup.appendTo(someFrame);
+		return self;
+	};
 	
 	return this;
 };NEW_MAIL_DESCRIPTION_DAFAULTS = {
@@ -2986,12 +3409,10 @@ var NewMail = function(callerID,applicationFrame,options,
 	
 	this.updateSend = function() {
 		if(sendToQuery.tagList.tagCount({markedError:false,markedOK:false}) > 0) {
-			titleArea.hideFunction("Send");
-			titleArea.hideFunction("Cancel");
+			titleArea.hideAll();
 			operations.hideAll();
 		} else if(sendToQuery.tagList.tagCount({markedError:true})) {
-			titleArea.showFunction("Send");
-			titleArea.showFunction("Cancel");
+			titleArea.showAll();
 			operations.showAll();
 		} else {			
 			eWolf.trigger("needRefresh."+callerID.replace("+","\\+"),[callerID]);
@@ -3027,11 +3448,15 @@ var NewMail = function(callerID,applicationFrame,options,
 		
 		sendToQuery.tagList.foreachTag({markedOK:false},function(destId) {
 			if(allowAttachment && files) {
-				files.uploadFile(destId, function(success, uploadedFiles) {
+				files.uploadAllFiles(destId, function(success, uploadedFiles) {
 					if(success) {
 						mailObject.attachment = uploadedFiles;
 						self.sendTo(destId,JSON.stringify(mailObject));
-					}		
+					} else {
+						errorMessage.html("Some of the files failed to upload...<br>Message did not sent.");
+						titleArea.showAll();
+						operations.showAll();
+					}
 				});			
 			} else {
 				self.sendTo(destId,JSON.stringify(mailObject));
