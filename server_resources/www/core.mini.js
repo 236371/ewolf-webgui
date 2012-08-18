@@ -1,4 +1,4 @@
-IDENTIFIERS = {
+EWOLF_CONSTANTS = {
 	LOADING_FRAME : "loadingFrame",
 	APPLICATION_FRAME : "applicationFrame",
 	MAIN_FRAME : "mainFrame",
@@ -9,40 +9,47 @@ IDENTIFIERS = {
 	MAINAPPS_MENU_ID : "__mainapps_menu__",
 	WOLFPACKS_MENU_ID : "__wolfpacks_menu__",
 	
-	NEWSFEED_APP_ID : "__newsFeed_mainApp__",
-	INBOX_APP_ID : "__inbox_mainApp__",
-	LOGIN_APP_ID : "__login_welcome_screen__"
+	MYPROFILE_APP_ID : "profile",
+	NEWSFEED_APP_ID : "newsfeed",
+	INBOX_APP_ID : "inbox",
+	LOGIN_APP_ID : "login"
 };
 
-var eWolfMaster = new function() {
+var eWolf = new function() {
 	var self = this;
+	$.extend(this,EWOLF_CONSTANTS);
 	
 	this.userID = null;
 	this.userName = null;
 	
+	this.sendToProfile = {
+			userID: "THIS IS AN ERROR"
+	};
+	
 	this.init = function() {
-		new Loading($("#"+IDENTIFIERS.LOADING_FRAME));
-		self.applicationFrame = $("#"+IDENTIFIERS.APPLICATION_FRAME);
+		$(window).bind('hashchange', self.onHashChange);
 		
-		self.sideMenu = new SideMenu($("#"+IDENTIFIERS.MENU_FRAME),
-				$("#"+IDENTIFIERS.MAIN_FRAME),
-				$("#"+IDENTIFIERS.TOPBAR_FRAME));
+		self.applicationFrame = $("#"+self.APPLICATION_FRAME);
+		self.mainFrame = $("#"+self.MAIN_FRAME);
+		self.topBarFrame = $("#"+self.TOPBAR_FRAME);
+		self.menuFrame = $("#"+self.MENU_FRAME);
+		self.loadingFrame = $("#"+self.LOADING_FRAME);
+		
+		new Loading(self.loadingFrame);		
+		
+		self.sideMenu = new SideMenu(self.menuFrame,
+				self.mainFrame,self.topBarFrame);
 		
 		self.welcome = self.sideMenu.createNewMenuList(
-				IDENTIFIERS.WELCOME_MENU_ID,"Welcome");
+				self.WELCOME_MENU_ID,"Welcome");
 		
 		self.mainApps = self.sideMenu.createNewMenuList(
-				IDENTIFIERS.MAINAPPS_MENU_ID,"Main");
+				self.MAINAPPS_MENU_ID,"Main");
 		
 		self.wolfpacksMenuList = self.sideMenu.createNewMenuList(
-				IDENTIFIERS.WOLFPACKS_MENU_ID,"Wolfpacks");
-		
-		// Welcome
-		self.welcome.addMenuItem(IDENTIFIERS.LOGIN_APP_ID,"Login");
-		new Login(IDENTIFIERS.LOGIN_APP_ID,self.applicationFrame);
+				self.WOLFPACKS_MENU_ID,"Wolfpacks");		
 		
 		self.getUserInformation();
-		//eWolf.trigger("select",[IDENTIFIERS.LOGIN_APP_ID]);
 	};
 	
 	this.getUserInformation = function () {
@@ -52,7 +59,7 @@ var eWolfMaster = new function() {
 		var request = new PostRequestHandler("eWolf","/json",0)
 			.register(function() {
 				return {
-					profile: {}
+					profile: self.sendToProfile
 				};
 			},responseHandler.getHandler());
 		
@@ -61,14 +68,20 @@ var eWolfMaster = new function() {
 			
 			self.userID = data.id;
 			self.userName = data.name;
-			eWolf.data('userID',data.id);
-			eWolf.data('userName',data.name);
+			
+			if(self.loginApp) {
+				self.loginApp.destroy();
+			}
 				
 			self.createMainApps();
 		}
 		
 		function onNotLoggedIn(data, textStatus, postData) {
-			eWolf.trigger("select",[IDENTIFIERS.LOGIN_APP_ID]);
+			// Welcome
+			self.welcome.addMenuItem(self.LOGIN_APP_ID,"Login");
+			if(!self.loginApp) {
+				self.loginApp = new Login(self.LOGIN_APP_ID,self.applicationFrame).select();
+			}		
 		}
 		
 		responseHandler.success(onLoggedIn);	
@@ -79,32 +92,95 @@ var eWolfMaster = new function() {
 	
 	this.createMainApps = function () {
 		self.welcome.hideMenu();
+		self.logout = new Logout("Logout",eWolf.topBarFrame);
 		
 		self.wolfpacks = new Wolfpacks(self.wolfpacksMenuList,self.applicationFrame);
 		self.wolfpacks.addFriend(self.userID, self.userName);
-		self.wolfpacks.requestWolfpacks();
 		
-		self.mainApps.addMenuItem(self.userID,"My Profile");
-		new Profile(self.userID,self.userName,
-				self.applicationFrame);
+		self.mainApps.addMenuItem(self.MYPROFILE_APP_ID,"My Profile");
+		self.profileApp = new Profile(self.MYPROFILE_APP_ID,self.userID,
+				self.userName,self.applicationFrame);
 		
-		self.mainApps.addMenuItem(IDENTIFIERS.NEWSFEED_APP_ID,"News Feed");
-		new WolfpackPage(IDENTIFIERS.NEWSFEED_APP_ID,null,self.applicationFrame);
+		self.mainApps.addMenuItem(self.NEWSFEED_APP_ID,"News Feed");
+		self.newsFeedApp = new WolfpackPage(self.NEWSFEED_APP_ID,null,self.applicationFrame);
 		
-		self.mainApps.addMenuItem(IDENTIFIERS.INBOX_APP_ID,"Messages");
-		new Inbox(IDENTIFIERS.INBOX_APP_ID,self.applicationFrame);
+		self.mainApps.addMenuItem(self.INBOX_APP_ID,"Messages");
+		self.inboxApp = new Inbox(self.INBOX_APP_ID,self.applicationFrame);
 		
-		new SearchApp(self.sideMenu,
-				self.applicationFrame,$("#"+IDENTIFIERS.TOPBAR_FRAME));
+		self.searchApp = new SearchApp(self.sideMenu,
+				self.applicationFrame,$("#"+self.TOPBAR_FRAME));
 		
-		eWolf.trigger("select",[IDENTIFIERS.NEWSFEED_APP_ID]);
+		self.wolfpacks.requestWolfpacks(function() {
+			self.onHashChange();
+		});		
 	};
+	
+	this.onHashChange = function() {
+		var selected = null;
+		if(window.location.hash && window.location.hash != "") {
+			selected = window.location.hash.replace("#", "");
+			
+			var found = false;
+			
+			$.each($(self).data("events").select, function(i,handler) {
+				if(handler.namespace == selected) {
+					found = true;
+					return false;
+				}
+			});
+			
+			if(found) {
+				self.trigger("select",[selected]);
+			} else {
+				var selectedSubString = selected.substring(0,
+						self.searchApp.SEARCH_PROFILE_PREFIX.length);
+				
+				if(selectedSubString ==
+					self.searchApp.SEARCH_PROFILE_PREFIX) {
+					var searchTerm = selected.substring(selectedSubString.length);
+					if(searchTerm != "") {
+						self.trigger("search",[searchTerm]);
+					} else {
+						self.selectApp(self.NEWSFEED_APP_ID);
+					}					
+				} else {
+					self.selectApp(self.NEWSFEED_APP_ID);
+				}				
+			}			
+		} else {
+			self.selectApp(self.NEWSFEED_APP_ID);
+		}
+	};
+	
+	this.selectApp = function (id) {
+		var newHash = "#"+id;
+		if(window.location.hash != newHash) {
+			window.location.hash = newHash;
+		} else {
+			self.onHashChange();
+		}				
+	};
+	
+	this.bind = function (arg0,arg1) {
+		$(self).bind(arg0,arg1);
+		return self;
+	};
+	
+	this.unbind = function (arg0,arg1) {
+		$(self).unbind(arg0,arg1);
+		return self;
+	};
+	
+	this.trigger = function (arg0,arg1) {
+		$(self).trigger(arg0,arg1);
+		return self;
+	};
+	
+	return this;
 };
 
-var eWolf = $(eWolfMaster);
-
 $(document).ready(function () {
-	eWolfMaster.init();
+	eWolf.init();	
 });
 var Application = function(id,container) {
 	var self = this;
@@ -112,7 +188,6 @@ var Application = function(id,container) {
 	var needRefresh = true;
 	
 	this.frame = $("<div/>").attr({
-		"id": id+"ApplicationFrame",
 		"class": "applicationContainer"
 	})	.appendTo(container)
 		.hide();
@@ -141,6 +216,8 @@ var Application = function(id,container) {
 				});
 				
 				selected = false;
+				
+				self.frame.stopAllYouTubePlayers();
 			}				
 		}			
 	});
@@ -159,6 +236,9 @@ var Application = function(id,container) {
 		}
 	});
 	
+	eWolf.bind("destroy."+id,function(event,eventId) {
+		self.destroy();
+	});	
 	
 	this.getFrame = function() {
 		return self.frame;
@@ -172,10 +252,17 @@ var Application = function(id,container) {
 		return selected;
 	};
 	
+	this.select = function() {
+		//eWolf.selectApp(id);
+		eWolf.trigger("select",[id]);
+		return self;
+	};
+	
 	this.destroy = function() {
 		eWolf.unbind("select."+id);
 		eWolf.unbind("refresh."+id);
 		eWolf.unbind("needRefresh."+id);
+		eWolf.unbind("destroy."+id);
 		self.frame.remove();
 		delete self;
 	};
@@ -299,11 +386,7 @@ function CreateTimestampBox(timestamp) {
 		"class": "selectableBox",
 		"title": id
 	}).click(function() {
-		if(id != eWolf.data("userID")) {
-			eWolf.trigger("search",[id,name]);
-		} else {
-			eWolf.trigger("select",[id]);
-		}
+		eWolf.trigger("search",[id,name]);
 	});
 	
 	if (id == null && name != null) {
@@ -331,11 +414,13 @@ function CreateTimestampBox(timestamp) {
 
 	return link;
 }function CreateWolfpackBox(name) {
+	var packAppID = eWolf.wolfpacks.WOLFPACK_APP_PREFIX + name;
+	
 	return $("<span/>").attr({
 		"style": "width:1%;",
 		"class": "selectableBox"
 	}).text(name).click(function() {
-		eWolf.trigger("select",["__pack__"+name]);
+		eWolf.selectApp(packAppID);
 	});
 }var FilesBox = function(uploaderArea) {
 	var self = this;
@@ -825,6 +910,7 @@ var WolfpackQueryTagList = function (minWidth) {
 	
 	var observersRequestFunction = [];
 	var observersHandleDataFunction = [];
+	var onCompleteAll = null;
 	var timer = null;
 	
 	function trigger() {
@@ -838,6 +924,10 @@ var WolfpackQueryTagList = function (minWidth) {
 			clearTimeout(timer);
 			timer = setTimeout(trigger,refreshIntervalSec*1000);
 		}
+		
+		if(onCompleteAll) {
+			onCompleteAll();
+		}		
 	}
 		
 	this.getId = function() {
@@ -902,6 +992,11 @@ var WolfpackQueryTagList = function (minWidth) {
 		});
 		
 		return self;
+	};
+	
+	this.complete = function(newOnCompleteAll) {
+		onCompleteAll = newOnCompleteAll;
+		return this;
 	};
 		
 	return this;
@@ -1456,8 +1551,13 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 	this.setTitle(title);
 	
 	return this;
-};var Wolfpacks = function (menuList,applicationFrame) {
+};WOLFPACK_CONSTANTS = {
+	WOLFPACK_APP_PREFIX : "wolfpack:"
+};
+
+var Wolfpacks = function (menuList,applicationFrame) {
 	var self = this;
+	$.extend(this,WOLFPACK_CONSTANTS);
 	
 	var request = new PostRequestHandler("eWolf","/json",0);
 	
@@ -1493,9 +1593,10 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 	}
 	
 	this.addWolfpack = function (pack) {
-		if(wolfpacksApps[pack] == null) {		
-			menuList.addMenuItem("__pack__"+pack,pack);			
-			var app = new WolfpackPage("__pack__"+pack,pack,applicationFrame);			
+		if(wolfpacksApps[pack] == null) {
+			var packID = self.WOLFPACK_APP_PREFIX+pack;
+			menuList.addMenuItem(packID,pack);			
+			var app = new WolfpackPage(packID,pack,applicationFrame);			
 			
 			wolfpacksApps[pack] = app;
 			self.wolfpacksArray.push(pack);
@@ -1549,7 +1650,8 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 		return friendsMapByID[userID];
 	};
 	
-	this.requestWolfpacks = function() {
+	this.requestWolfpacks = function(onReady) {
+		request.complete(onReady);
 		request.requestAll();
 	};	
 	
@@ -1997,49 +2099,102 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 		tooltip: true
 	};
 
-})(jQuery);(function($){
+})(jQuery);//fgnass.github.com/spin.js#v1.2.5
+(function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);(function($) {
 
-  var url1 = /(^|&lt;|\s)(www\..+?\..+?)(\s|&gt;|$)/g,
-      url2 = /(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,
-      target = 'target="_blank"',
+	var url1 = /(^|&lt;|\s)(www\..+?\..+?)(\s|&gt;|$)/g,
+		url2 = /(^|&lt;|\s)(((https?|ftp):\/\/|mailto:).+?)(\s|&gt;|$)/g,
+		target = 'target="_blank"';
 
-      linkifyThis = function () {
-        var childNodes = this.childNodes,
-            i = childNodes.length;
-        while(i--)
-        {
-          var n = childNodes[i];
-          if (n.nodeType == 3) {
-            var html = $.trim(n.nodeValue);
-            if (html)
-            {
-              html = html.replace(/&/g, '&amp;')
-                         .replace(/</g, '&lt;')
-                         .replace(/>/g, '&gt;')
-                         .replace(url1, '$1<a href="http://$2" ' + 
-                        		 target + '>$2</a>$3')
-                         .replace(url2, '$1<a href="$2" ' +
-                        		 target + '>$2</a>$5');
-              $(n).after(html).remove();
-            }
-          }
-          else if (n.nodeType == 1  &&  !/^(a|button|textarea)$/i.test(n.tagName)) {
-            linkifyThis.call(n);
-          }
-        }
-      };
+	function linkifyThis() {
+		var childNodes = this.childNodes,
+			i = childNodes.length;
+		
+		while (i--) {
+			var n = childNodes[i];
+			if (n.nodeType == 3) {
+				var html = $.trim(n.nodeValue);
+				if (html) {
+					html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+							.replace(/>/g, '&gt;').replace(
+									url1,
+									'$1<a href="http://$2" ' + target
+											+ '>$2</a>$3').replace(url2,
+									'$1<a href="$2" ' + target + '>$2</a>$5');
+					$(n).after(html).remove();
+				}
+			} else if (n.nodeType == 1
+					&& !/^(a|button|textarea)$/i.test(n.tagName)) {
+				linkifyThis.call(n);
+			}
+		}
+	}
 
-  $.fn.linkify = function () {
-    return this.each(linkifyThis);
-  };
+	$.fn.linkify = function() {
+		return this.each(linkifyThis);
+	};
 })(jQuery);
+(function($) {
+	var vidWidth = 280,
+		vidHeight = 240,
+		UID = 0,
+		playerID = "__YouTube_Player__",
+		
+		obj = '<object '
+				+'width="' + vidWidth + '" ' 
+				+ 'height="' + vidHeight + '" '
+				//+ 'id="' + playerID + '" '
+				+ '>'
+					+ '<param name="movie" value="http://www.youtube.com/v/[vid]&hl=en&fs=1"></param>'
+					+ '<param name="allowFullScreen" value="true"></param>'
+					+ '<param name="allowscriptaccess" value="always"></param>'
+					+ '<param name="wmode" value="transparent">'
+					+ '<embed '
+						+ 'id="' + playerID + '[UID]" '
+						+ 'src="http://www.youtube.com/v/[vid]&hl=en&fs=1&version=3&enablejsapi=1" '
+						+ 'type="application/x-shockwave-flash" '
+						+ 'allowscriptaccess="always" '
+						+ 'allowfullscreen="true" '
+						+ 'wmode="transparent" '
+						+ 'width="' + vidWidth + '" ' + 'height="' + vidHeight
+					+ '">'
+					+ '</embed>' 
+				+ '</object> ';
+	
 
-//fgnass.github.com/spin.js#v1.2.5
-(function(a,b,c){function g(a,c){var d=b.createElement(a||"div"),e;for(e in c)d[e]=c[e];return d}function h(a){for(var b=1,c=arguments.length;b<c;b++)a.appendChild(arguments[b]);return a}function j(a,b,c,d){var g=["opacity",b,~~(a*100),c,d].join("-"),h=.01+c/d*100,j=Math.max(1-(1-a)/b*(100-h),a),k=f.substring(0,f.indexOf("Animation")).toLowerCase(),l=k&&"-"+k+"-"||"";return e[g]||(i.insertRule("@"+l+"keyframes "+g+"{"+"0%{opacity:"+j+"}"+h+"%{opacity:"+a+"}"+(h+.01)+"%{opacity:1}"+(h+b)%100+"%{opacity:"+a+"}"+"100%{opacity:"+j+"}"+"}",0),e[g]=1),g}function k(a,b){var e=a.style,f,g;if(e[b]!==c)return b;b=b.charAt(0).toUpperCase()+b.slice(1);for(g=0;g<d.length;g++){f=d[g]+b;if(e[f]!==c)return f}}function l(a,b){for(var c in b)a.style[k(a,c)||c]=b[c];return a}function m(a){for(var b=1;b<arguments.length;b++){var d=arguments[b];for(var e in d)a[e]===c&&(a[e]=d[e])}return a}function n(a){var b={x:a.offsetLeft,y:a.offsetTop};while(a=a.offsetParent)b.x+=a.offsetLeft,b.y+=a.offsetTop;return b}var d=["webkit","Moz","ms","O"],e={},f,i=function(){var a=g("style");return h(b.getElementsByTagName("head")[0],a),a.sheet||a.styleSheet}(),o={lines:12,length:7,width:5,radius:10,rotate:0,color:"#000",speed:1,trail:100,opacity:.25,fps:20,zIndex:2e9,className:"spinner",top:"auto",left:"auto"},p=function q(a){if(!this.spin)return new q(a);this.opts=m(a||{},q.defaults,o)};p.defaults={},m(p.prototype,{spin:function(a){this.stop();var b=this,c=b.opts,d=b.el=l(g(0,{className:c.className}),{position:"relative",zIndex:c.zIndex}),e=c.radius+c.length+c.width,h,i;a&&(a.insertBefore(d,a.firstChild||null),i=n(a),h=n(d),l(d,{left:(c.left=="auto"?i.x-h.x+(a.offsetWidth>>1):c.left+e)+"px",top:(c.top=="auto"?i.y-h.y+(a.offsetHeight>>1):c.top+e)+"px"})),d.setAttribute("aria-role","progressbar"),b.lines(d,b.opts);if(!f){var j=0,k=c.fps,m=k/c.speed,o=(1-c.opacity)/(m*c.trail/100),p=m/c.lines;!function q(){j++;for(var a=c.lines;a;a--){var e=Math.max(1-(j+a*p)%m*o,c.opacity);b.opacity(d,c.lines-a,e,c)}b.timeout=b.el&&setTimeout(q,~~(1e3/k))}()}return b},stop:function(){var a=this.el;return a&&(clearTimeout(this.timeout),a.parentNode&&a.parentNode.removeChild(a),this.el=c),this},lines:function(a,b){function e(a,d){return l(g(),{position:"absolute",width:b.length+b.width+"px",height:b.width+"px",background:a,boxShadow:d,transformOrigin:"left",transform:"rotate("+~~(360/b.lines*c+b.rotate)+"deg) translate("+b.radius+"px"+",0)",borderRadius:(b.width>>1)+"px"})}var c=0,d;for(;c<b.lines;c++)d=l(g(),{position:"absolute",top:1+~(b.width/2)+"px",transform:b.hwaccel?"translate3d(0,0,0)":"",opacity:b.opacity,animation:f&&j(b.opacity,b.trail,c,b.lines)+" "+1/b.speed+"s linear infinite"}),b.shadow&&h(d,l(e("#000","0 0 4px #000"),{top:"2px"})),h(a,h(d,e(b.color,"0 0 1px rgba(0,0,0,.1)")));return a},opacity:function(a,b,c){b<a.childNodes.length&&(a.childNodes[b].style.opacity=c)}}),!function(){function a(a,b){return g("<"+a+' xmlns="urn:schemas-microsoft.com:vml" class="spin-vml">',b)}var b=l(g("group"),{behavior:"url(#default#VML)"});!k(b,"transform")&&b.adj?(i.addRule(".spin-vml","behavior:url(#default#VML)"),p.prototype.lines=function(b,c){function f(){return l(a("group",{coordsize:e+" "+e,coordorigin:-d+" "+ -d}),{width:e,height:e})}function k(b,e,g){h(i,h(l(f(),{rotation:360/c.lines*b+"deg",left:~~e}),h(l(a("roundrect",{arcsize:1}),{width:d,height:c.width,left:c.radius,top:-c.width>>1,filter:g}),a("fill",{color:c.color,opacity:c.opacity}),a("stroke",{opacity:0}))))}var d=c.length+c.width,e=2*d,g=-(c.width+c.length)*2+"px",i=l(f(),{position:"absolute",top:g,left:g}),j;if(c.shadow)for(j=1;j<=c.lines;j++)k(j,-2,"progid:DXImageTransform.Microsoft.Blur(pixelradius=2,makeshadow=1,shadowopacity=.3)");for(j=1;j<=c.lines;j++)k(j);return h(b,i)},p.prototype.opacity=function(a,b,c,d){var e=a.firstChild;d=d.shadow&&d.lines||0,e&&b+d<e.childNodes.length&&(e=e.childNodes[b+d],e=e&&e.firstChild,e=e&&e.firstChild,e&&(e.opacity=c))}):f=k(b,"animation")}(),a.Spinner=p})(window,document);var MenuItem = function(id,title,messageText,topbarFrame) {
+	addYouTubeEmbededToThis = function() {
+		var that = $(this);
+		var links = that.children("a:contains('youtube.com/watch')");
+
+		links.each(function(i, link) {
+			var vid = $(link).attr("href").match(/((\?v=)(\w[\w|-]*))/g); // end up with ?v=oHg5SJYRHA0
+			if (vid.length != 0) {
+				var ytid = vid[0].replace(/\?v=/, ''); // end up with oHg5SJYRHA0
+				var player = obj.replace(/\[vid\]/g, ytid).replace(/\[UID\]/g, UID);
+				UID += 1;
+				that.append(player);
+			}
+		});
+
+	};
+
+	$.fn.addYouTubeEmbeded = function() {
+		return this.each(addYouTubeEmbededToThis);
+	};
+	
+	$.fn.stopAllYouTubePlayers = function() {
+		var players = $("embed[id^="+playerID+"]");
+		if(players && players.length > 0) {
+			players.each(function(i, p) {
+				p.stopVideo();
+			});			
+		}
+	};
+})(jQuery);
+var MenuItem = function(id,title,topbarFrame) {
 	var thisObj = this;
 	var isLoading = false;
 	var selected = false;	
-	var message = new MenuMessage(messageText,topbarFrame);
 	
 	var listItem = $("<li/>");
 		
@@ -2065,7 +2220,7 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 	
 	listItem.click(function() {
 		if(selected == false) {
-			eWolf.trigger("select",[id]);
+			eWolf.selectApp(id);
 		}	
 	});
 
@@ -2074,9 +2229,6 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 			eWolf.trigger("refresh."+id.replace("+","\\+"),[id]);
 		}	
 	});
-	
-	listItem.mouseover(message.show);
-	listItem.mouseout(message.hide);
 	
 	function updateView() {
 		var w = 145;
@@ -2150,7 +2302,6 @@ Heavily modified/simplified/improved by Marc Diethelm (http://web5.me/).
 	};
 	
 	this.destroy = function() {
-		message.destroy();
 		listItem.remove();
 		delete thisObj;
 	};
@@ -2188,8 +2339,7 @@ var menuItemSpinnerOpts = {
 	
 	this.addMenuItem = function(id,title) {
 		if(items[id] == null) {
-			var menuItem = new MenuItem(id,title,
-					"Click to show "+title.toLowerCase(),topbarFrame)
+			var menuItem = new MenuItem(id,title,topbarFrame)
 					.appendTo(list);
 			
 			items[id] = menuItem;
@@ -2199,8 +2349,7 @@ var menuItemSpinnerOpts = {
 			}
 		} else {
 			console.log("[Menu Error] Item with id: "+ id +" already exist");
-		}
-		
+		}		
 	};
 	
 	this.removeMenuItem = function(removeId) {
@@ -2236,39 +2385,7 @@ var menuItemSpinnerOpts = {
 	};
 	
 	return this;
-};var MenuMessage = function(text,container) {
-	var thisObj = this;	
-	var message = null;
-	
-	this.show = function() {
-		if(message == null) {
-			message = $("<div/>").attr({
-				"class": "menuItemMessageClass"
-			}).text(text).appendTo(container);
-		} else {
-			message.show();
-		}
-	};
-	
-	this.hide = function() {
-		if(message != null) {
-			message.remove();
-			message = null;
-		}
-	};
-	
-	this.destroy = function() {
-		if(message != null) {
-			message.remove();
-			message = null;
-			delete thisObj;
-		}
-	};
-	
-	return this;
-};
-
-var SideMenu = function(menu, mainFrame,topbarFrame) {
+};var SideMenu = function(menu, mainFrame,topbarFrame) {
 	var thisObj = this;
 	
 	var itemSpace = menu.children("#menuItemsSpace");
@@ -2392,9 +2509,10 @@ var SideMenu = function(menu, mainFrame,topbarFrame) {
 	
 	return this;
 };function CreateMailItemBox(mailObj) {
-	var text = mailObj.text.replace("<","&lt").replace(">","&gt").replace(/\n/g,"<br>");
+	var text = mailObj.text;
 	var canvas = $("<div/>").html(text);
 	canvas.linkify();
+	canvas.addYouTubeEmbeded();
 
 	if(mailObj.attachment != null) {
 		var imageCanvas = $("<div/>");
@@ -2653,7 +2771,7 @@ var ProfileNewsFeedList = function (request,profileID) {
 		newsOf:"user"
 	};
 	
-	if(profileID != eWolf.data("userID")) {
+	if(profileID != eWolf.userID) {
 		newsFeedRequestObj.userID = profileID;
 	}
 	
@@ -2814,7 +2932,7 @@ var InboxList = function (request,serverSettings) {
 		.complete(this.complete);
 	
 	return this;
-};var AddToWolfpack = function(id, frame, activator, request, packsAlreadyIn) {
+};var AddToWolfpack = function(id, userID, frame, activator, request, packsAlreadyIn) {
 	var self = this;
 	PopUp.call(this,frame,activator);
 	
@@ -2982,7 +3100,7 @@ var InboxList = function (request,serverSettings) {
 			request.request({
 				addWolfpackMember: {
 					wolfpackNames: wolfpacks,
-					userIDs: [id]
+					userIDs: [userID]
 				}
 			},response.getHandler());
 		}
@@ -3035,7 +3153,8 @@ var LoginArea = function(id) {
 	var login = new TitleArea("Login").appendTo(this.frame);
 	login.addFunction("Login",function() {
 		// TODO: Login
-		eWolfMaster.getUserInformation();
+		eWolf.sendToProfile = {};
+		eWolf.getUserInformation();
 	});
 	
 	var username = $("<input/>").attr({
@@ -3051,7 +3170,7 @@ var LoginArea = function(id) {
 	var base = $("<table/>");
 	
 	var usernameRaw = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("newMailAlt")
+	$("<td/>").addClass("loginFieldDescription")
 		.append("Username:")
 		.appendTo(usernameRaw);	
 	$("<td/>")
@@ -3059,7 +3178,7 @@ var LoginArea = function(id) {
 		.appendTo(usernameRaw);
 	
 	var passwordRaw = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("newMailAlt")
+	$("<td/>").addClass("loginFieldDescription")
 		.append("Password:")
 		.appendTo(passwordRaw);	
 	$("<td/>")
@@ -3110,7 +3229,7 @@ var SignUpArea = function(id) {
 	var base = $("<table/>");
 	
 	var fullNameRaw = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("newMailAlt")
+	$("<td/>").addClass("loginFieldDescription")
 		.append("Full Name:")
 		.appendTo(fullNameRaw);	
 	$("<td/>")
@@ -3119,7 +3238,7 @@ var SignUpArea = function(id) {
 		.appendTo(fullNameRaw);
 	
 	var usernameRaw = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("newMailAlt")
+	$("<td/>").addClass("loginFieldDescription")
 		.append("Username:")
 		.appendTo(usernameRaw);	
 	$("<td/>")
@@ -3128,7 +3247,7 @@ var SignUpArea = function(id) {
 		.appendTo(usernameRaw);
 	
 	var passwordRaw = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("newMailAlt")
+	$("<td/>").addClass("loginFieldDescription")
 		.append("Password:")
 		.appendTo(passwordRaw);	
 	$("<td/>")
@@ -3137,7 +3256,7 @@ var SignUpArea = function(id) {
 		.appendTo(passwordRaw);
 	
 	var passwordRaw = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("newMailAlt")
+	$("<td/>").addClass("loginFieldDescription")
 		.append("Verify Password:")
 		.appendTo(passwordRaw);	
 	$("<td/>")
@@ -3147,7 +3266,7 @@ var SignUpArea = function(id) {
 	signup.appendAtBottomPart(base);
 	
 	function handleSignUp(data, textStatus, postData) {
-		eWolfMaster.getUserInformation();
+		eWolf.getUserInformation();
 		self.clearAll();
 	}
 	
@@ -3295,31 +3414,67 @@ var SignUpArea = function(id) {
 	});
 	
 	return this;
-};NEW_MAIL_DESCRIPTION_DAFAULTS = {
-	TITLE : "New Mail",
-	TO : "To",
-	CONTENT : "Content",
-	ATTACHMENT : "Attachment"
+};var Logout = function(text,container) {
+	var self = this;	
+	this.frame =$("<div/>").attr({
+		"class": "logoutLink aLink"
+	})	.text(text)
+		.appendTo(container)
+		.click(function() {
+			// TODO: logout
+			eWolf.sendToProfile = {
+					userID: "THIS IS AN ERROR"
+			};
+			
+			$(window).unbind('hashchange');
+			window.location.hash = "";
+			document.location.reload(true);
+		});
+	
+	this.destroy = function() {
+		if(self.frame != null) {
+			self.frame.remove();
+			self.frame = null;
+			delete self;
+		}
+	};
+	
+	return this;
+};
+
+NEWMAIL_CONSTANTS = {
+	NEWMAIL_APP_ID_PREFIX : "mailto:",
+	NEW_MAIL_DAFAULTS : {
+			TITLE : "New Mail",
+			TO : "To",
+			CONTENT : "Content",
+			ATTACHMENT : "Attachment"
+		}
 };
 
 var NewMail = function(callerID,applicationFrame,options,		
 		createRequestObj,handleResponseCategory,
 		allowAttachment,sendTo,sendToQuery) {
 	var self = this;
-	var id = "__newmessage__"+callerID;
+	$.extend(this,NEWMAIL_CONSTANTS);
+	
+	var id = self.NEWMAIL_APP_ID_PREFIX+callerID;
 	
 	Application.call(this,id,applicationFrame);
 	
-	var settings = $.extend({}, NEW_MAIL_DESCRIPTION_DAFAULTS, options);
+	var settings = $.extend({}, self.NEW_MAIL_DAFAULTS, options);
 		
 	var request = new PostRequestHandler(id,"/json",0);
 		
 	var titleArea = new TitleArea(settings.TITLE).appendTo(this.frame);
 	
-	var base = $("<table/>").appendTo(this.frame);
+	var base = $("<table/>")
+		.addClass("newMainTable")
+		.appendTo(this.frame);
 	
 	var queryRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("class","newMailAlt")
+	$("<td/>")
+		.addClass("newMailAlt")
 		.append(settings.TO+":")
 		.appendTo(queryRaw);	
 	var userIdCell = $("<td/>").appendTo(queryRaw);
@@ -3331,26 +3486,32 @@ var NewMail = function(callerID,applicationFrame,options,
 	}
 	
 	var msgRaw = $("<tr/>").appendTo(base);
-	$("<td/>").attr("class","newMailAlt")
+	$("<td/>")
+		.addClass("newMailAlt")
 		.append(settings.CONTENT+":")
 		.appendTo(msgRaw);
 	
-	var height = 300;
+	var height = 350;
 	if(allowAttachment) {
-		height = 100;
+		height = 200;
 	}
 	
-	var messageText = $("<textarea/>").attr({
-		"placeholder": "What is on your mind...",
-		"style" : "min-width:300px !important;height:"+height+"px  !important"
+	var messageText = $("<div/>")
+		.addClass("textarea-div")
+		.attr({
+//		"placeholder": "What is on your mind...",
+		"style" : "min-height:"+height+"px;",
+		"contentEditable" : "true"
 	});
 	
-	$("<td/>").append(messageText).appendTo(msgRaw);
+	$("<td/>").append(messageText)
+		.appendTo(msgRaw);
 	
 	var files = null;
 	if(allowAttachment) {
 		var attacheRaw = $("<tr/>").appendTo(base);
-		$("<td/>").attr("class","newMailAlt")
+		$("<td/>")
+			.addClass("newMailAlt")
 			.append(settings.ATTACHMENT+":")
 			.appendTo(attacheRaw);
 		
@@ -3374,7 +3535,7 @@ var NewMail = function(callerID,applicationFrame,options,
 		"class": "errorArea"
 	}).appendTo(errorBox);
 	
-	eWolf.bind("refresh",function(event,eventID) {
+	eWolf.bind("refresh."+id,function(event,eventID) {
 		if(eventID == id) {
 			if(sendTo != null) {				
 				window.setTimeout(function () {
@@ -3461,7 +3622,8 @@ var NewMail = function(callerID,applicationFrame,options,
 	};
 	
 	this.sendToAll = function () {		
-		var msg = messageText.val();
+		var msg = messageText.html();
+
 		var mailObject = {
 				text: msg
 		};
@@ -3503,13 +3665,9 @@ var NewMail = function(callerID,applicationFrame,options,
 				createRequestObj(destId,data),
 				responseHandler.getHandler());
 	};
-		
-	this.select = function() {
-		eWolf.trigger("select",[id]);
-	};
 	
 	this.cancel = function() {
-		eWolf.trigger("select",[callerID]);
+		eWolf.selectApp(callerID);
 	};
 	
 	titleArea
@@ -3559,7 +3717,7 @@ var NewPost = function(id,applicationFrame,wolfpack) {
 	
 	return this;
 };
-var Profile = function (id,name,applicationFrame) {
+var Profile = function (id,userID,userName,applicationFrame) {
 	var self = this;
 	
 	Application.call(this,id,applicationFrame);
@@ -3568,8 +3726,8 @@ var Profile = function (id,name,applicationFrame) {
 	
 	var userObj = {};
 	
-	if(id != eWolf.data("userID")) {
-		userObj.userID = id;
+	if(userID != eWolf.userID) {
+		userObj.userID = userID;
 	}
 	
 	var handleProfileResonse = new ResponseHandler("profile",
@@ -3590,13 +3748,13 @@ var Profile = function (id,name,applicationFrame) {
 	var wolfpacksContainer = new CommaSeperatedList("Wolfpakcs");
 	topTitle.appendAtBottomPart(wolfpacksContainer.getList());
 	
-	if(id != eWolf.data("userID")) {
+	if(userID != eWolf.userID) {
 		topTitle.addFunction("Send message...", function (event) {
-			new NewMessage(id,applicationFrame,id,name).select();
+			new NewMessage(id,applicationFrame,userID,userName).select();
 		});
 		
 		topTitle.addFunction("Add to wolfpack...", function () {
-			new AddToWolfpack(id, self.frame, this, request, wolfpacksContainer.getItemNames());
+			new AddToWolfpack(id, userID,self.frame, this, request, wolfpacksContainer.getItemNames());
 			return false;
 		});
 	} else {
@@ -3609,7 +3767,7 @@ var Profile = function (id,name,applicationFrame) {
 	
 	var newsFeed = null;
 	
-	if(name == null) {
+	if(userName == null) {
 		request.request(getProfileData(),
 				handleProfileResonse.getHandler());
 	} else {
@@ -3617,18 +3775,18 @@ var Profile = function (id,name,applicationFrame) {
 	}
 	
 	function onProfileFound() {		
-		topTitle.setTitle(CreateUserBox(id,name));
-		idBox.html(id);
+		topTitle.setTitle(CreateUserBox(userID,userName));
+		idBox.html(userID);
 		
 		topTitle.showAll();
 		
 		if(newsFeed == null) {			
-			newsFeed = new ProfileNewsFeedList(request,id)
+			newsFeed = new ProfileNewsFeedList(request,userID)
 				.appendTo(self.frame);
 		} 	
 		
 		while(waitingForName.length > 0) {
-			waitingForName.pop()(name);
+			waitingForName.pop()(userName);
 		}
 	}
 	
@@ -3645,7 +3803,7 @@ var Profile = function (id,name,applicationFrame) {
 	}
 	
 	function handleProfileData(data, textStatus, postData) {		
-		name = data.name;
+		userName = data.name;
 		onProfileFound();
 	}
 	
@@ -3670,8 +3828,8 @@ var Profile = function (id,name,applicationFrame) {
 	}
 	
 	this.onReceiveName = function(nameHandler) {
-		if(name != null) {
-			nameHandler(name);
+		if(userName != null) {
+			nameHandler(userName);
 		} else {
 			waitingForName.push(nameHandler);
 		}
@@ -3681,10 +3839,16 @@ var Profile = function (id,name,applicationFrame) {
 	
 	return this;
 };
+SEARCHAPP_CONSTANTS = {
+	SEARCH_PROFILE_PREFIX : "profile:",
+	SEARCH_MENU_ITEM_ID : "__seach_menu_id__"
+};
+
 var SearchApp = function(menu,applicationFrame,container) {
 	var self = this;
+	$.extend(this,SEARCHAPP_CONSTANTS);
 	
-	var menuList = menu.createNewMenuList("search","Searches");
+	var menuList = menu.createNewMenuList(this.SEARCH_MENU_ITEM_ID,"Search");
 	var apps = new Object();
 	var lastSearch = null;
 	
@@ -3712,21 +3876,25 @@ var SearchApp = function(menu,applicationFrame,container) {
 			tempName = name;
 		}
 		
-		menuList.addMenuItem(key,tempName);
-		apps[key] = new Profile(key,name,applicationFrame)
+		var searchAppKey = self.SEARCH_PROFILE_PREFIX + key;
+		menuList.addMenuItem(searchAppKey,tempName);
+		apps[searchAppKey] = new Profile(searchAppKey,key,name,
+				applicationFrame)
 			.onReceiveName(function(newName) {
-				menuList.renameMenuItem(key,newName);
+				menuList.renameMenuItem(searchAppKey,newName);
 			});	
 		
-		eWolf.trigger("select",[key]);
+		eWolf.selectApp(searchAppKey);
 	};
 	
-	function removeSearchMenuItem(key) {
-		if(apps[key] != null) {
-			apps[key].destroy();
-			delete apps[key];
-			apps[key] = null;
-			menuList.removeMenuItem(key);
+	function removeSearchMenuItem(searchKey) {
+		var searchAppKey = self.SEARCH_PROFILE_PREFIX + searchKey;
+		
+		if(apps[searchAppKey] != null) {
+			apps[searchAppKey].destroy();
+			delete apps[searchAppKey];
+			apps[searchAppKey] = null;
+			menuList.removeMenuItem(searchAppKey);
 		}
 	}
 	
@@ -3743,8 +3911,12 @@ var SearchApp = function(menu,applicationFrame,container) {
 		}
 		
 		if(key != null && key != "") {
-			if(key == eWolf.data("userID") || apps[key] != null) {
-				eWolf.trigger("select",[key]);
+			var searchAppKey = self.SEARCH_PROFILE_PREFIX + key;
+			
+			if(key == eWolf.userID) {
+				eWolf.selectApp(eWolf.MYPROFILE_APP_ID);
+			} else if(apps[searchAppKey] != null) {
+				eWolf.selectApp(searchAppKey);
 			} else {
 				removeLastSearch();
 				lastSearch = key;
@@ -3763,7 +3935,10 @@ var SearchApp = function(menu,applicationFrame,container) {
 	});
 	
 	eWolf.bind("select",function(event,eventId) {
-		if(eventId != lastSearch && eventId != "__newmessage__"+lastSearch) {
+		var lastSearchAppKey = self.SEARCH_PROFILE_PREFIX + lastSearch;
+		var lastSearchNewMailAppKey = NEWMAIL_CONSTANTS.NEWMAIL_APP_ID_PREFIX
+			+ lastSearchAppKey;
+		if(eventId != lastSearchAppKey && eventId != lastSearchNewMailAppKey) {
 			removeLastSearch();
 		}
 	});

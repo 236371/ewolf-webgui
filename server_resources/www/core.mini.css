@@ -72,12 +72,11 @@ button, input[type="button"]:hover {
 
 input[type="text"], input[type="password"] {
 	width:250px;
-	height:14px;
 	min-height:auto;
-	padding:10px 27px 6px 12px;
+	padding:6px 12px 6px 12px;
 	font-size:16px;
 	line-height:1;
-	color:#666;
+	color:#333;
 	background-color: /*#ccc*/ #ddd;
 	border:0;
 	transition:all .2s ease-in-out;
@@ -87,42 +86,38 @@ input[type="text"], input[type="password"] {
 }
 
 input[type="text"]:focus, input[type="password"]:focus {
-	color:#444;
+	color:black;
 	background-color:#fff;
 }
 
-input[type="text"]:focus::-webkit-input-placeholder,
-	input[type="password"]:focus::-webkit-input-placeholder {
-	color:#ccc;
+input::-webkit-input-placeholder, textarea::-webkit-input-placeholder {
+  color: #999;
+  font-style:italic;
+}
+input:-moz-placeholder, textarea:-moz-placeholder {
+  color: #999;
+  font-style:italic;
 }
 
-textarea {
-	min-height:auto;
-	padding:10px 27px 6px 12px;
-	font-size:16px;
-	line-height:1;
-	color:#666;
-	background-color: /*#ccc*/ #ddd;
+textarea, .textarea-div {
+	background-color:rgba(200,200,200,0.5);
 	border:0;
-	-webkit-border-radius:13px;
-	-moz-border-radius:13px;
-	-webkit-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
-	-moz-box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
-	-webkit-transition:all .2s ease-in-out;
-	-moz-transition:all .2s ease-in-out;
-	transition:all .2s ease-in-out;
-	border-radius:13px;	
-	box-shadow:inset 0 1px 2px rgba(0,0,0,.2);	
-	outline: none;
+	width:100%;
+	height:100%;
+	font-size:14px;
+	line-height:1;
+	color:#333;
+	padding:6px 6px 6px 6px;
+	border-radius:13px;
+	white-space: pre-wrap;
+	word-break:break-all;
+	word-wrap:break-word;
+	text-align:left;
 }
 
-textarea:focus {
-	color:#444;
-	background-color:#fff;
-}
-
-textarea:focus::-webkit-input-placeholder {
-	color:#ccc;
+textarea:focus, .textarea-div:focus {
+	color:black;
+	background-color:rgba(255,255,255,0.5);
 }
 
 .howling-back {
@@ -208,7 +203,8 @@ h1, h2
 	padding-left:10px;
 	font-size:30px;
 	font-weight:bold;
-	color:#af9c7c;
+/* 	color:#af9c7c; */
+	color:#555;
 	width:95%;
 }
 
@@ -240,8 +236,6 @@ h1, h2
 	padding-left: 10px;
 	vertical-align:middle;
 }
-/*** Inbox ***/
-
 .preMessageBox {
 	width:30px;
 	font-size:12px;
@@ -255,6 +249,7 @@ h1, h2
 }
 
 .messageBox {
+	text-align:left;
 	font-family:Georgia, Times, serif;
 	padding-left:15px;
 	padding-right:10px;
@@ -272,7 +267,6 @@ h1, h2
 
 .messageList {
 	list-style:none;
-	/*width:400px; */
 	font-family:Georgia, Times, serif;
 	font-size:22px;
 }
@@ -294,6 +288,10 @@ h1, h2
 	color:#FFFFFF;
 	background-image:url(hover.png);
 	background-repeat:repeat-x;
+}.loginFieldDescription {
+	vertical-align:text-top;
+	text-align:right;
+	padding-top:6px;
 }/*************************** Main Frame Style ********************/
 
 .applicationClass {
@@ -474,10 +472,20 @@ h1, h2
 	padding-bottom:50px;
 }
 
+.newMainTable {
+	height:100%;
+	padding-left:12px;
+	padding-top:5px;
+	padding-bottom:5px;
+	padding-right:12px;
+	margin-right:5px;
+}
+
 .newMailAlt {
 	vertical-align:text-top;
 	text-align:right;
 	padding-top:6px;
+	width:1%;
 }.postBox {
 	font-family:Georgia, Times, serif;
 	padding-left:15px;
@@ -653,10 +661,7 @@ h1, h2
 	width:750px;
 }
 
-.menuItemMessageClass {
-	background-color:white;
-	opacity: 0.8;
-	border-radius:13px;
+.logoutLink {
 	padding:1px 12px 1px 12px;	
 	font-size:12px;
 	color:black;
@@ -672,7 +677,19 @@ h1, h2
 	width:160px;
 	font-size:40px;
 	font-weight:bold;
-	color:#af9c7c;
+	color:black;
+}
+
+.main-eWolf-title A:link {
+	text-decoration: none;	
+	color:black;
+}
+
+.main-eWolf-title A:visited {
+	color:black;
+}
+.main-eWolf-title A:active {
+	color:black;
 }
 
 .title-bar {
