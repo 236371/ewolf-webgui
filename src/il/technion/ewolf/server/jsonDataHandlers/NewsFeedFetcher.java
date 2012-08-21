@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -102,9 +103,9 @@ public class NewsFeedFetcher implements JsonDataHandler {
 	}
 	
 	public static class NewsFeedResponse extends EWolfResponse {
-		public List<PostData> mailList;
+		public Set<PostData> mailList;
 		
-		public NewsFeedResponse(List<PostData> postList) {
+		public NewsFeedResponse(Set<PostData> postList) {
 			this.mailList = postList;
 		}
 
@@ -161,7 +162,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 				jsonReqParams.olderThan));
 	}
 
-	private List<PostData> filterPosts(List<Post> posts, Integer filterNumOfPosts,
+	private Set<PostData> filterPosts(List<Post> posts, Integer filterNumOfPosts,
 			Long filterFromDate, Long filterToDate) {
 		List<PostData> lst = new ArrayList<PostData>();
 		for (Post post: posts) {
@@ -189,7 +190,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		if (filterNumOfPosts != null && lst.size() > filterNumOfPosts) {
 			lst = lst.subList(0, filterNumOfPosts);
 		}
-		return lst;
+		return new TreeSet<PostData>(lst);
 	}
 
 	private List<Post> fetchPostsForWolfpack(String socialGroupName) throws FileNotFoundException {
@@ -242,4 +243,3 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return posts;
 	}
 }
-//TODO set instead of list for posts
