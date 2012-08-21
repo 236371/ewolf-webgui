@@ -53,6 +53,10 @@ var eWolf = new function() {
 	};
 	
 	this.getUserInformation = function () {
+		if(self.loginApp) {
+			self.loginApp.destroy();
+		}
+		
 		var responseHandler = new ResponseHandler("profile",
 				["id","name"]);
 		
@@ -68,10 +72,6 @@ var eWolf = new function() {
 			
 			self.userID = data.id;
 			self.userName = data.name;
-			
-			if(self.loginApp) {
-				self.loginApp.destroy();
-			}
 				
 			self.createMainApps();
 		}
@@ -121,8 +121,8 @@ var eWolf = new function() {
 			
 			var found = false;
 			
-			$.each($(self).data("events").select, function(i,handler) {
-				if(handler.namespace == selected) {
+			$.each($(self).data("events").select, function(i,handler) {				
+				if(handler.type == "select" && handler.namespace == selected) {
 					found = true;
 					return false;
 				}
@@ -157,7 +157,7 @@ var eWolf = new function() {
 			window.location.hash = newHash;
 		} else {
 			self.onHashChange();
-		}				
+		}
 	};
 	
 	this.bind = function (arg0,arg1) {
@@ -379,7 +379,7 @@ var Application = function(id,container) {
 function CreateTimestampBox(timestamp) {	
 	return $("<span/>").addClass("timestampBox")
 		.append(new Date(timestamp).toString(DATE_FORMAT));
-}function CreateUserBox(id,name) {
+}function CreateUserBox(id,name,showID) {
 	var link = $("<a/>").attr({
 		"style": "width:1%;",
 		"class": "selectableBox",
@@ -388,12 +388,31 @@ function CreateTimestampBox(timestamp) {
 		eWolf.trigger("search",[id,name]);
 	});
 	
+	var idBox = null;
+	
+	if(showID) {
+		idBox = $("<span/>")
+			.addClass("idBox");
+	}
+	
+	function fillInformation() {
+		link.attr({
+			"title": id
+		}).text(name);
+		
+		if(idBox) {
+			idBox.html(id).appendTo(link);
+		}		
+	}
+	
 	if (id == null && name != null) {
 		id = eWolf.wolfpacks.getFriendID(name);
+		if(!id) {
+			return null;
+		}
 	} else if (id != null && name == null) {
 		name = eWolf.wolfpacks.getFriendName(id);
-		if(name == null) {
-			name = id;
+		if(!name) {			
 			var request = new PostRequestHandler(id,"/json",0).request({
 						profile: {
 							userID: id
@@ -402,14 +421,14 @@ function CreateTimestampBox(timestamp) {
 					new ResponseHandler("profile",["name"],
 							function(data, textStatus, postData) {
 						name = data.name;
-						link.text(name);
+						fillInformation();
 					}).getHandler());
 		}
 	} else if (id == null && name == null) {
 		return null;
-	}
+	} 
 	
-	link.text(name);
+	fillInformation();	
 
 	return link;
 }function CreateWolfpackBox(name) {
@@ -816,18 +835,20 @@ $.fn.spin = function(opts) {
 	    }	    
 	});
 	
-	function onSelectSendTo(event,ui) {		
-		thisObj.addTagByQuery(ui.item.label,true);
-		return false;
-	}
-	
-	function updateQuery (id) {	
+	query.bind('input propertychange',function() {
 		if(query.val() == "") {
 			addBtn.hide(200);
 		} else {
 			addBtn.show(200);
 		}
-		
+	});
+	
+	function onSelectSendTo(event,ui) {		
+		thisObj.addTagByQuery(ui.item.label,true);
+		return false;
+	}
+	
+	function updateQuery (id) {			
 		if(!allowMultipleDestinations) {
 			if(! thisObj.tagList.match().isEmpty()) {
 				queryBox.hide();
@@ -1562,7 +1583,8 @@ var Wolfpacks = function (menuList,applicationFrame) {
 	
 	var wolfpacksApps = {},
 		friendsMapByName = {},
-		friendsMapByID = {};
+		friendsMapByID = {},
+		UID = 100;
 	
 	this.wolfpacksArray = [];
 	this.friendsNameArray = [];
@@ -1593,7 +1615,9 @@ var Wolfpacks = function (menuList,applicationFrame) {
 	
 	this.addWolfpack = function (pack) {
 		if(wolfpacksApps[pack] == null) {
-			var packID = self.WOLFPACK_APP_PREFIX+pack;
+			var packID = self.WOLFPACK_APP_PREFIX + pack + "_" + UID;
+			UID += 1;
+			packID = packID.replace(/[^a-zA-Z0-9_:]/g,'_');
 			menuList.addMenuItem(packID,pack);			
 			var app = new WolfpackPage(packID,pack,applicationFrame);			
 			
@@ -3145,6 +3169,8 @@ var SignUpArea = function(id) {
 	
 	var passwordError = $("<span/>").addClass("errorArea");
 	
+	var signUpError = $("<span/>").addClass("errorArea");
+	
 	var base = $("<table/>");
 	
 	var fullNameRaw = $("<tr/>").appendTo(base);
@@ -3182,11 +3208,26 @@ var SignUpArea = function(id) {
 		.append(verifyPassword)
 		.appendTo(passwordRaw);
 	
+	var signUpErrorRow = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("loginFieldDescription")
+		.appendTo(signUpErrorRow);	
+	$("<td/>")
+		.append(signUpError)
+		.appendTo(signUpErrorRow);
+	
 	signup.appendAtBottomPart(base);
 	
 	function handleSignUp(data, textStatus, postData) {
+		eWolf.sendToProfile = {};
 		eWolf.getUserInformation();
-		self.clearAll();
+	}
+	
+	function errorHandler(data, textStatus, postData) {
+		signUpError.html(data.errorMessage);
+	}
+	
+	function badRequestHandler(data, textStatus, postData) {
+		signUpError.html("Server Error. Could not sign up.");
 	}
 	
 	signup.addFunction("Sign Up",function() {		
@@ -3196,14 +3237,18 @@ var SignUpArea = function(id) {
 				password.val() != verifyPassword.val()) {
 			self.showErrors();
 		} else {
+			var handler = new ResponseHandler("createAccount",[])
+				.success(handleSignUp)
+				.error(errorHandler)
+				.badResponseHandler(badRequestHandler);
+			
 			new PostRequestHandler(id, "/json", 0).request({
 				createAccount : {
 					name : fullName.val(),
 					username : username.val(),
 					password : password.val()
 				}
-			}, new ResponseHandler("createAccount", 
-					[],handleSignUp).getHandler());
+			}, handler.getHandler());
 		}
 	});
 	
@@ -3694,8 +3739,8 @@ var Profile = function (id,userID,userName,applicationFrame) {
 	}
 	
 	function onProfileFound() {		
-		topTitle.setTitle(CreateUserBox(userID,userName));
-		idBox.html(userID);
+		topTitle.setTitle(CreateUserBox(userID,userName,true));
+		//idBox.html(userID);
 		
 		topTitle.showAll();
 		
@@ -3862,6 +3907,14 @@ var SearchApp = function(menu,applicationFrame,container) {
 		}
 	});
 	
+	query.bind('input propertychange',function() {
+		 if(query.val() == "") {
+	    	searchBtn.hide(200);
+	    } else {
+	    	searchBtn.show(200);
+	    }
+	});
+	
 	query.keyup(function(event){
 	    if(event.keyCode == 13 && query.val() != ""){
 //	    	if(event.shiftKey) {
@@ -3871,13 +3924,7 @@ var SearchApp = function(menu,applicationFrame,container) {
 //	    	}
 	    	
 	    	searchBtn.click();
-	    }
-	    
-	    if(query.val() == "") {
-	    	searchBtn.hide(200);
-	    } else {
-	    	searchBtn.show(200);
-	    }
+	    }   
 	});
 		
 	

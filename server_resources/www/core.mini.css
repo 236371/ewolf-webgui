@@ -236,6 +236,14 @@ h1, h2
 	padding-left: 10px;
 	vertical-align:middle;
 }
+
+.idBox {
+	font-size:10px;
+	color:#444;
+	font-style:italic;
+	font-weight:normal !important;
+	padding-left:5px;
+}
 .preMessageBox {
 	width:30px;
 	font-size:12px;
@@ -422,11 +430,16 @@ h1, h2
 	min-height:0!important;
 	background-color:rgba(0,0,0,0.9);
 	color:white;
+	
 	margin-right:2px;
+	margin-top:2px;
+	
 	padding-right:2px;
-	padding-left:2px;
+	padding-left:0px;
+	
 	position:relative;
-	top:-5px;
+	width:20px;
+	height:20px;	
 }
 
 .refreshButton {
@@ -531,13 +544,6 @@ h1, h2
 .senderBox:hover {
 	color:blue;
 	text-decoration:underline;
-}
-
-.idBox {
-	font-size:10px;
-	color:#444;
-	font-style:italic;
-	padding-left:5px;
 }.TagClass {
 	background-color:#999;
 	color:white;
