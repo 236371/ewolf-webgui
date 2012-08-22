@@ -95,7 +95,7 @@ var eWolf = new function() {
 		self.logout = new Logout("Logout",eWolf.topBarFrame);
 		
 		self.wolfpacks = new Wolfpacks(self.wolfpacksMenuList,self.applicationFrame);
-		self.wolfpacks.addFriend(self.userID, self.userName);
+		self.wolfpacks.addKnownUsers(self.userID, self.userName);
 		
 		self.mainApps.addMenuItem(self.MYPROFILE_APP_ID,"My Profile");
 		self.profileApp = new Profile(self.MYPROFILE_APP_ID,self.userID,
@@ -252,7 +252,6 @@ var Application = function(id,container) {
 	};
 	
 	this.select = function() {
-		//eWolf.selectApp(id);
 		eWolf.trigger("select",[id]);
 		return self;
 	};
@@ -380,63 +379,62 @@ function CreateTimestampBox(timestamp) {
 	return $("<span/>").addClass("timestampBox")
 		.append(new Date(timestamp).toString(DATE_FORMAT));
 }function CreateUserBox(id,name,showID) {
+	if(id == null) {
+		return null;
+	}
+	
 	var link = $("<a/>").attr({
 		"style": "width:1%;",
-		"class": "selectableBox",
-		"title": id
+		"class": "selectableBox selectableBoxHovered",
 	}).click(function() {
-		eWolf.trigger("search",[id,name]);
+			eWolf.trigger("search",[id,name]);
 	});
+	
+	var nameBox = $("<span/>").appendTo(link);
 	
 	var idBox = null;
 	
 	if(showID) {
 		idBox = $("<span/>")
-			.addClass("idBox");
+			.addClass("idBox")
+			.appendTo(link);
+		
+		nameBox.addClass("selectableBoxHovered");
+		link.removeClass("selectableBoxHovered");
 	}
 	
 	function fillInformation() {
-		link.attr({
+		nameBox.attr({
 			"title": id
 		}).text(name);
 		
 		if(idBox) {
-			idBox.html(id).appendTo(link);
+			idBox.html(id);
 		}		
 	}
 	
-	if (id == null && name != null) {
-		id = eWolf.wolfpacks.getFriendID(name);
-		if(!id) {
-			return null;
+	if (!name) {
+		var fullDescID = eWolf.wolfpacks.getUserFromFullDescription(id);
+		
+		if(fullDescID) {
+			id = fullDescID;
 		}
-	} else if (id != null && name == null) {
-		name = eWolf.wolfpacks.getFriendName(id);
-		if(!name) {			
-			var request = new PostRequestHandler(id,"/json",0).request({
-						profile: {
-							userID: id
-						}
-					  },
-					new ResponseHandler("profile",["name"],
-							function(data, textStatus, postData) {
-						name = data.name;
-						fillInformation();
-					}).getHandler());
-		}
-	} else if (id == null && name == null) {
-		return null;
-	} 
+		
+		name = eWolf.wolfpacks.getUserName(id,function(receivedName) {
+			name = receivedName;
+			fillInformation();	
+		});
+	}
 	
 	fillInformation();	
 
 	return link;
 }function CreateWolfpackBox(name) {
-	var packAppID = eWolf.wolfpacks.WOLFPACK_APP_PREFIX + name;
+	var packAppID = eWolf.wolfpacks.getWolfpackAppID(name);
 	
 	return $("<span/>").attr({
 		"style": "width:1%;",
-		"class": "selectableBox"
+		"class": "selectableBox selectableBoxHovered"
 	}).text(name).click(function() {
 		eWolf.selectApp(packAppID);
 	});
@@ -892,9 +890,10 @@ $.fn.spin = function(opts) {
 
 var FriendsQueryTagList = function (minWidth) {
 	function sendToFuncReplace(query) {
-		var id = eWolf.wolfpacks.getFriendID(query);
-		
-		if(id == null) {
+		var id = eWolf.wolfpacks.getUserFromFullDescription(query);
+		if(id) {
+			query = eWolf.wolfpacks.getUserName(id);
+		} else {
 			id = query;
 			query = null;
 		}
@@ -906,7 +905,7 @@ var FriendsQueryTagList = function (minWidth) {
 	}
 	
 	return new QueryTagList(minWidth,"Type user name or ID...",
-			eWolf.wolfpacks.friendsNameArray,true,sendToFuncReplace);
+			eWolf.wolfpacks.knownUsersFullDescriptionArray,true,sendToFuncReplace);
 };
 
 var WolfpackQueryTagList = function (minWidth) {
@@ -1582,12 +1581,12 @@ var Wolfpacks = function (menuList,applicationFrame) {
 	var request = new PostRequestHandler("eWolf","/json",0);
 	
 	var wolfpacksApps = {},
-		friendsMapByName = {},
-		friendsMapByID = {},
+		knownUsersMapByID = {},
 		UID = 100;
 	
 	this.wolfpacksArray = [];
-	this.friendsNameArray = [];
+	this.knownUsersFullDescriptionArray = [];
+	this.knownUsersIDArray = [];
 	
 	request.register(function() {
 		return {
@@ -1609,7 +1608,7 @@ var Wolfpacks = function (menuList,applicationFrame) {
 	
 	function handleMembers(data, textStatus, postData) {
 		$.each(data.membersList, function(i,userObj){
-			self.addFriend(userObj.id,userObj.name);
+			self.addKnownUsers(userObj.id,userObj.name);
 		});
 	}
 	
@@ -1628,6 +1627,15 @@ var Wolfpacks = function (menuList,applicationFrame) {
 		return self;
 	};
 	
+	this.getWolfpackAppID = function(pack) {
+		var app = wolfpacksApps[pack];
+		if(app) {
+			return app.getId();
+		} else {
+			return null;
+		}
+	};
+	
 	this.removeWolfpack = function(pack) {
 		if(wolfpacksApps[pack] != null) {
 			menuList.removeMenuItem("__pack__"+pack);
@@ -1643,34 +1651,44 @@ var Wolfpacks = function (menuList,applicationFrame) {
 		return self;
 	};
 	
-	this.addFriend = function(userID,userName) {
-		if(friendsMapByName[userName] == null) {
-			friendsMapByName[userName] = userID;
-			friendsMapByID[userID] = userName;
-			self.friendsNameArray.push(userName);
+	this.addKnownUsers = function(userID,userName) {
+		if(knownUsersMapByID[userID] == null) {
+			knownUsersMapByID[userID] = userName;
+			var fullDesc = userName+" ("+userID+")";
+			self.knownUsersFullDescriptionArray.push(fullDesc);
+			self.knownUsersIDArray.push(userID);
+			
+			eWolf.trigger("foundNewUser",[userID,userName,fullDesc]);
 		}		
 		
 		return self;
 	};
 	
-	this.removeFriend = function(userID,userName) {
-		friendsMapByName[userName] = null;
-		friendsMapByID[userID] = null;
-		
-		var idx = self.friendsNameArray.indexOf(userName);
+	this.getUserFromFullDescription = function (fullDescription) {
+		var idx = self.knownUsersFullDescriptionArray.indexOf(fullDescription);
 		if(idx != -1){
-			self.friendsNameArray.splice(idx, 1);
+			return self.knownUsersIDArray[idx];
+		} else {
+			return null;
+		}
+	};
+	
+	this.getUserName = function (userID, onReady) {
+		var itsName = knownUsersMapByID[userID];
+		if(!itsName && onReady) {
+			var request = new PostRequestHandler(userID,"/json",0).request({
+						profile: {
+							userID: userID
+						}
+					  },
+					new ResponseHandler("profile",["name"],
+							function(data, textStatus, postData) {
+						self.addKnownUsers(userID,data.name);
+						onReady(data.name);
+					}).getHandler());
 		}
 		
-		return self;
-	};
-	
-	this.getFriendID = function (userName) {
-		return friendsMapByName[userName];
-	};
-	
-	this.getFriendName = function (userID) {
-		return friendsMapByID[userID];
+		return itsName;
 	};
 	
 	this.requestWolfpacks = function(onReady) {
@@ -3644,7 +3662,7 @@ var NewMail = function(callerID,applicationFrame,options,
 	return this;
 };
 
-var NewMessage = function(id,applicationFrame,sendToID,sendToName) {	
+var NewMessage = function(id,applicationFrame,sendToID) {
 	function createNewMessageRequestObj(to,msg) {
 		return {
 			sendMessage: {
@@ -3657,7 +3675,7 @@ var NewMessage = function(id,applicationFrame,sendToID,sendToName) {
 	NewMail.call(this,id,applicationFrame,{
 			TITLE : "New Message"
 		},createNewMessageRequestObj,"sendMessage",false,
-		sendToName,new FriendsQueryTagList(300));
+		sendToID,new FriendsQueryTagList(300));
 	
 	return this;
 };
@@ -3706,15 +3724,12 @@ var Profile = function (id,userID,userName,applicationFrame) {
 	
 	var topTitle = new TitleArea("Searching profile...").appendTo(this.frame);
 	
-	var idBox = $("<span/>").addClass("idBox");
-	topTitle.appendAtTitleTextArea(idBox);
-	
 	var wolfpacksContainer = new CommaSeperatedList("Wolfpakcs");
 	topTitle.appendAtBottomPart(wolfpacksContainer.getList());
 	
 	if(userID != eWolf.userID) {
 		topTitle.addFunction("Send message...", function (event) {
-			new NewMessage(id,applicationFrame,userID,userName).select();
+			new NewMessage(id,applicationFrame,userID).select();
 		});
 		
 		topTitle.addFunction("Add to wolfpack...", function () {
@@ -3740,7 +3755,7 @@ var Profile = function (id,userID,userName,applicationFrame) {
 	
 	function onProfileFound() {		
 		topTitle.setTitle(CreateUserBox(userID,userName,true));
-		//idBox.html(userID);
+		eWolf.wolfpacks.addKnownUsers(userID,userName);
 		
 		topTitle.showAll();
 		
@@ -3756,7 +3771,6 @@ var Profile = function (id,userID,userName,applicationFrame) {
 	
 	function onProfileNotFound() {
 		topTitle.setTitle("Profile not found");
-		idBox.html();
 		
 		topTitle.hideAll();
 		
@@ -3825,25 +3839,41 @@ var SearchApp = function(menu,applicationFrame,container) {
 		"placeholder" : "Search",
 		"autocomplete" : "off",
 		"spellcheck" : "false"
+	}).css({
+		"width" : "400px"
+	}).autocomplete({
+		source: eWolf.wolfpacks.knownUsersFullDescriptionArray,
+		select: onSelectAutocomplete
 	}).appendTo(this.frame);
+	
+	eWolf.bind("foundNewUser",function(event,id,name,fullDescription) {
+		query.autocomplete("destroy").autocomplete({
+			source: eWolf.wolfpacks.knownUsersFullDescriptionArray,
+			select: onSelectAutocomplete
+		});
+	});
+	
+	function onSelectAutocomplete(event,ui) {
+		self.search(ui.item.label);
+		return false;
+	}
 
 	var searchBtn = $("<input/>").attr({
 		"type" : "button",
 		"value" : "Search"
 	}).appendTo(this.frame).hide();
 	
-	function addSearchMenuItem(key,name) {
+	function addSearchMenuItem(id,name) {
 		var tempName;
 		if(name == null) {
-			tempName = "Search: "+key;
+			tempName = "Search: " + id;
 		} else {
 			tempName = name;
 		}
 		
-		var searchAppKey = self.SEARCH_PROFILE_PREFIX + key;
+		var searchAppKey = self.SEARCH_PROFILE_PREFIX + id;
 		menuList.addMenuItem(searchAppKey,tempName);
-		apps[searchAppKey] = new Profile(searchAppKey,key,name,
-				applicationFrame)
+		apps[searchAppKey] = new Profile(searchAppKey,id,name,applicationFrame)
 			.onReceiveName(function(newName) {
 				menuList.renameMenuItem(searchAppKey,newName);
 			});	
@@ -3874,7 +3904,24 @@ var SearchApp = function(menu,applicationFrame,container) {
 			key = query.val();
 		}
 		
-		if(key != null && key != "") {
+		if(name == "") {
+			name == null;
+		}
+		
+		if(key != null && key != "") {				
+			if(!name) {
+				name = eWolf.wolfpacks.getUserName(key);
+			}
+
+			if(!name) {
+				var fullDescID = eWolf.wolfpacks.getUserFromFullDescription(key);
+				
+				if(fullDescID) {
+					key = fullDescID;
+					name = eWolf.wolfpacks.getUserName(key);
+				}
+			}
+			
 			var searchAppKey = self.SEARCH_PROFILE_PREFIX + key;
 			
 			if(key == eWolf.userID) {
@@ -3884,9 +3931,6 @@ var SearchApp = function(menu,applicationFrame,container) {
 			} else {
 				removeLastSearch();
 				lastSearch = key;
-				if(name == "") {
-					name = null;
-				}
 				addSearchMenuItem(key,name);
 			}			
 		}
@@ -4027,7 +4071,7 @@ var SearchApp = function(menu,applicationFrame,container) {
 			members.removeAll();
 
 			$.each(list, function(i, member) {
-				members.addItem(CreateUserBox(member.id, member.name),member.name);
+				members.addItem(CreateUserBox(member.id, member.name),member.id);
 			});
 		}
 		
