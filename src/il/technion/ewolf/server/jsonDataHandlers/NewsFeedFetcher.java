@@ -1,7 +1,6 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
 import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
-import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
 import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
 import il.technion.ewolf.ewolf.SocialNetwork;
 import il.technion.ewolf.ewolf.WolfPack;
@@ -150,9 +149,6 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_BAD_REQUEST, "Illegal user ID.");
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			return new NewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_NOT_FOUND, "User with given ID wasn't found.");
@@ -193,7 +189,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return new TreeSet<PostData>(lst);
 	}
 
-	private List<Post> fetchPostsForWolfpack(String socialGroupName) throws FileNotFoundException {
+	private List<Post> fetchPostsForWolfpack(String socialGroupName) {
 		Set<Profile> profiles = new HashSet<Profile>();
 		List<WolfPack> wolfpacks = new ArrayList<WolfPack>();
 
@@ -217,7 +213,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return fetchPostsForProfiles(profiles);
 	}
 
-	private List<Post> fetchPostsForUser(String strUid) throws FileNotFoundException, ProfileNotFoundException {
+	private List<Post> fetchPostsForUser(String strUid) throws ProfileNotFoundException {
 		Profile profile;
 		if (strUid==null) {
 			profile = socialFS.getCredentials().getProfile();
@@ -231,12 +227,20 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		return fetchPostsForProfiles(profiles);
 	}
 
-	private List<Post> fetchPostsForProfiles(Set<Profile> profiles) throws FileNotFoundException {
+	private List<Post> fetchPostsForProfiles(Set<Profile> profiles) {
 		List<Post> posts = new ArrayList<Post>();
 		for (Profile profile: profiles) {
 			try {
 				posts.addAll(snet.getWall(profile).getAllPosts());
 			} catch (WallNotFound e) {
+				System.out.println("User isn't allowed to view posts of " +
+						profile.getName() + ": " + profile.getUserId());
+				//XXX
+				e.printStackTrace();
+			} catch (FileNotFoundException e) {
+				System.out.println("User isn't allowed to view posts of " +
+						profile.getName() + ": " + profile.getUserId());
+				//XXX
 				e.printStackTrace();
 			}
 		}		

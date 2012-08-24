@@ -94,9 +94,9 @@ public class EwolfServer {
 
 		while (configurations.username == null || configurations.password == null
 											   || configurations.name == null) {
+			System.out.println("Username and/or password and/or name weren't provided.");
 			this.configurations = ServerResources.getConfigurations(config);
 			Thread.sleep(1000);
-			System.out.println("Username and/or password and/or name weren't provided.");
 		}
 
 		this.ewolfInjector = createInjector();
@@ -112,12 +112,12 @@ public class EwolfServer {
 		ewolfConnector.bind();
 		ewolfConnector.start();
 
+		//FIXME port for testing
+		kbr.join(configurations.kbrURIs);
+
 		EwolfAccountCreator accountCreator =
 				ewolfInjector.getInstance(EwolfAccountCreator.class);
 		accountCreator.create();
-
-		//FIXME port for testing
-		kbr.join(configurations.kbrURIs);
 
 		new Thread(ewolfInjector.getInstance(PokeMessagesAcceptor.class),
 				"PokeMessagesAcceptorThread").start();
@@ -167,7 +167,7 @@ public class EwolfServer {
 
 				new SimpleDHTModule()
 					//TODO temporary property - replicating bug workaround
-					.setProperty("dht.storage.checkInterval", ""+TimeUnit.HOURS.toMillis(1)),
+					.setProperty("dht.storage.checkInterval", ""+TimeUnit.HOURS.toMillis(3)),
 					
 				new ChunKeeperModule(),
 				
