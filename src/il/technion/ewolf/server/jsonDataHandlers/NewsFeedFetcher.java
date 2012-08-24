@@ -233,15 +233,19 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			try {
 				posts.addAll(snet.getWall(profile).getAllPosts());
 			} catch (WallNotFound e) {
-				System.out.println("User isn't allowed to view posts of " +
-						profile.getName() + ": " + profile.getUserId());
+				Profile user = socialFS.getCredentials().getProfile();
+				System.err.println("User " + user.getName() + ": " + user.getUserId() +
+						" isn't allowed to view posts of " +
+						profile.getName() + ": " + profile.getUserId() + ".");
 				//XXX
-				e.printStackTrace();
+				//e.printStackTrace();
 			} catch (FileNotFoundException e) {
-				System.out.println("User isn't allowed to view posts of " +
-						profile.getName() + ": " + profile.getUserId());
+				Profile user = socialFS.getCredentials().getProfile();
+				System.err.println("User " + user.getName() + ": " + user.getUserId() +
+						" isn't allowed to view posts of " +
+						profile.getName() + ": " + profile.getUserId() + ".");
 				//XXX
-				e.printStackTrace();
+				//e.printStackTrace();
 			}
 		}		
 		return posts;
