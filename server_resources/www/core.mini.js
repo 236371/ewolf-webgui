@@ -3517,15 +3517,23 @@ var NewMail = function(callerID,applicationFrame,options,
 	
 	eWolf.bind("refresh."+id,function(event,eventID) {
 		if(eventID == id) {
-			if(sendTo != null) {				
-				window.setTimeout(function () {
-					messageText.focus();
-				}, 0);				
-			} else {
-				window.setTimeout(function () {
-					sendToQuery.focus();
-				}, 0);
-			}
+			window.setTimeout(function () {
+				messageText.focus();
+			}, 0);
+
+///////////////////////////////////////////////////////////////////////////////			
+//	Changed due to Issue #3 (Focus on the content in new mail)
+///////////////////////////////////////////////////////////////////////////////
+//			if(sendTo != null) {				
+//				window.setTimeout(function () {
+//					messageText.focus();
+//				}, 0);				
+//			} else {
+//				window.setTimeout(function () {
+//					sendToQuery.focus();
+//				}, 0);
+//			}
+///////////////////////////////////////////////////////////////////////////////
 		}
 	});
 	
