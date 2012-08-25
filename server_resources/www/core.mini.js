@@ -22,9 +22,7 @@ var eWolf = new function() {
 	this.userID = null;
 	this.userName = null;
 	
-	this.sendToProfile = {
-			userID: "THIS IS AN ERROR"
-	};
+	this.sendToProfile = {};
 	
 	this.init = function() {
 		$(window).bind('hashchange', self.onHashChange);
