@@ -81,6 +81,14 @@ public class EwolfServer {
 					.setProperty("openkad.net.udp.port", port));
 	}
 
+	private boolean isReady = false;
+	public synchronized boolean isServerReady() {
+		return isReady;
+	}
+	private synchronized void serverIsReady() {
+		isReady = true;
+	}
+
 	public void initEwolf() throws IOException, ConfigurationException, Exception {
 		this.configurations = ServerResources.getConfigurations(config);
 
@@ -89,14 +97,13 @@ public class EwolfServer {
 		serverConnector = serverInjector.getInstance(HttpConnector.class);
 		serverConnector.bind();
 		registerConnectorHandlers();
-		jsonHandler.addHandler("createAccount", new CreateAccountHandler(config));
+		jsonHandler.addHandler("createAccount", new CreateAccountHandler(this, config));
 		serverConnector.start();
 
 		while (configurations.username == null || configurations.password == null
 											   || configurations.name == null) {
 			System.out.println("Username and/or password and/or name weren't provided.");
 			this.configurations = ServerResources.getConfigurations(config);
-			Thread.sleep(1000);
 		}
 
 		this.ewolfInjector = createInjector();
@@ -123,6 +130,7 @@ public class EwolfServer {
 				"PokeMessagesAcceptorThread").start();
 		addEwolfHandlers();
 
+		serverIsReady();
 		System.out.println("Server started.");
 	}
 	
