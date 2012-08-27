@@ -77,7 +77,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		String senderName;
 		Long timestamp;
 		String mail;
-		
+
 		PostData(String postID, String senderID, String senderName, Long timestamp, String post) {
 			this.itemID = postID;
 			this.senderID = senderID;
@@ -100,10 +100,10 @@ public class NewsFeedFetcher implements JsonDataHandler {
 					", mail: \"" + mail + "\" )";
 		}
 	}
-	
+
 	public static class NewsFeedResponse extends EWolfResponse {
 		public Set<PostData> mailList;
-		
+
 		public NewsFeedResponse(Set<PostData> postList) {
 			this.mailList = postList;
 		}
@@ -131,7 +131,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_BAD_REQUEST);
 		}
-		
+
 		List<Post> posts;
 		if (jsonReqParams.newsOf == null) {
 			return new NewsFeedResponse(RES_BAD_REQUEST,
@@ -182,7 +182,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		}
 		//sort by timestamp
 		Collections.sort(lst);
-		
+
 		if (filterNumOfPosts != null && lst.size() > filterNumOfPosts) {
 			lst = lst.subList(0, filterNumOfPosts);
 		}
@@ -209,7 +209,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 		for (WolfPack w : wolfpacks) {
 			profiles.addAll(w.getMembers());
 		}
-		
+
 		return fetchPostsForProfiles(profiles);
 	}
 

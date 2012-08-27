@@ -21,7 +21,7 @@ public class DownloadFileFromSFS {
 		this.socialFS = socialFS;
 		this.userIDFactory = userIDFactory;
 	}
-	
+
 	public Serializable handleData(String userID, String fileName)
 			throws ProfileNotFoundException, FileNotFoundException {
 		Profile profile;

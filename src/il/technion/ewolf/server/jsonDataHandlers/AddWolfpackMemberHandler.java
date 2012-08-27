@@ -75,7 +75,7 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 		}
 
 		if (jsonReqParams.wolfpackNames == null || jsonReqParams.wolfpackNames.isEmpty() || 
-					jsonReqParams.userIDs==null || jsonReqParams.userIDs.isEmpty()) {
+				jsonReqParams.userIDs==null || jsonReqParams.userIDs.isEmpty()) {
 			return new AddWolfpackMemberResponse(RES_BAD_REQUEST, 
 					"Must specify both wolfpack name and user ID.");
 		}

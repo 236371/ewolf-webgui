@@ -24,7 +24,7 @@ public class JarResourceHandler implements HttpRequestHandler {
 		System.out.println("\t[JarResourceHandler] requesting: " + reqUri);
 		//TODO move adding general headers to response intercepter
 		response.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
-		
+
 		if (reqUri.contains("..")) {
 			response.setStatusCode(HttpStatus.SC_FORBIDDEN);
 			return;
@@ -33,7 +33,7 @@ public class JarResourceHandler implements HttpRequestHandler {
 		if(reqUri.equals("/")) {
 			reqUri = "/home.html";
 		}
-		
+
 		String path = "/www" + reqUri;
 		InputStream is = getResourceAsStream(path);
 		if (is == null) {
@@ -42,7 +42,7 @@ public class JarResourceHandler implements HttpRequestHandler {
 			is = getResourceAsStream(path);
 			if (is == null) return;
 		}
-		
+
 		setResponseEntity(response, is, path);
 	}
 

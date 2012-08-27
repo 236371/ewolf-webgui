@@ -49,8 +49,8 @@ public class WolfpackMembersFetcherTest {
 
 	@SuppressWarnings("unused")
 	private class JsonReqWolfpackMembersParams {
-//		If wolfpackName field wasn't sent with the request then
-//		the response list will contain all the members of all the "logged in" user wolfpacks
+		//		If wolfpackName field wasn't sent with the request then
+		//		the response list will contain all the members of all the "logged in" user wolfpacks
 		String wolfpackName;
 	}
 	@After
@@ -76,63 +76,63 @@ public class WolfpackMembersFetcherTest {
 		for (int i=0; i < 5; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
-						.setProperty("openkad.keyfactory.keysize", "20")
-						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
-						
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
+
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
-					
+					.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
+
 					new SimpleDHTModule(),
-						
+
 					new ChunKeeperModule(),
-					
+
 					new StashModule(),
-						
+
 					new SocialFSCreatorModule()
-						.setProperty("socialfs.user.username", "user_"+i)
-						.setProperty("socialfs.user.password", "1234"),
-					
+					.setProperty("socialfs.user.username", "user_"+i)
+					.setProperty("socialfs.user.password", "1234"),
+
 					new SocialFSModule(),
-					
+
 					new EwolfAccountCreatorModule(),
-					
+
 					new EwolfModule()
-			);
+					);
 			injectors.add(injector);
 		}
-		
+
 		for (Injector injector : injectors) {
-			
+
 			// start the Keybased routing
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
-			
+
 			// bind the http connector
 			HttpConnector connector = injector.getInstance(HttpConnector.class);
 			connector.bind();
 			connector.start();
-			
+
 			// bind the chunkeeper
 			ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
 			chnukeeper.bind();
 		}
-		
-		
+
+
 		for (int i=1; i < injectors.size(); ++i) {
 			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
-		
-		
+
+
 		for (Injector injector : injectors) {
 			System.out.println("creating...");
 			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 			accountCreator.create();
 			System.out.println("done\n");
-			
+
 		}
 		/*
 		for (Injector injector : injectors) {
@@ -140,9 +140,9 @@ public class WolfpackMembersFetcherTest {
 			SocialNetwork osn = injector.getInstance(SocialNetwork.class);
 			osn.login("1234");
 		}
-		*/
+		 */
 		Thread.sleep(1000);
-		
+
 		List<SocialFS> sfsList = new ArrayList<SocialFS>();
 		List<UserID> userIDList = new ArrayList<UserID>();
 		List<String> strUidListBefore = new ArrayList<String>();
@@ -153,7 +153,7 @@ public class WolfpackMembersFetcherTest {
 			strUidListBefore.add(i, userIDList.get(i).toString());
 			profileList.add(i, sfsList.get(i).findProfile(userIDList.get(i)));
 		}
-		
+
 		WolfPackLeader sgm1 = injectors.get(0).getInstance(WolfPackLeader.class);
 
 		//add all users to user0 friends
@@ -164,7 +164,7 @@ public class WolfpackMembersFetcherTest {
 			osn1Friends.addMember(profile);
 			wallReaders.addMember(profile);
 		}
-		
+
 		System.out.println(sgm1.getAllSocialGroups());
 
 		List<SocialMail> smList = new ArrayList<SocialMail>();
@@ -187,7 +187,7 @@ public class WolfpackMembersFetcherTest {
 		}
 		strUidListAfter.add(userIDList.get(0).toString());
 		Assert.assertTrue(CollectionUtils.isEqualCollection(strUidListBefore, strUidListAfter));
-		
+
 	}
 
 	@Test
@@ -195,63 +195,63 @@ public class WolfpackMembersFetcherTest {
 		for (int i=0; i < 5; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
-						.setProperty("openkad.keyfactory.keysize", "20")
-						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
-						
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
+
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
-					
+					.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
+
 					new SimpleDHTModule(),
-						
+
 					new ChunKeeperModule(),
-					
+
 					new StashModule(),
-						
+
 					new SocialFSCreatorModule()
-						.setProperty("socialfs.user.username", "user_"+i)
-						.setProperty("socialfs.user.password", "1234"),
-					
+					.setProperty("socialfs.user.username", "user_"+i)
+					.setProperty("socialfs.user.password", "1234"),
+
 					new SocialFSModule(),
-					
+
 					new EwolfAccountCreatorModule(),
-					
+
 					new EwolfModule()
-			);
+					);
 			injectors.add(injector);
 		}
-		
+
 		for (Injector injector : injectors) {
-			
+
 			// start the Keybased routing
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
-			
+
 			// bind the http connector
 			HttpConnector connector = injector.getInstance(HttpConnector.class);
 			connector.bind();
 			connector.start();
-			
+
 			// bind the chunkeeper
 			ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
 			chnukeeper.bind();
 		}
-		
-		
+
+
 		for (int i=1; i < injectors.size(); ++i) {
 			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
-		
-		
+
+
 		for (Injector injector : injectors) {
 			System.out.println("creating...");
 			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 			accountCreator.create();
 			System.out.println("done\n");
-			
+
 		}
 		/*
 		for (Injector injector : injectors) {
@@ -259,9 +259,9 @@ public class WolfpackMembersFetcherTest {
 			SocialNetwork osn = injector.getInstance(SocialNetwork.class);
 			osn.login("1234");
 		}
-		*/
+		 */
 		Thread.sleep(1000);
-		
+
 		List<SocialFS> sfsList = new ArrayList<SocialFS>();
 		List<UserID> userIDList = new ArrayList<UserID>();
 		List<String> strUidListBefore = new ArrayList<String>();
@@ -272,7 +272,7 @@ public class WolfpackMembersFetcherTest {
 			strUidListBefore.add(i, userIDList.get(i).toString());
 			profileList.add(i, sfsList.get(i).findProfile(userIDList.get(i)));
 		}
-		
+
 		WolfPackLeader sgm1 = injectors.get(0).getInstance(WolfPackLeader.class);
 
 		//add all users to user0 friends
@@ -286,7 +286,7 @@ public class WolfpackMembersFetcherTest {
 		for (int i=1; i<4; i++) {
 			osn1Friends.addMember(profileList.get(i));
 		}
-		
+
 		//System.out.println(sgm1.getAllSocialGroups());
 
 		List<SocialMail> smList = new ArrayList<SocialMail>();
@@ -316,7 +316,7 @@ public class WolfpackMembersFetcherTest {
 		strUidListAfter.add(userIDList.get(0).toString());
 		Assert.assertTrue(CollectionUtils.isEqualCollection(strUidListBefore, strUidListAfter));
 		Assert.assertEquals(obj1.getResult(), EWolfResponse.RES_SUCCESS);
-		
+
 		params = setWolfpackMembersParams("friends");
 		WolfpackMembersResponse obj2 = ((WolfpackMembersResponse)injectors.get(0).getInstance(WolfpackMembersFetcher.class).handleData(params));
 		Assert.assertEquals(obj2.getResult(), EWolfResponse.RES_SUCCESS);
@@ -329,6 +329,6 @@ public class WolfpackMembersFetcherTest {
 		strUid2ListBefore.add(userIDList.get(2).toString());
 		strUid2ListBefore.add(userIDList.get(3).toString());
 		Assert.assertTrue(CollectionUtils.isEqualCollection(strUid2ListBefore, strUidList2After));
-		
+
 	}
 }

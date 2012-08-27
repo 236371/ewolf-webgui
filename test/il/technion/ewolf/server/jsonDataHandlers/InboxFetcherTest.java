@@ -53,7 +53,7 @@ public class InboxFetcherTest {
 		//User ID, to retrieve messages from a specific sender.
 		String fromSender;
 	}
-	
+
 	@After
 	public void cleanup() {
 		for (Injector inj: injectors) {
@@ -62,69 +62,69 @@ public class InboxFetcherTest {
 		}
 		injectors.clear();
 	}
-	
+
 	@Test
 	public void getFullSortedInbox() throws Exception {
 		for (int i=0; i < 3; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
-						.setProperty("openkad.keyfactory.keysize", "20")
-						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
-						
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
+
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
-					
+					.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
+
 					new SimpleDHTModule(),
-						
+
 					new ChunKeeperModule(),
-					
+
 					new StashModule(),
-						
+
 					new SocialFSCreatorModule()
-						.setProperty("socialfs.user.username", "user_"+i)
-						.setProperty("socialfs.user.password", "1234"),
-					
+					.setProperty("socialfs.user.username", "user_"+i)
+					.setProperty("socialfs.user.password", "1234"),
+
 					new SocialFSModule(),
-					
+
 					new EwolfAccountCreatorModule(),
-					
+
 					new EwolfModule()
-			);
+					);
 			injectors.add(injector);
 		}
-		
+
 		for (Injector injector : injectors) {
-			
+
 			// start the Keybased routing
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
-			
+
 			// bind the http connector
 			HttpConnector connector = injector.getInstance(HttpConnector.class);
 			connector.bind();
 			connector.start();
-			
+
 			// bind the chunkeeper
 			ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
 			chnukeeper.bind();
 		}
-		
-		
+
+
 		for (int i=1; i < injectors.size(); ++i) {
 			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
-		
-		
+
+
 		for (Injector injector : injectors) {
 			System.out.println("creating...");
 			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 			accountCreator.create();
 			System.out.println("done\n");
-			
+
 		}
 		/*
 		for (Injector injector : injectors) {
@@ -132,25 +132,25 @@ public class InboxFetcherTest {
 			SocialNetwork osn = injector.getInstance(SocialNetwork.class);
 			osn.login("1234");
 		}
-		*/
+		 */
 		Thread.sleep(1000);
-		
+
 		SocialFS sfs1 = injectors.get(0).getInstance(SocialFS.class);
 		SocialFS sfs2 = injectors.get(1).getInstance(SocialFS.class);
 		SocialFS sfs3 = injectors.get(2).getInstance(SocialFS.class);
-		
-		
+
+
 		SocialMail sm1 = injectors.get(0).getInstance(SocialMail.class);
 		SocialMail sm2 = injectors.get(1).getInstance(SocialMail.class);
 		SocialMail sm3 = injectors.get(2).getInstance(SocialMail.class);
-		
+
 		UserID uid2 = sfs2.getCredentials().getProfile().getUserId();
 		UserID uid3 = sfs3.getCredentials().getProfile().getUserId();
-		
+
 		// osn1 finds osn2
 		Profile profile2 = sfs1.findProfile(uid2);
 		Assert.assertEquals(uid2, profile2.getUserId());
-		
+
 		ContentMessage[] messages = new ContentMessage[10];
 		for (int i=0; i<10; i++) {
 			messages[i] = sm1.createContentMessage().setMessage("msg " + i + " from user1");
@@ -162,7 +162,7 @@ public class InboxFetcherTest {
 		}
 
 		Thread.sleep(1000);
-		
+
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 
@@ -173,7 +173,7 @@ public class InboxFetcherTest {
 			Assert.assertEquals(im.mail,"msg " + (9-i) + " from user3");
 			Assert.assertEquals(im.senderID, uid3.toString());
 		}
-		
+
 	}
 
 	private JsonElement setInboxParams(Integer maxMessages, Long olderThan,
@@ -194,63 +194,63 @@ public class InboxFetcherTest {
 		for (int i=0; i < 3; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
-						.setProperty("openkad.keyfactory.keysize", "20")
-						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
-						
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
+
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
-					
+					.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
+
 					new SimpleDHTModule(),
-						
+
 					new ChunKeeperModule(),
-					
+
 					new StashModule(),
-						
+
 					new SocialFSCreatorModule()
-						.setProperty("socialfs.user.username", "user_"+i)
-						.setProperty("socialfs.user.password", "1234"),
-					
+					.setProperty("socialfs.user.username", "user_"+i)
+					.setProperty("socialfs.user.password", "1234"),
+
 					new SocialFSModule(),
-					
+
 					new EwolfAccountCreatorModule(),
-					
+
 					new EwolfModule()
-			);
+					);
 			injectors.add(injector);
 		}
-		
+
 		for (Injector injector : injectors) {
-			
+
 			// start the Keybased routing
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
-			
+
 			// bind the http connector
 			HttpConnector connector = injector.getInstance(HttpConnector.class);
 			connector.bind();
 			connector.start();
-			
+
 			// bind the chunkeeper
 			ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
 			chnukeeper.bind();
 		}
-		
-		
+
+
 		for (int i=1; i < injectors.size(); ++i) {
 			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
-		
-		
+
+
 		for (Injector injector : injectors) {
 			System.out.println("creating...");
 			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 			accountCreator.create();
 			System.out.println("done\n");
-			
+
 		}
 		/*
 		for (Injector injector : injectors) {
@@ -258,24 +258,24 @@ public class InboxFetcherTest {
 			SocialNetwork osn = injector.getInstance(SocialNetwork.class);
 			osn.login("1234");
 		}
-		*/
+		 */
 		Thread.sleep(1000);
-		
+
 		SocialFS sfs1 = injectors.get(0).getInstance(SocialFS.class);
 		SocialFS sfs2 = injectors.get(1).getInstance(SocialFS.class);
-		
-		
+
+
 		SocialMail sm1 = injectors.get(0).getInstance(SocialMail.class);
 		SocialMail sm2 = injectors.get(1).getInstance(SocialMail.class);
 		SocialMail sm3 = injectors.get(2).getInstance(SocialMail.class);
-		
+
 		UserID uid1 = sfs1.getCredentials().getProfile().getUserId();
 		UserID uid2 = sfs2.getCredentials().getProfile().getUserId();
-		
+
 		// osn1 finds osn2
 		Profile profile2 = sfs1.findProfile(uid2);
 		Assert.assertEquals(uid2, profile2.getUserId());
-		
+
 		ContentMessage[] messages = new ContentMessage[10];
 		for (int i=0; i<10; i++) {
 			messages[i] = sm1.createContentMessage().setMessage("msg " + i + " from user1");
@@ -285,10 +285,10 @@ public class InboxFetcherTest {
 			messages[i] = sm3.createContentMessage().setMessage("msg " + i + " from user3");
 			sm3.send(messages[i], profile2);
 		}
-		
-		
+
+
 		Thread.sleep(1000);
-		
+
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 		JsonElement params = setInboxParams(null, null, null, uid1.toString());
@@ -298,71 +298,71 @@ public class InboxFetcherTest {
 			Assert.assertEquals(im.mail,"msg " + (9-i) + " from user1");
 			Assert.assertEquals(im.senderID, uid1.toString());
 		}
-		
+
 	}
-	
+
 	@Test
 	public void getSortedInboxBetweenTwoTimestamps() throws Exception {
 		for (int i=0; i < 3; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
-						.setProperty("openkad.keyfactory.keysize", "20")
-						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
-						
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
+
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
-					
+					.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
+
 					new SimpleDHTModule(),
-						
+
 					new ChunKeeperModule(),
-					
+
 					new StashModule(),
-						
+
 					new SocialFSCreatorModule()
-						.setProperty("socialfs.user.username", "user_"+i)
-						.setProperty("socialfs.user.password", "1234"),
-					
+					.setProperty("socialfs.user.username", "user_"+i)
+					.setProperty("socialfs.user.password", "1234"),
+
 					new SocialFSModule(),
-					
+
 					new EwolfAccountCreatorModule(),
-					
+
 					new EwolfModule()
-			);
+					);
 			injectors.add(injector);
 		}
-		
+
 		for (Injector injector : injectors) {
-			
+
 			// start the Keybased routing
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
-			
+
 			// bind the http connector
 			HttpConnector connector = injector.getInstance(HttpConnector.class);
 			connector.bind();
 			connector.start();
-			
+
 			// bind the chunkeeper
 			ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
 			chnukeeper.bind();
 		}
-		
-		
+
+
 		for (int i=1; i < injectors.size(); ++i) {
 			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
-		
-		
+
+
 		for (Injector injector : injectors) {
 			System.out.println("creating...");
 			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 			accountCreator.create();
 			System.out.println("done\n");
-			
+
 		}
 		/*
 		for (Injector injector : injectors) {
@@ -370,26 +370,26 @@ public class InboxFetcherTest {
 			SocialNetwork osn = injector.getInstance(SocialNetwork.class);
 			osn.login("1234");
 		}
-		*/
+		 */
 		Thread.sleep(1000);
-		
+
 		SocialFS sfs1 = injectors.get(0).getInstance(SocialFS.class);
 		SocialFS sfs2 = injectors.get(1).getInstance(SocialFS.class);
 		SocialFS sfs3 = injectors.get(2).getInstance(SocialFS.class);
-		
-		
+
+
 		SocialMail sm1 = injectors.get(0).getInstance(SocialMail.class);
 		SocialMail sm2 = injectors.get(1).getInstance(SocialMail.class);
 		SocialMail sm3 = injectors.get(2).getInstance(SocialMail.class);
-		
+
 		UserID uid1 = sfs1.getCredentials().getProfile().getUserId();
 		UserID uid2 = sfs2.getCredentials().getProfile().getUserId();
 		UserID uid3 = sfs3.getCredentials().getProfile().getUserId();
-		
+
 		// osn1 finds osn2
 		Profile profile2 = sfs1.findProfile(uid2);
 		Assert.assertEquals(uid2, profile2.getUserId());
-		
+
 		ContentMessage[] messages = new ContentMessage[10];
 		Long[] timestamps = new Long[21];
 		for (int i=0; i<10; i++) {
@@ -403,10 +403,10 @@ public class InboxFetcherTest {
 			sm3.send(messages[i], profile2);
 		}
 		timestamps[20]=System.currentTimeMillis();
-		
-		
+
+
 		Thread.sleep(1000);
-		
+
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 		JsonElement params = setInboxParams(null, timestamps[20], timestamps[0], null);
@@ -422,71 +422,71 @@ public class InboxFetcherTest {
 			Assert.assertEquals(im.mail,"msg " + (19-i) + " from user1");
 			Assert.assertEquals(im.senderID, uid1.toString());
 		}
-		
+
 	}
-	
+
 	@Test
 	public void get5InboxMessagesFromSpecificUser() throws Exception {
 		for (int i=0; i < 3; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
-						.setProperty("openkad.keyfactory.keysize", "20")
-						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
-						
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
+
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
-					
+					.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
+
 					new SimpleDHTModule(),
-						
+
 					new ChunKeeperModule(),
-					
+
 					new StashModule(),
-						
+
 					new SocialFSCreatorModule()
-						.setProperty("socialfs.user.username", "user_"+i)
-						.setProperty("socialfs.user.password", "1234"),
-					
+					.setProperty("socialfs.user.username", "user_"+i)
+					.setProperty("socialfs.user.password", "1234"),
+
 					new SocialFSModule(),
-					
+
 					new EwolfAccountCreatorModule(),
-					
+
 					new EwolfModule()
-			);
+					);
 			injectors.add(injector);
 		}
-		
+
 		for (Injector injector : injectors) {
-			
+
 			// start the Keybased routing
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
-			
+
 			// bind the http connector
 			HttpConnector connector = injector.getInstance(HttpConnector.class);
 			connector.bind();
 			connector.start();
-			
+
 			// bind the chunkeeper
 			ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
 			chnukeeper.bind();
 		}
-		
-		
+
+
 		for (int i=1; i < injectors.size(); ++i) {
 			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
-		
-		
+
+
 		for (Injector injector : injectors) {
 			System.out.println("creating...");
 			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 			accountCreator.create();
 			System.out.println("done\n");
-			
+
 		}
 		/*
 		for (Injector injector : injectors) {
@@ -494,24 +494,24 @@ public class InboxFetcherTest {
 			SocialNetwork osn = injector.getInstance(SocialNetwork.class);
 			osn.login("1234");
 		}
-		*/
+		 */
 		Thread.sleep(1000);
-		
+
 		SocialFS sfs1 = injectors.get(0).getInstance(SocialFS.class);
 		SocialFS sfs2 = injectors.get(1).getInstance(SocialFS.class);
-		
-		
+
+
 		SocialMail sm1 = injectors.get(0).getInstance(SocialMail.class);
 		SocialMail sm2 = injectors.get(1).getInstance(SocialMail.class);
 		SocialMail sm3 = injectors.get(2).getInstance(SocialMail.class);
-		
+
 		UserID uid1 = sfs1.getCredentials().getProfile().getUserId();
 		UserID uid2 = sfs2.getCredentials().getProfile().getUserId();
-		
+
 		// osn1 finds osn2
 		Profile profile2 = sfs1.findProfile(uid2);
 		Assert.assertEquals(uid2, profile2.getUserId());
-		
+
 		ContentMessage[] messages = new ContentMessage[10];
 		for (int i=0; i<10; i++) {
 			messages[i] = sm1.createContentMessage().setMessage("msg " + i + " from user1");
@@ -521,10 +521,10 @@ public class InboxFetcherTest {
 			messages[i] = sm3.createContentMessage().setMessage("msg " + i + " from user3");
 			sm3.send(messages[i], profile2);
 		}
-		
-		
+
+
 		Thread.sleep(1000);
-		
+
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 		JsonElement params = setInboxParams(5, null, null, uid1.toString());
@@ -536,69 +536,69 @@ public class InboxFetcherTest {
 			Assert.assertEquals(im.senderID, uid1.toString());
 		}	
 	}
-	
+
 	@Test
 	public void get5messagesBetweenTwoTimestamps() throws Exception {
 		for (int i=0; i < 3; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
-						.setProperty("openkad.keyfactory.keysize", "20")
-						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
-						
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
+
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
-					
+					.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
+
 					new SimpleDHTModule(),
-						
+
 					new ChunKeeperModule(),
-					
+
 					new StashModule(),
-						
+
 					new SocialFSCreatorModule()
-						.setProperty("socialfs.user.username", "user_"+i)
-						.setProperty("socialfs.user.password", "1234"),
-					
+					.setProperty("socialfs.user.username", "user_"+i)
+					.setProperty("socialfs.user.password", "1234"),
+
 					new SocialFSModule(),
-					
+
 					new EwolfAccountCreatorModule(),
-					
+
 					new EwolfModule()
-			);
+					);
 			injectors.add(injector);
 		}
-		
+
 		for (Injector injector : injectors) {
-			
+
 			// start the Keybased routing
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
-			
+
 			// bind the http connector
 			HttpConnector connector = injector.getInstance(HttpConnector.class);
 			connector.bind();
 			connector.start();
-			
+
 			// bind the chunkeeper
 			ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
 			chnukeeper.bind();
 		}
-		
-		
+
+
 		for (int i=1; i < injectors.size(); ++i) {
 			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
-		
-		
+
+
 		for (Injector injector : injectors) {
 			System.out.println("creating...");
 			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 			accountCreator.create();
 			System.out.println("done\n");
-			
+
 		}
 		/*
 		for (Injector injector : injectors) {
@@ -606,25 +606,25 @@ public class InboxFetcherTest {
 			SocialNetwork osn = injector.getInstance(SocialNetwork.class);
 			osn.login("1234");
 		}
-		*/
+		 */
 		Thread.sleep(1000);
-		
+
 		SocialFS sfs1 = injectors.get(0).getInstance(SocialFS.class);
 		SocialFS sfs2 = injectors.get(1).getInstance(SocialFS.class);
 		SocialFS sfs3 = injectors.get(2).getInstance(SocialFS.class);
-		
-		
+
+
 		SocialMail sm1 = injectors.get(0).getInstance(SocialMail.class);
 		SocialMail sm2 = injectors.get(1).getInstance(SocialMail.class);
 		SocialMail sm3 = injectors.get(2).getInstance(SocialMail.class);
-		
+
 		UserID uid2 = sfs2.getCredentials().getProfile().getUserId();
 		UserID uid3 = sfs3.getCredentials().getProfile().getUserId();
-		
+
 		// osn1 finds osn2
 		Profile profile2 = sfs1.findProfile(uid2);
 		Assert.assertEquals(uid2, profile2.getUserId());
-		
+
 		ContentMessage[] messages = new ContentMessage[10];
 		Long[] timestamps = new Long[21];
 		for (int i=0; i<10; i++) {
@@ -638,10 +638,10 @@ public class InboxFetcherTest {
 			sm3.send(messages[i], profile2);
 		}
 		timestamps[20]=System.currentTimeMillis();
-		
-		
+
+
 		Thread.sleep(1000);
-		
+
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(20, inbox.size());
 		JsonElement params = setInboxParams(5, timestamps[20], timestamps[18], null);

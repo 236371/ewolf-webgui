@@ -16,9 +16,9 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 
 public class ServerResources {	
 	private static final String MIME_TYPES = "/mime.types";
-    /** A lock object for protecting read/write operations to a configuration file. */
-    private static Object configLock = new Lock("ConfigurationFileLock");
-	
+	/** A lock object for protecting read/write operations to a configuration file. */
+	private static Object configLock = new Lock("ConfigurationFileLock");
+
 	static class EwolfConfigurations {
 		String username;
 		String password;
@@ -27,7 +27,7 @@ public class ServerResources {
 		int serverPort;
 		int ewolfPort;
 	}
-	
+
 	public static URL getResource(String name) {
 		return ServerResources.class.getResource(name);
 	}
@@ -67,7 +67,7 @@ public class ServerResources {
 				for (Object o: config.getList("kbr.urls")) {
 					configurations.kbrURIs.add(new URI((String)o));
 				}
-	        }
+			}
 		} catch (ConfigurationException e) {
 			e.printStackTrace();
 			System.out.println("Can't read configuration file.");
@@ -80,7 +80,7 @@ public class ServerResources {
 
 		return configurations;
 	}
-	
+
 	public static FileTypeMap getFileTypeMap() {
 		MimetypesFileTypeMap map;
 		try {

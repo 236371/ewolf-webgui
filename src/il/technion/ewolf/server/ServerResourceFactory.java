@@ -12,35 +12,35 @@ import java.util.Date;
 import javax.activation.FileTypeMap;
 
 public class ServerResourceFactory implements ServerFileFactory {
-//	private final String CWD = System.getProperty("user.dir") + "/";
-	
+	//	private final String CWD = System.getProperty("user.dir") + "/";
+
 	FileTypeMap map;
-	
+
 	ServerResourceFactory(FileTypeMap inputMap) {
 		map = inputMap;
 	}
-	
+
 	@Override
 	public ServerFile newInstance() {
 		return new ServerFile() {
-			
+
 			URL url = null;
-			
+
 			@Override
 			public void read(String path) throws FileNotFoundException {
 				if(path.isEmpty()) {
 					path = "home.html";
 				}
-				
+
 				url = ServerResources.getResource(path);
-				
+
 				if(url == null) {
 					throw new FileNotFoundException();
-//					try {
-//						url = new URL("file", "", CWD + path);
-//					} catch (MalformedURLException e) {
-//						throw new FileNotFoundException();
-//					}
+					//					try {
+					//						url = new URL("file", "", CWD + path);
+					//					} catch (MalformedURLException e) {
+					//						throw new FileNotFoundException();
+					//					}
 				}
 			}
 
@@ -58,7 +58,7 @@ public class ServerResourceFactory implements ServerFileFactory {
 				if(url == null) {
 					throw new FileNotFoundException();
 				}
-				
+
 				try {
 					return new Date(url.openConnection().getLastModified());
 				} catch (IOException e) {
@@ -76,13 +76,13 @@ public class ServerResourceFactory implements ServerFileFactory {
 				if(url == null) {
 					throw new FileNotFoundException();
 				}
-				
+
 				String path = url.getPath();
 				return map.getContentType(path);
 			}
 		};
 	}
 
-	
+
 
 }
