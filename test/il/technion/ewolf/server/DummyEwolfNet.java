@@ -32,15 +32,17 @@ public class DummyEwolfNet {
 	public static void main(String[] args) throws Exception {
 		List<Injector> injectors = new LinkedList<Injector>();
 
-		for (int i=0; i < 2; ++i) {
+		for (int i = 0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
-					.setProperty("openkad.keyfactory.keysize", "20")
-					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-					.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
+							.setProperty("openkad.keyfactory.keysize", "20")
+							.setProperty("openkad.bucket.kbuckets.maxsize",
+									"20")
+							.setProperty("openkad.net.udp.port",
+									"" + (BASE_PORT + i)),
 
-					new HttpConnectorModule()
-					.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
+					new HttpConnectorModule().setProperty(
+							"httpconnector.net.port", "" + (BASE_PORT + i)),
 
 					new SimpleDHTModule(),
 
@@ -48,16 +50,15 @@ public class DummyEwolfNet {
 
 					new StashModule(),
 
-					new SocialFSCreatorModule()
-					.setProperty("socialfs.user.username", "user_"+i)
-					.setProperty("socialfs.user.password", "1234"),
+					new SocialFSCreatorModule().setProperty(
+							"socialfs.user.username", "user_" + i).setProperty(
+							"socialfs.user.password", "1234"),
 
 					new SocialFSModule(),
 
 					new EwolfAccountCreatorModule(),
 
-					new EwolfModule()
-					);
+					new EwolfModule());
 			injectors.add(injector);
 		}
 
@@ -77,26 +78,25 @@ public class DummyEwolfNet {
 			chnukeeper.bind();
 		}
 
-
-		for (int i=1; i < injectors.size(); ++i) {
+		for (int i = 1; i < injectors.size(); ++i) {
 			int port = BASE_PORT + i - 1;
-			System.out.println(i+" ==> "+(i-1));
-			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
-			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
+			System.out.println(i + " ==> " + (i - 1));
+			KeybasedRouting kbr = injectors.get(i).
+					getInstance(KeybasedRouting.class);
+			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"
+					+ port + "/")));
 		}
-
 
 		for (Injector injector : injectors) {
 			System.out.println("creating...");
-			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
+			EwolfAccountCreator accountCreator = injector
+					.getInstance(EwolfAccountCreator.class);
 			accountCreator.create();
 			System.out.println("done\n");
 		}
 
-
 		EwolfServer server1 = new EwolfServer(EWOLF_CONFIG_1);
 		server1.initEwolf();
-
 
 		EwolfServer server2 = new EwolfServer(EWOLF_CONFIG_2);
 		server2.initEwolf();

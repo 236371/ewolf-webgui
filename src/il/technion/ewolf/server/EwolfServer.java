@@ -73,12 +73,12 @@ public class EwolfServer {
 
 		return Guice.createInjector(
 				new HttpConnectorModule()
-				.setProperty("httpconnector.net.port", port),
+					.setProperty("httpconnector.net.port", port),
 				new KadNetModule()
-				.setProperty("openkad.keyfactory.keysize", "20")
-				.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-				.setProperty("openkad.seed", port)
-				.setProperty("openkad.net.udp.port", port));
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.seed", port)
+					.setProperty("openkad.net.udp.port", port));
 	}
 
 	private boolean isReady = false;
@@ -144,19 +144,19 @@ public class EwolfServer {
 
 	private void addEwolfHandlers() {
 		jsonHandler
-		.addHandler("inbox", ewolfInjector.getInstance(InboxFetcher.class))
-		.addHandler("wolfpacks", ewolfInjector.getInstance(WolfpacksFetcher.class))
-		.addHandler("profile", ewolfInjector.getInstance(ProfileFetcher.class))
-		.addHandler("wolfpackMembers", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
-		.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcher.class))
-		.addHandler("createWolfpack", ewolfInjector.getInstance(CreateWolfpackHandler.class))
-		.addHandler("addWolfpackMember", ewolfInjector.getInstance(AddWolfpackMemberHandler.class))
-		.addHandler("post", ewolfInjector.getInstance(PostToNewsFeedHandler.class))
-		.addHandler("sendMessage", ewolfInjector.getInstance(SendMessageHandler.class));
+			.addHandler("inbox", ewolfInjector.getInstance(InboxFetcher.class))
+			.addHandler("wolfpacks", ewolfInjector.getInstance(WolfpacksFetcher.class))
+			.addHandler("profile", ewolfInjector.getInstance(ProfileFetcher.class))
+			.addHandler("wolfpackMembers", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
+			.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcher.class))
+			.addHandler("createWolfpack", ewolfInjector.getInstance(CreateWolfpackHandler.class))
+			.addHandler("addWolfpackMember", ewolfInjector.getInstance(AddWolfpackMemberHandler.class))
+			.addHandler("post", ewolfInjector.getInstance(PostToNewsFeedHandler.class))
+			.addHandler("sendMessage", ewolfInjector.getInstance(SendMessageHandler.class));
 		sfsUploadHandler
-		.addHandler(ewolfInjector.getInstance(UploadFileToSFS.class));
+			.addHandler(ewolfInjector.getInstance(UploadFileToSFS.class));
 		sfsHandler
-		.addHandler(ewolfInjector.getInstance(DownloadFileFromSFS.class));
+			.addHandler(ewolfInjector.getInstance(DownloadFileFromSFS.class));
 	}
 
 	private Injector createInjector() {
@@ -165,35 +165,35 @@ public class EwolfServer {
 		return Guice.createInjector(
 
 				new KadNetModule()
-				.setProperty("openkad.keyfactory.keysize", "20")
-				.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-				.setProperty("openkad.seed", port)
-				.setProperty("openkad.net.udp.port", port),
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.seed", port)
+					.setProperty("openkad.net.udp.port", port),
 
 				new HttpConnectorModule()
-				.setProperty("httpconnector.net.port", port),
+					.setProperty("httpconnector.net.port", port),
 
 				new SimpleDHTModule()
-				//TODO temporary property - replicating bug workaround
-				.setProperty("dht.storage.checkInterval", ""+TimeUnit.HOURS.toMillis(3)),
+					//TODO temporary property - replicating bug workaround
+					.setProperty("dht.storage.checkInterval", ""+TimeUnit.HOURS.toMillis(3)),
 
 				new ChunKeeperModule(),
 
 				new StashModule(),
 
 				new SocialFSCreatorModule()
-				.setProperty("socialfs.user.username", 
+					.setProperty("socialfs.user.username", 
 						configurations.username)
-						.setProperty("socialfs.user.password", 
-								configurations.password)
-								.setProperty("socialfs.user.name", 
-										configurations.name),
+					.setProperty("socialfs.user.password", 
+						configurations.password)
+					.setProperty("socialfs.user.name", 
+						configurations.name),
 
-										new SocialFSModule(),
+				new SocialFSModule(),
 
-										new EwolfAccountCreatorModule(),
+				new EwolfAccountCreatorModule(),
 
-										new EwolfModule()
-				);
+				new EwolfModule()
+		);
 	}
 }
