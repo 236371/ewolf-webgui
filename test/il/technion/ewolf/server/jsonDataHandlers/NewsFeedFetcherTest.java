@@ -47,7 +47,7 @@ import com.google.inject.Injector;
 public class NewsFeedFetcherTest {
 	private static final int BASE_PORT = 10000;
 	private List<Injector> injectors = new LinkedList<Injector>();
-	
+
 	static class JsonReqNewsFeedParams {
 		String newsOf;
 		String wolfpackName;
@@ -56,7 +56,7 @@ public class NewsFeedFetcherTest {
 		Long olderThan;
 		Long newerThan;
 	}
-	
+
 	@After
 	public void cleanup() {
 		for (Injector inj: injectors) {
@@ -65,7 +65,7 @@ public class NewsFeedFetcherTest {
 		}
 		injectors.clear();
 	}
-	
+
 	public static JsonElement setNewsFeedParams(String newsOf, String wolfpackName, String userID,
 			Integer maxMessages, Long olderThan, Long newerThan) {
 
@@ -80,69 +80,69 @@ public class NewsFeedFetcherTest {
 		JsonElement jElem = gson.toJsonTree(params);
 		return jElem;
 	}
-	
+
 	@Test
 	public void getAllPostsForUser() throws Exception {
 		for (int i=0; i < 2; ++i) {
 			Injector injector = Guice.createInjector(
 					new KadNetModule()
-						.setProperty("openkad.keyfactory.keysize", "20")
-						.setProperty("openkad.bucket.kbuckets.maxsize", "20")
-						.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
-						
+					.setProperty("openkad.keyfactory.keysize", "20")
+					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
+					.setProperty("openkad.net.udp.port", ""+(BASE_PORT+i)),
+
 					new HttpConnectorModule()
-						.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
-					
+					.setProperty("httpconnector.net.port", ""+(BASE_PORT+i)),
+
 					new SimpleDHTModule(),
-						
+
 					new ChunKeeperModule(),
-					
+
 					new StashModule(),
-						
+
 					new SocialFSCreatorModule()
-						.setProperty("socialfs.user.username", "user_"+i)
-						.setProperty("socialfs.user.password", "1234"),
-					
+					.setProperty("socialfs.user.username", "user_"+i)
+					.setProperty("socialfs.user.password", "1234"),
+
 					new SocialFSModule(),
-					
+
 					new EwolfAccountCreatorModule(),
-					
+
 					new EwolfModule()
-			);
+					);
 			injectors.add(injector);
 		}
-		
+
 		for (Injector injector : injectors) {
-			
+
 			// start the Keybased routing
 			KeybasedRouting kbr = injector.getInstance(KeybasedRouting.class);
 			kbr.create();
-			
+
 			// bind the http connector
 			HttpConnector connector = injector.getInstance(HttpConnector.class);
 			connector.bind();
 			connector.start();
-			
+
 			// bind the chunkeeper
 			ChunKeeper chnukeeper = injector.getInstance(ChunKeeper.class);
 			chnukeeper.bind();
 		}
-		
-		
+
+
 		for (int i=1; i < injectors.size(); ++i) {
 			int port = BASE_PORT + i - 1;
 			System.out.println(i+" ==> "+(i-1));
 			KeybasedRouting kbr = injectors.get(i).getInstance(KeybasedRouting.class);
 			kbr.join(Arrays.asList(new URI("openkad.udp://127.0.0.1:"+port+"/")));
 		}
-		
-		
+
+
 		for (Injector injector : injectors) {
 			System.out.println("creating...");
 			EwolfAccountCreator accountCreator = injector.getInstance(EwolfAccountCreator.class);
 			accountCreator.create();
 			System.out.println("done\n");
-			
+
 		}
 		/*
 		for (Injector injector : injectors) {
@@ -150,25 +150,25 @@ public class NewsFeedFetcherTest {
 			SocialNetwork osn = injector.getInstance(SocialNetwork.class);
 			osn.login("1234");
 		}
-		*/
+		 */
 		Thread.sleep(1000);
-		
+
 		SocialNetwork osn1 = injectors.get(0).getInstance(SocialNetwork.class);
-		
+
 		SocialFS sfs1 = injectors.get(0).getInstance(SocialFS.class);
 		SocialFS sfs2 = injectors.get(1).getInstance(SocialFS.class);
-		
+
 		UserID uid1 = sfs1.getCredentials().getProfile().getUserId();
 		UserID uid2 = sfs2.getCredentials().getProfile().getUserId();
-		
+
 		SocialMail sm2 = injectors.get(1).getInstance(SocialMail.class);
-		
+
 		WolfPackLeader sgm1 = injectors.get(0).getInstance(WolfPackLeader.class);
-		
+
 		// osn1 finds osn2
 		Profile profile2 = sfs1.findProfile(uid2);
 		Assert.assertEquals(uid2, profile2.getUserId());
-		
+
 		WolfPack osn1Friends = sgm1
 				.findOrCreateSocialGroup("friends")
 				.addMember(profile2);
@@ -178,14 +178,14 @@ public class NewsFeedFetcherTest {
 		sgm1
 		.findSocialGroup("wall-readers")
 		.addMember(profile2);
-		
+
 		// osn2 accepts the secret key and saves it
 		List<SocialMessage> inbox = sm2.readInbox();
 		Assert.assertEquals(2, inbox.size());
 		Assert.assertEquals(PokeMessage.class, inbox.get(0).getClass());
 		((PokeMessage)inbox.get(0)).accept();
 		((PokeMessage)inbox.get(1)).accept();
-		
+
 		// osn1 creates 10 posts
 		Post[] posts = new Post[10];
 		for (int i=0; i<4; i++) {
@@ -200,7 +200,7 @@ public class NewsFeedFetcherTest {
 			osn1.getWall().publish(posts2[i], osn1Enemies);
 		}
 		Thread.sleep(1000);
-		
+
 		JsonElement params = setNewsFeedParams("user", null, uid1.toString(), null, null, null);
 		NewsFeedResponse obj = ((NewsFeedResponse)injectors.get(1).getInstance(NewsFeedFetcher.class).handleData(params));
 		Assert.assertEquals(obj.mailList.size(), 4);

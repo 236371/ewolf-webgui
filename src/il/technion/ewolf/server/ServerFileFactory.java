@@ -12,6 +12,6 @@ public interface ServerFileFactory {
 		public String getTag() throws FileNotFoundException,UnsupportedOperationException;
 		public String contentType() throws FileNotFoundException;
 	}
-	
+
 	public ServerFile newInstance();
 }

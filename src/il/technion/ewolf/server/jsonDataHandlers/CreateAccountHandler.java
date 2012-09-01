@@ -3,6 +3,7 @@ package il.technion.ewolf.server.jsonDataHandlers;
 import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import static il.technion.ewolf.server.EWolfResponse.RES_GENERIC_ERROR;
 import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.EwolfServer;
 import il.technion.ewolf.server.ServerResources;
 
 import org.apache.commons.configuration.ConfigurationException;
@@ -12,10 +13,12 @@ import com.google.gson.JsonElement;
 
 public class CreateAccountHandler implements JsonDataHandler {
 
+	private EwolfServer ewolfServer;
 	private String configFile;
 
-	public CreateAccountHandler(String configFile) {
+	public CreateAccountHandler(EwolfServer ewolfServer, String configFile) {
 		this.configFile = configFile;
+		this.ewolfServer = ewolfServer;
 	}
 
 	private static class JsonReqCreateAccountParams {
@@ -49,7 +52,7 @@ public class CreateAccountHandler implements JsonDataHandler {
 		}
 
 		if (jsonReqParams.username == null || jsonReqParams.name == null
-										  || jsonReqParams.password == null) {
+				|| jsonReqParams.password == null) {
 			return new CreateAccountResponse(RES_BAD_REQUEST,
 					"Must specify username, name and password.");
 		}
@@ -64,6 +67,10 @@ public class CreateAccountHandler implements JsonDataHandler {
 			e.printStackTrace();
 			return new CreateAccountResponse(RES_GENERIC_ERROR,
 					"Error while saving to the properties file.");
+		}
+
+		while (!ewolfServer.isServerReady()) {
+
 		}
 		return new CreateAccountResponse();
 	}

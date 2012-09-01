@@ -23,7 +23,7 @@ public class ProfileFetcher implements JsonDataHandler {
 		this.socialFS = socialFS;
 		this.userIDFactory = userIDFactory;
 	}
-	
+
 	@SuppressWarnings("unused")
 	static class ProfileResponse extends EWolfResponse {
 		private String name;
@@ -45,8 +45,8 @@ public class ProfileFetcher implements JsonDataHandler {
 	}
 
 	private static class JsonReqProfileParams {
-//		If userID field wasn't sent with the request then
-//			the response will be for "logged in" user
+		//		If userID field wasn't sent with the request then
+		//			the response will be for "logged in" user
 		String userID;
 	}
 
@@ -63,7 +63,7 @@ public class ProfileFetcher implements JsonDataHandler {
 		} catch (Exception e) {
 			return new ProfileResponse(RES_BAD_REQUEST);
 		}
-		
+
 		Profile profile;
 		if (jsonReqParams.userID==null) {
 			profile = socialFS.getCredentials().getProfile();

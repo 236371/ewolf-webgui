@@ -28,7 +28,7 @@ public class SFSHandler implements HttpRequestHandler {
 			HttpContext context) {
 		//TODO move adding server header to response intercepter
 		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
-		
+
 		String uri = req.getRequestLine().getUri();
 		try {
 			List<NameValuePair> parameters = 

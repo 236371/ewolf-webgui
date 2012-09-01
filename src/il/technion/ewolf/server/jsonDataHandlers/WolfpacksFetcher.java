@@ -32,8 +32,8 @@ public class WolfpacksFetcher implements JsonDataHandler {
 	}
 
 	private static class JsonReqWolfpacksParams {
-//		If userID field wasn't sent with the request then the response
-//			list of wolfpack names will be for "logged in" user
+		//		If userID field wasn't sent with the request then the response
+		//			list of wolfpack names will be for "logged in" user
 		String userID;
 	}
 
@@ -61,10 +61,10 @@ public class WolfpacksFetcher implements JsonDataHandler {
 		} catch (Exception e) {
 			return new WolfpacksResponse(RES_BAD_REQUEST);
 		}
-		
+
 		List<WolfPack> wgroups = socialGroupsManager.getAllSocialGroups();
 		List<String> groups = new ArrayList<String>();
-		
+
 		if (jsonReqParams.userID==null) {
 			for (WolfPack w : wgroups) {
 				groups.add(w.getName());

@@ -40,9 +40,9 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 public class EwolfServer {
-	
+
 	private static final String EWOLF_CONFIG = "/ewolf.config.properties";
-	
+
 	private String config = EWOLF_CONFIG;
 	private EwolfConfigurations configurations;
 	Injector serverInjector;
@@ -81,6 +81,14 @@ public class EwolfServer {
 					.setProperty("openkad.net.udp.port", port));
 	}
 
+	private boolean isReady = false;
+	public synchronized boolean isServerReady() {
+		return isReady;
+	}
+	private synchronized void serverIsReady() {
+		isReady = true;
+	}
+
 	public void initEwolf() throws IOException, ConfigurationException, Exception {
 		this.configurations = ServerResources.getConfigurations(config);
 
@@ -89,14 +97,13 @@ public class EwolfServer {
 		serverConnector = serverInjector.getInstance(HttpConnector.class);
 		serverConnector.bind();
 		registerConnectorHandlers();
-		jsonHandler.addHandler("createAccount", new CreateAccountHandler(config));
+		jsonHandler.addHandler("createAccount", new CreateAccountHandler(this, config));
 		serverConnector.start();
 
 		while (configurations.username == null || configurations.password == null
-											   || configurations.name == null) {
+				|| configurations.name == null) {
 			System.out.println("Username and/or password and/or name weren't provided.");
 			this.configurations = ServerResources.getConfigurations(config);
-			Thread.sleep(1000);
 		}
 
 		this.ewolfInjector = createInjector();
@@ -123,9 +130,10 @@ public class EwolfServer {
 				"PokeMessagesAcceptorThread").start();
 		addEwolfHandlers();
 
+		serverIsReady();
 		System.out.println("Server started.");
 	}
-	
+
 	private void registerConnectorHandlers() {
 		serverConnector.register("/json*", jsonHandler);
 		serverConnector.register("/sfsupload*", sfsUploadHandler);
@@ -133,7 +141,7 @@ public class EwolfServer {
 
 		serverConnector.register("*", new JarResourceHandler());
 	}
-	
+
 	private void addEwolfHandlers() {
 		jsonHandler
 			.addHandler("inbox", ewolfInjector.getInstance(InboxFetcher.class))
@@ -153,7 +161,7 @@ public class EwolfServer {
 
 	private Injector createInjector() {
 		String port = String.valueOf(configurations.ewolfPort);
-		
+
 		return Guice.createInjector(
 
 				new KadNetModule()
@@ -161,28 +169,28 @@ public class EwolfServer {
 					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
 					.setProperty("openkad.seed", port)
 					.setProperty("openkad.net.udp.port", port),
-					
+
 				new HttpConnectorModule()
 					.setProperty("httpconnector.net.port", port),
 
 				new SimpleDHTModule()
 					//TODO temporary property - replicating bug workaround
 					.setProperty("dht.storage.checkInterval", ""+TimeUnit.HOURS.toMillis(3)),
-					
+
 				new ChunKeeperModule(),
-				
+
 				new StashModule(),
-				
+
 				new SocialFSCreatorModule()
 					.setProperty("socialfs.user.username", 
-							configurations.username)
+						configurations.username)
 					.setProperty("socialfs.user.password", 
-							configurations.password)
+						configurations.password)
 					.setProperty("socialfs.user.name", 
-							configurations.name),
+						configurations.name),
 
 				new SocialFSModule(),
-				
+
 				new EwolfAccountCreatorModule(),
 
 				new EwolfModule()

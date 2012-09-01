@@ -41,7 +41,7 @@ public class UploadFileToSFS {
 		this.socialFS = socialFS;
 		this.socialGroupsManager = socialGroupsManager;
 	}
-	
+
 	public UploadFileResponse handleData(String wolfpackName, String ext, byte[] fileData) {
 		Profile profile = socialFS.getCredentials().getProfile();
 		String resFileName;
@@ -63,7 +63,7 @@ public class UploadFileToSFS {
 					break;
 				}
 			}
-			
+
 			SFSFile file = socialFS.getSFSFileFactory().createNewFile()
 					.setName(resFileName)
 					.setData(fileData);

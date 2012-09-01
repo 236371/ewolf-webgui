@@ -27,7 +27,7 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 	static class ProfileData {
 		String name;
 		String id;
-	
+
 		ProfileData(String name, String id) {
 			this.name = name;
 			this.id = id;
@@ -39,15 +39,15 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 		public WolfpackMembersResponse(List<ProfileData> lst) {
 			this.membersList = lst;
 		}
-		
+
 		public WolfpackMembersResponse(String result) {
 			super(result);
 		}
 	}
 
 	private static class JsonReqWolfpackMembersParams {
-//		If wolfpackName field wasn't sent with the request then
-//		the response list will contain all the members of all the "logged in" user wolfpacks
+		//		If wolfpackName field wasn't sent with the request then
+		//		the response list will contain all the members of all the "logged in" user wolfpacks
 		String wolfpackName;
 	}
 
@@ -79,12 +79,12 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 				wolfpacks.add(wp);
 			}
 		}
-		
+
 		Set<Profile> profiles = new HashSet<Profile>();
 		for (WolfPack w : wolfpacks) {
 			profiles.addAll(w.getMembers());
 		}
-		
+
 		for (Profile profile: profiles) {
 			resList.add(new ProfileData(profile.getName(), profile.getUserId().toString()));
 		}

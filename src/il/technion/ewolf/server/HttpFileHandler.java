@@ -18,27 +18,27 @@ import org.apache.http.protocol.HttpRequestHandler;
 
 public class HttpFileHandler implements HttpRequestHandler {
 	private static final String PAGE_404 = "404.html";
-	
+
 	ServerFileFactory fileFactory;
 	final String prefix;
-	
+
 	public HttpFileHandler(
 			String					inputPrefix,
 			ServerFileFactory		inputFileFactory) {
-		
+
 		fileFactory = inputFileFactory;
 		prefix = inputPrefix;
 	}
-	
+
 	@Override
 	public void handle(HttpRequest req, HttpResponse res, HttpContext ctx)
 			throws HttpException, IOException {
 		String resName = req.getRequestLine().getUri();
-		
+
 		System.out.println("\t[HttpFileHandler] requesting: " + resName);
-		
+
 		addGeneralHeaders(res);
-		
+
 		ServerFile file = fileFactory.newInstance();
 		try {
 			if(!loadFile(file,resName)) {
@@ -50,18 +50,18 @@ public class HttpFileHandler implements HttpRequestHandler {
 			res.setStatusCode(HttpStatus.SC_NOT_FOUND);
 			System.out.println("\t[HttpFileHandler] could not load "+PAGE_404);
 		}
-		
+
 		res.addHeader(HTTP.CONTENT_TYPE, file.contentType());
-		
+
 		if(!isModified(file,req,res)) {
 			res.setStatusCode(HttpStatus.SC_NOT_MODIFIED);
 			System.out.println("\t[HttpFileHandler] resource not modified.");
 			return;
 		}
-		
-	    res.setEntity(new InputStreamEntity(file.openStream(), -1));
+
+		res.setEntity(new InputStreamEntity(file.openStream(), -1));
 	}	
-	
+
 	private boolean isHeaderMatch(Header[] h, String tag) {
 		if(h.length != 0) {
 			for (Header header : h) {
@@ -70,15 +70,15 @@ public class HttpFileHandler implements HttpRequestHandler {
 				}
 			}			
 		}
-		
+
 		return false;
 	}
-	
+
 	private boolean isModified(ServerFile file, HttpRequest req,
 			HttpResponse res) {
 		try {
 			String lastModified = file.lastModified().toString();
-			
+
 			if(isHeaderMatch(req.getHeaders("IF-MODIFIED-SINCE"), lastModified)) {
 				return false;
 			} else {
@@ -88,7 +88,7 @@ public class HttpFileHandler implements HttpRequestHandler {
 		} catch (UnsupportedOperationException lastModifiedException) {
 			try {
 				String ETag = file.getTag();
-				
+
 				if(isHeaderMatch(req.getHeaders("IF-NONE-MATCH"), ETag)) {
 					return false;
 				} else {
@@ -103,15 +103,15 @@ public class HttpFileHandler implements HttpRequestHandler {
 		} catch (FileNotFoundException fileException) {
 			// nothing to do.
 		}
-		
+
 		return true;
 	}
-	
+
 	private void addGeneralHeaders(HttpResponse res) {
 		//TODO move adding general headers to response intercepter
 		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
 	}
-	
+
 	private boolean loadFile(ServerFile file, String path)
 			throws FileNotFoundException {
 		try {

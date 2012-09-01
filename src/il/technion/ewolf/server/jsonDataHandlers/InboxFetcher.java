@@ -37,7 +37,7 @@ public class InboxFetcher implements JsonDataHandler {
 		Long newerThan;
 		//User ID, to retrieve messages from a specific sender.
 		String fromSender;
-		
+
 		public boolean isMatchCriteria(InboxMessage msg) {
 			return 	(fromSender == null || fromSender.equals(msg.senderID)) &&
 					(newerThan == null || newerThan <= msg.timestamp) &&
@@ -64,7 +64,7 @@ public class InboxFetcher implements JsonDataHandler {
 		public InboxResponse(List<InboxMessage> lst) {
 			this.mailList = lst;
 		}
-		
+
 		public InboxResponse(String result) {
 			super(result);
 		}
@@ -104,7 +104,7 @@ public class InboxFetcher implements JsonDataHandler {
 				e.printStackTrace();
 			}
 			msg.timestamp = m.getTimestamp();
-			
+
 			if(jsonReqParams.isMatchCriteria(msg)) {
 				msg.mail = ((ContentMessage)m).getMessage();
 				lst.add(msg);
@@ -112,11 +112,11 @@ public class InboxFetcher implements JsonDataHandler {
 		}
 		//sort by timestamp
 		Collections.sort(lst);	
-		
+
 		if (jsonReqParams.maxMessages != null && lst.size() > jsonReqParams.maxMessages) {
 			lst = lst.subList(0, jsonReqParams.maxMessages);
 		}
-		
+
 		return new InboxResponse(lst);
 	}
 }

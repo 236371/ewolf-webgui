@@ -41,26 +41,26 @@ public class JsonHandler implements HttpRequestHandler {
 
 		String jsonReqAsString = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 		JsonParser parser = new JsonParser();
-        JsonObject jsonReq = parser.parse(jsonReqAsString).getAsJsonObject();
-        
-        JsonObject jsonRes = new JsonObject();
-        Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
-        
-        Set<Entry<String, JsonElement>> jsonReqAsSet = jsonReq.entrySet();
-        for (Entry<String, JsonElement> obj : jsonReqAsSet) {
-        	String key = obj.getKey();
-        	JsonDataHandler handler = handlers.get(key);
-        	if (handler != null) {
-    			Object handlerRes = handler.handleData(obj.getValue());
-    			jsonRes.add(key, gson.toJsonTree(handlerRes));
-        	} else {
-        		System.out.println("No handlers are registered to handle request " +
-        				"with keyword \"" + key + "\"");
-        		jsonRes.addProperty("result", "unavailable request");
-        	}     	
+		JsonObject jsonReq = parser.parse(jsonReqAsString).getAsJsonObject();
+
+		JsonObject jsonRes = new JsonObject();
+		Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
+
+		Set<Entry<String, JsonElement>> jsonReqAsSet = jsonReq.entrySet();
+		for (Entry<String, JsonElement> obj : jsonReqAsSet) {
+			String key = obj.getKey();
+			JsonDataHandler handler = handlers.get(key);
+			if (handler != null) {
+				Object handlerRes = handler.handleData(obj.getValue());
+				jsonRes.add(key, gson.toJsonTree(handlerRes));
+			} else {
+				System.out.println("No handlers are registered to handle request " +
+						"with keyword \"" + key + "\"");
+				jsonRes.addProperty("result", "unavailable request");
+			}     	
 		}
-        
-        String json = gson.toJson(jsonRes);
-        res.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
+
+		String json = gson.toJson(jsonRes);
+		res.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
 	}
 }

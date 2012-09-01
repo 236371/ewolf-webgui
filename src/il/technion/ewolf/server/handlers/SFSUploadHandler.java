@@ -36,7 +36,7 @@ public class SFSUploadHandler implements HttpRequestHandler {
 			HttpContext context) {
 		//TODO move adding server header to response intercepter
 		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
-		
+
 		String uri = req.getRequestLine().getUri();
 
 		String wolfpackName = null;
@@ -89,7 +89,7 @@ public class SFSUploadHandler implements HttpRequestHandler {
 		String json = gson.toJson(resObj);
 		res.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
 	}
-	
+
 	public void addHandler(UploadFileToSFS handler) {
 		this.handler = handler;
 	}

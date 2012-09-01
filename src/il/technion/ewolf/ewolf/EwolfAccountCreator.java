@@ -77,6 +77,8 @@ public class EwolfAccountCreator {
 		createWall();
 		createSharedFolder();
 		
+		socialGroupsManager.findOrCreateSocialGroup("followers");
+
 		System.out.println(socialFS);
 	}
 	

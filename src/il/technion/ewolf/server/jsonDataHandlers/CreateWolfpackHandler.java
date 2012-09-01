@@ -14,12 +14,12 @@ import static il.technion.ewolf.server.EWolfResponse.*;
 
 public class CreateWolfpackHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
-	
+
 	@Inject
 	public CreateWolfpackHandler(WolfPackLeader socialGroupsManager) {
 		this.socialGroupsManager = socialGroupsManager;
 	}
-	
+
 	private static class JsonReqCreateWolfpackParams {
 		List<String> wolfpackNames;
 	}
