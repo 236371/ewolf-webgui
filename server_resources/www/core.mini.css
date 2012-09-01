@@ -138,8 +138,8 @@ textarea:focus, .textarea-div:focus {
 	background-color:rgba(256,256,256,0.5);
 }
 
-.fileDragBox,.fileDragBoxHover {
-	display: none;
+.fileDragBox {
+	display: block;
 	font-weight: bold;
 	text-align: center;
 	padding: 1em 0;
