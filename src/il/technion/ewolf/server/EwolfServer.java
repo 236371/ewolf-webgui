@@ -32,6 +32,7 @@ import il.technion.ewolf.socialfs.SocialFSModule;
 import il.technion.ewolf.stash.StashModule;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.configuration.ConfigurationException;
@@ -51,7 +52,10 @@ public class EwolfServer {
 
 	private JsonHandler jsonHandler = new JsonHandler();
 	private SFSUploadHandler sfsUploadHandler = new SFSUploadHandler();
-	private SFSHandler sfsHandler = new SFSHandler();
+	private SFSHandler sfsHandler;
+
+	private boolean isReady = false;
+	private Date startTime;
 
 	public EwolfServer(String config) {
 		if (config == null) {
@@ -81,7 +85,6 @@ public class EwolfServer {
 					.setProperty("openkad.net.udp.port", port));
 	}
 
-	private boolean isReady = false;
 	public synchronized boolean isServerReady() {
 		return isReady;
 	}
@@ -89,6 +92,9 @@ public class EwolfServer {
 		isReady = true;
 	}
 
+	public Date startTime() {
+		return startTime;
+	}
 	public void initEwolf() throws IOException, ConfigurationException, Exception {
 		this.configurations = ServerResources.getConfigurations(config);
 
@@ -130,6 +136,7 @@ public class EwolfServer {
 				"PokeMessagesAcceptorThread").start();
 		addEwolfHandlers();
 
+		startTime = new Date();
 		serverIsReady();
 		System.out.println("Server started.");
 	}
@@ -137,9 +144,10 @@ public class EwolfServer {
 	private void registerConnectorHandlers() {
 		serverConnector.register("/json*", jsonHandler);
 		serverConnector.register("/sfsupload*", sfsUploadHandler);
+		sfsHandler = new SFSHandler(this);
 		serverConnector.register("/sfs*", sfsHandler);
 
-		serverConnector.register("*", new JarResourceHandler());
+		serverConnector.register("*", new JarResourceHandler(this));
 	}
 
 	private void addEwolfHandlers() {

@@ -1,5 +1,6 @@
 package il.technion.ewolf.server.handlers;
 
+import il.technion.ewolf.server.EwolfServer;
 import il.technion.ewolf.server.ServerResources;
 import il.technion.ewolf.server.ewolfHandlers.DownloadFileFromSFS;
 
@@ -22,6 +23,11 @@ import org.apache.http.protocol.HttpRequestHandler;
 
 public class SFSHandler implements HttpRequestHandler {
 	private DownloadFileFromSFS handler;
+	private EwolfServer ewolfServer;
+
+	public SFSHandler(EwolfServer ewolfServer) {
+		this.ewolfServer = ewolfServer;
+	}
 
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
@@ -72,7 +78,7 @@ public class SFSHandler implements HttpRequestHandler {
 		if (resStatus == HttpStatus.SC_NOT_FOUND) {
 			try {
 				String path = "/www/404.html";
-				JarResourceHandler handler = new JarResourceHandler();
+				JarResourceHandler handler = new JarResourceHandler(ewolfServer);
 				InputStream is = handler.getResourceAsStream(path);
 				if (is == null) return;
 				handler.setResponseEntity(res, is, path);
