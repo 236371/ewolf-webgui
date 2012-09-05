@@ -7,12 +7,11 @@ import java.io.IOException;
 
 import org.apache.http.Header;
 import org.apache.http.HttpException;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.InputStreamEntity;
-
-import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
@@ -51,7 +50,7 @@ public class HttpFileHandler implements HttpRequestHandler {
 			System.out.println("\t[HttpFileHandler] could not load "+PAGE_404);
 		}
 
-		res.addHeader(HTTP.CONTENT_TYPE, file.contentType());
+		res.addHeader(HttpHeaders.CONTENT_TYPE, file.contentType());
 
 		if(!isModified(file,req,res)) {
 			res.setStatusCode(HttpStatus.SC_NOT_MODIFIED);
@@ -109,7 +108,7 @@ public class HttpFileHandler implements HttpRequestHandler {
 
 	private void addGeneralHeaders(HttpResponse res) {
 		//TODO move adding general headers to response intercepter
-		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
+		res.addHeader(HttpHeaders.SERVER, "e-WolfNode");
 	}
 
 	private boolean loadFile(ServerFile file, String path)

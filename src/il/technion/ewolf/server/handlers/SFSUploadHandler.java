@@ -14,13 +14,13 @@ import java.util.List;
 
 import org.apache.http.Consts;
 import org.apache.http.HttpEntityEnclosingRequest;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
@@ -35,7 +35,7 @@ public class SFSUploadHandler implements HttpRequestHandler {
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) {
 		//TODO move adding server header to response intercepter
-		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
+		res.addHeader(HttpHeaders.SERVER, "e-WolfNode");
 
 		String uri = req.getRequestLine().getUri();
 

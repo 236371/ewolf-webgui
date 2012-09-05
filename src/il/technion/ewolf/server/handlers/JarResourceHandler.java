@@ -6,11 +6,11 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
@@ -23,7 +23,7 @@ public class JarResourceHandler implements HttpRequestHandler {
 		String reqUri = request.getRequestLine().getUri();
 		System.out.println("\t[JarResourceHandler] requesting: " + reqUri);
 		//TODO move adding general headers to response intercepter
-		response.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
+		response.addHeader(HttpHeaders.SERVER, "e-WolfNode");
 
 		if (reqUri.contains("..")) {
 			response.setStatusCode(HttpStatus.SC_FORBIDDEN);
@@ -53,6 +53,6 @@ public class JarResourceHandler implements HttpRequestHandler {
 	void setResponseEntity(HttpResponse response, InputStream is, String path) throws IOException {
 		ByteArrayEntity bae = new ByteArrayEntity(IOUtils.toByteArray(is));
 		response.setEntity(bae);
-		response.addHeader(HTTP.CONTENT_TYPE, ServerResources.getFileTypeMap().getContentType(path));
+		response.addHeader(HttpHeaders.CONTENT_TYPE, ServerResources.getFileTypeMap().getContentType(path));
 	}
 }

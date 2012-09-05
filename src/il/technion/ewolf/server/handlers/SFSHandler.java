@@ -10,13 +10,13 @@ import java.net.URI;
 import java.util.List;
 
 import org.apache.http.Consts;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
@@ -27,7 +27,12 @@ public class SFSHandler implements HttpRequestHandler {
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) {
 		//TODO move adding server header to response intercepter
-		res.addHeader(HTTP.SERVER_HEADER, "e-WolfNode");
+		res.addHeader(HttpHeaders.SERVER, "e-WolfNode");
+
+		if (req.containsHeader(HttpHeaders.IF_MODIFIED_SINCE)) {
+			res.setStatusCode(HttpStatus.SC_NOT_MODIFIED);
+			return;
+		}
 
 		String uri = req.getRequestLine().getUri();
 		try {
@@ -51,7 +56,7 @@ public class SFSHandler implements HttpRequestHandler {
 			}
 			Serializable fileData = handler.handleData(userID, fileName);
 			String mimeType = ServerResources.getFileTypeMap().getContentType(fileName);
-			res.setHeader(HTTP.CONTENT_TYPE, mimeType);
+			res.setHeader(HttpHeaders.CONTENT_TYPE, mimeType);
 			res.setHeader( "Content-Disposition", "attachment; filename=" + fileName );
 			res.setEntity(new ByteArrayEntity((byte[]) fileData));
 		} catch (Exception e) {
