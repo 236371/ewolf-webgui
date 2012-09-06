@@ -5,10 +5,10 @@ import il.technion.ewolf.server.ServerResources;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import org.apache.commons.httpclient.util.DateParseException;
+import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
@@ -35,16 +35,15 @@ public class JarResourceHandler implements HttpRequestHandler {
 		res.addHeader(HttpHeaders.SERVER, "e-WolfNode");
 
 		try {
-			String dateString = req.getLastHeader(HttpHeaders.IF_MODIFIED_SINCE).getValue();
-			SimpleDateFormat format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz");
-			if (dateString != null) {
-				Date d = format.parse(dateString);
+			if (req.containsHeader(HttpHeaders.IF_MODIFIED_SINCE)) {
+				String dateString = req.getLastHeader(HttpHeaders.IF_MODIFIED_SINCE).getValue();
+				Date d = DateUtil.parseDate(dateString);
 				if (d.after(ewolfServer.startTime())) {
 					res.setStatusCode(HttpStatus.SC_NOT_MODIFIED);
 					return;
 				}
 			}
-		} catch (ParseException e) {
+		} catch (DateParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
