@@ -2,6 +2,7 @@ package il.technion.ewolf.http;
 
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.server.HttpSessionStore;
+import il.technion.ewolf.server.WebGuiHttpService;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -64,6 +65,7 @@ public class HttpConnectorModule extends AbstractModule {
 		// port for opening the tcp socket on
 		defaultProps.setProperty("httpconnector.net.port", "2345");
 		
+		defaultProps.setProperty("httpconnector.httpservice", "");
 		
 		return defaultProps;
 	}
@@ -176,11 +178,20 @@ public class HttpConnectorModule extends AbstractModule {
 	
 	@Provides
 	@Singleton
-	HttpService provideHttpService(
+	HttpService provideHttpService(@Named("httpconnector.httpservice") String service,
 			HttpRequestHandlerRegistry registry,
 			@Named("httpconnector.params.server") HttpParams serverParams,
-			@Named("httpconnector.proc.server") HttpProcessor serverProc) {
-		
+			@Named("httpconnector.proc.server") HttpProcessor serverProc,
+			@Named("httpconnector.sessionStore") HttpSessionStore httpSessionStore) {
+		if (service.equals("webgui")) {
+			return  new WebGuiHttpService(
+					serverProc,
+	                new NoConnectionReuseStrategy(),
+	                new DefaultHttpResponseFactory(),
+	                registry,
+	                serverParams,
+	                httpSessionStore);
+		}
 		return  new HttpService(
 				serverProc, 
                 new NoConnectionReuseStrategy(),

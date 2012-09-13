@@ -77,6 +77,7 @@ public class EwolfServer {
 
 		return Guice.createInjector(
 				new HttpConnectorModule()
+					.setProperty("httpconnector.httpservice", "webgui")
 					.setProperty("httpconnector.net.port", port),
 				new KadNetModule()
 					.setProperty("openkad.keyfactory.keysize", "20")
