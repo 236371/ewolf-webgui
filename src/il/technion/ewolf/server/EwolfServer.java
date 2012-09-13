@@ -21,6 +21,7 @@ import il.technion.ewolf.server.jsonDataHandlers.AddWolfpackMemberHandler;
 import il.technion.ewolf.server.jsonDataHandlers.CreateAccountHandler;
 import il.technion.ewolf.server.jsonDataHandlers.CreateWolfpackHandler;
 import il.technion.ewolf.server.jsonDataHandlers.InboxFetcher;
+import il.technion.ewolf.server.jsonDataHandlers.LoginHandler;
 import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher;
 import il.technion.ewolf.server.jsonDataHandlers.PostToNewsFeedHandler;
 import il.technion.ewolf.server.jsonDataHandlers.ProfileFetcher;
@@ -106,6 +107,7 @@ public class EwolfServer {
 		jsonHandler = serverInjector.getInstance(JsonHandler.class);
 		registerConnectorHandlers();
 		jsonHandler.addHandler("createAccount", new CreateAccountHandler(this, config));
+		jsonHandler.addHandler("login", new LoginHandler(config));
 		serverConnector.start();
 
 		while (configurations.username == null || configurations.password == null
