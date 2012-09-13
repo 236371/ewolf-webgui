@@ -41,7 +41,7 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 	 * @return	"success" or error message
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) {
+	public EWolfResponse handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
 		JsonReqCreateWolfpackParams jsonReqParams;
 		try {

@@ -41,7 +41,7 @@ public class CreateAccountHandler implements JsonDataHandler {
 	}
 
 	@Override
-	public Object handleData(JsonElement jsonReq) {
+	public EWolfResponse handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
 		JsonReqCreateAccountParams jsonReqParams;
 		try {

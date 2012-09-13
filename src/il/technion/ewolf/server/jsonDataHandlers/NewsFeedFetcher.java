@@ -122,7 +122,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 	 * @return	list of posts, each contains post ID, sender ID, sender name, timestamp and post text
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) {
+	public EWolfResponse handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
 		JsonReqNewsFeedParams jsonReqParams;
 		try {

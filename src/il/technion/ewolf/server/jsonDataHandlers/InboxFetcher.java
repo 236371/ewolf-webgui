@@ -76,7 +76,7 @@ public class InboxFetcher implements JsonDataHandler {
 	 * 			timestamp and message text, sorted from newer date to older
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) {
+	public EWolfResponse handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
 		JsonReqInboxParams jsonReqParams;
 		try {

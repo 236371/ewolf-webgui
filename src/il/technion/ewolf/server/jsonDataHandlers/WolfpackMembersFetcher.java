@@ -56,7 +56,7 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 	 * @return	list of ProfileData objects. Each object contains name and user ID.
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) {
+	public EWolfResponse handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
 		JsonReqWolfpackMembersParams jsonReqParams;
 		try {

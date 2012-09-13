@@ -53,7 +53,7 @@ public class WolfpacksFetcher implements JsonDataHandler {
 	 * @return	list of all social groups (wolfpacks) names, the user has access to them
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) {
+	public EWolfResponse handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
 		JsonReqWolfpacksParams jsonReqParams;
 		try {

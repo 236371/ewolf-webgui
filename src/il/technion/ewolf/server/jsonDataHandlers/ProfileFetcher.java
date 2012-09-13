@@ -55,7 +55,7 @@ public class ProfileFetcher implements JsonDataHandler {
 	 * @return	ProfileData object that contains user's name and ID
 	 */
 	@Override
-	public Object handleData(JsonElement jsonReq) {
+	public EWolfResponse handleData(JsonElement jsonReq) {
 		Gson gson = new Gson();
 		JsonReqProfileParams jsonReqParams;
 		try {
