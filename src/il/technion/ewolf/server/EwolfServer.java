@@ -50,7 +50,7 @@ public class EwolfServer {
 	HttpConnector serverConnector;
 	Injector ewolfInjector;
 
-	private JsonHandler jsonHandler = new JsonHandler();
+	private JsonHandler jsonHandler;
 	private SFSUploadHandler sfsUploadHandler = new SFSUploadHandler();
 	private SFSHandler sfsHandler;
 
@@ -102,6 +102,7 @@ public class EwolfServer {
 
 		serverConnector = serverInjector.getInstance(HttpConnector.class);
 		serverConnector.bind();
+		jsonHandler = serverInjector.getInstance(JsonHandler.class);
 		registerConnectorHandlers();
 		jsonHandler.addHandler("createAccount", new CreateAccountHandler(this, config));
 		serverConnector.start();

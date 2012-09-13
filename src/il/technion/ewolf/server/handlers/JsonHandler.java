@@ -1,6 +1,7 @@
 package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.HttpSessionStore;
 import il.technion.ewolf.server.jsonDataHandlers.JsonDataHandler;
 
 import java.io.IOException;
@@ -25,9 +26,16 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.inject.Inject;
 
 public class JsonHandler implements HttpRequestHandler {
 	private Map<String,JsonDataHandler> handlers = new HashMap<String,JsonDataHandler>();
+	HttpSessionStore sessionStore;
+
+	@Inject
+	JsonHandler(HttpSessionStore sessionStore) {
+		this.sessionStore = sessionStore;
+	}
 
 	public JsonHandler addHandler(String key, JsonDataHandler handler) {
 		handlers.put(key, handler);

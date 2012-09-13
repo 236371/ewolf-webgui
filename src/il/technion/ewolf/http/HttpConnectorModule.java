@@ -1,6 +1,7 @@
 package il.technion.ewolf.http;
 
 import il.technion.ewolf.kbr.KeybasedRouting;
+import il.technion.ewolf.server.HttpSessionStore;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -87,6 +88,7 @@ public class HttpConnectorModule extends AbstractModule {
 	protected void configure() {
 		Names.bindProperties(binder(), properties);
 		bind(HttpConnector.class).in(Scopes.SINGLETON);
+		bind(HttpSessionStore.class).in(Scopes.SINGLETON);
 	}
 	
 	@Provides
@@ -165,6 +167,12 @@ public class HttpConnectorModule extends AbstractModule {
         });
 	}
 	
+	@Provides
+	@Singleton
+	@Named("httpconnector.sessionStore")
+	HttpSessionStore provideHttpSessionStore() {
+		return new HttpSessionStore();
+	}
 	
 	@Provides
 	@Singleton
@@ -180,7 +188,7 @@ public class HttpConnectorModule extends AbstractModule {
                 registry,
                 serverParams);
 	}
-	
+
 	@Provides
 	HttpContext provideHttpContext() {
 		return new BasicHttpContext();
