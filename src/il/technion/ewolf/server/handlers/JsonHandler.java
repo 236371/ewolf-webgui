@@ -1,5 +1,6 @@
 package il.technion.ewolf.server.handlers;
 
+import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.HttpSessionStore;
 import il.technion.ewolf.server.jsonDataHandlers.JsonDataHandler;
@@ -15,6 +16,7 @@ import org.apache.http.HttpException;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.protocol.HttpContext;
@@ -48,6 +50,8 @@ public class JsonHandler implements HttpRequestHandler {
 		//TODO move adding server header to response intercepter
 		res.addHeader(HttpHeaders.SERVER, "e-WolfNode");
 
+		boolean authorized = (Boolean) context.getAttribute("authorized");
+
 		String jsonReqAsString = EntityUtils.toString(((HttpEntityEnclosingRequest)req).getEntity());
 		JsonParser parser = new JsonParser();
 		JsonObject jsonReq = parser.parse(jsonReqAsString).getAsJsonObject();
@@ -58,10 +62,21 @@ public class JsonHandler implements HttpRequestHandler {
 		Set<Entry<String, JsonElement>> jsonReqAsSet = jsonReq.entrySet();
 		for (Entry<String, JsonElement> obj : jsonReqAsSet) {
 			String key = obj.getKey();
+			if (!authorized) {
+				if (!key.equals("login") && !key.equals("createAccount")) {
+					res.setStatusCode(HttpStatus.SC_FORBIDDEN);
+					return;
+				}
+			}
 			JsonDataHandler handler = handlers.get(key);
 			if (handler != null) {
 				EWolfResponse handlerRes = handler.handleData(obj.getValue());
 				jsonRes.add(key, gson.toJsonTree(handlerRes));
+				if (handlerRes.getResult().equals(RES_SUCCESS) && !authorized) {
+					//TODO set cookie
+					String cookie = sessionStore.createSession();
+					res.addHeader("Set-Cookie", "session=" + cookie);
+				}
 			} else {
 				System.out.println("No handlers are registered to handle request " +
 						"with keyword \"" + key + "\"");
