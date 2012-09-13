@@ -19,9 +19,9 @@ public class ServerResources {
 	/** A lock object for protecting read/write operations to a configuration file. */
 	private static Object configLock = new Lock("ConfigurationFileLock");
 
-	static class EwolfConfigurations {
-		String username;
-		String password;
+	public static class EwolfConfigurations {
+		public String username;
+		public String password;
 		String name;
 		List<URI> kbrURIs = new ArrayList<URI>();
 		int serverPort;

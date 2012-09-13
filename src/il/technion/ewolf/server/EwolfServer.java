@@ -146,10 +146,10 @@ public class EwolfServer {
 	}
 
 	private void registerConnectorHandlers() {
-		serverConnector.register("/json*", jsonHandler);
-		serverConnector.register("/sfsupload*", sfsUploadHandler);
+		serverConnector.register("/json", jsonHandler);
+		serverConnector.register("/sfsupload", sfsUploadHandler);
 		sfsHandler = new SFSHandler(this);
-		serverConnector.register("/sfs*", sfsHandler);
+		serverConnector.register("/sfs", sfsHandler);
 
 		serverConnector.register("*", new JarResourceHandler(this));
 	}
