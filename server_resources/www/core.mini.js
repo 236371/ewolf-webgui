@@ -1,4 +1,5 @@
 EWOLF_CONSTANTS = {
+	REFRESH_INTERVAL : 60,
 	LOADING_FRAME : "loadingFrame",
 	APPLICATION_FRAME : "applicationFrame",
 	MAIN_FRAME : "mainFrame",
@@ -12,7 +13,11 @@ EWOLF_CONSTANTS = {
 	MYPROFILE_APP_ID : "profile",
 	NEWSFEED_APP_ID : "newsfeed",
 	INBOX_APP_ID : "inbox",
-	LOGIN_APP_ID : "login"
+	LOGIN_APP_ID : "login",
+	
+	PROFILE_REQUEST_NAME : "__main_profile_request__",
+	WOLFPACKS_REQUEST_NAME : "__main_wolfpacks_request",
+	MEMBERS_REQUEST_NAME : "__main_members_request__"
 };
 
 var eWolf = new function() {
@@ -21,10 +26,13 @@ var eWolf = new function() {
 	
 	this.userID = null;
 	this.userName = null;
+	this.selectedApp = null;
 	
-	this.sendToProfile = {};
+	this.serverRequest = null;
 	
 	this.init = function() {
+		self.serverRequest = new PostRequestHandler("/json",self.REFRESH_INTERVAL);
+		
 		$(window).bind('hashchange', self.onHashChange);
 		
 		self.applicationFrame = $("#"+self.APPLICATION_FRAME);
@@ -45,7 +53,30 @@ var eWolf = new function() {
 				self.MAINAPPS_MENU_ID,"Main");
 		
 		self.wolfpacksMenuList = self.sideMenu.createNewMenuList(
-				self.WOLFPACKS_MENU_ID,"Wolfpacks");		
+				self.WOLFPACKS_MENU_ID,"Wolfpacks");
+		
+		self.serverRequest.registerRequest(self.PROFILE_REQUEST_NAME,
+				function() {
+					return { profile : {}	};
+				});
+		
+		self.serverRequest.registerRequest(self.WOLFPACKS_REQUEST_NAME,
+				function() {
+					return { wolfpacks : {}	};
+				});
+		
+		self.serverRequest.bindRequest(self.PROFILE_REQUEST_NAME);
+		self.serverRequest.bindRequest(self.WOLFPACKS_REQUEST_NAME);
+		
+		self.members = new Members();		
+		self.wolfpacks = new Wolfpacks(self.wolfpacksMenuList,self.applicationFrame);
+		self.profile = new Profile(self.MYPROFILE_APP_ID,self.applicationFrame);
+		
+		self.serverRequest.registerHandler(self.PROFILE_REQUEST_NAME,
+				new ResponseHandler("profile",["id","name"],
+						function (data, textStatus, postData) {
+					document.title = "eWolf - " + data.name;
+				}).getHandler());
 		
 		self.getUserInformation();
 	};
@@ -55,50 +86,31 @@ var eWolf = new function() {
 			self.loginApp.destroy();
 		}
 		
-		var responseHandler = new ResponseHandler("profile",
-				["id","name"]);
-		
-		var request = new PostRequestHandler("eWolf","/json",0)
-			.register(function() {
-				return {
-					profile: self.sendToProfile
-				};
-			},responseHandler.getHandler());
-		
-		function onLoggedIn(data, textStatus, postData) {
-			document.title = "eWolf - " + data.name;
+		self.serverRequest.complete(null,function() {			
+			self.serverRequest.complete(null,null);
 			
-			self.userID = data.id;
-			self.userName = data.name;
+			if(self.profile.getID()) {
+				self.createMainApps();
+			} else {
+				self.serverRequest.stopRefreshInterval();
 				
-			self.createMainApps();
-		}
+				// Welcome
+				self.welcome.addMenuItem(self.LOGIN_APP_ID,"Login");
+				if(!self.loginApp) {
+					self.loginApp = new Login(self.LOGIN_APP_ID,self.applicationFrame).select();
+				}
+			}
+		});
 		
-		function onNotLoggedIn(data, textStatus, postData) {
-			// Welcome
-			self.welcome.addMenuItem(self.LOGIN_APP_ID,"Login");
-			if(!self.loginApp) {
-				self.loginApp = new Login(self.LOGIN_APP_ID,self.applicationFrame).select();
-			}		
-		}
-		
-		responseHandler.success(onLoggedIn);	
-		responseHandler.error(onNotLoggedIn).badResponseHandler(onNotLoggedIn);
-		
-		request.requestAll();
+		self.serverRequest.requestAll("eWolfLogin");
 	};
 	
 	this.createMainApps = function () {
 		self.welcome.hideMenu();
 		self.logout = new Logout("Logout",eWolf.topBarFrame);
 		
-		self.wolfpacks = new Wolfpacks(self.wolfpacksMenuList,self.applicationFrame);
-		self.wolfpacks.addKnownUsers(self.userID, self.userName);
-		
 		self.mainApps.addMenuItem(self.MYPROFILE_APP_ID,"My Profile");
-		self.profileApp = new Profile(self.MYPROFILE_APP_ID,self.userID,
-				self.userName,self.applicationFrame);
-		
+				
 		self.mainApps.addMenuItem(self.NEWSFEED_APP_ID,"News Feed");
 		self.newsFeedApp = new WolfpackPage(self.NEWSFEED_APP_ID,null,self.applicationFrame);
 		
@@ -108,9 +120,7 @@ var eWolf = new function() {
 		self.searchApp = new SearchApp(self.sideMenu,
 				self.applicationFrame,$("#"+self.TOPBAR_FRAME));
 		
-		self.wolfpacks.requestWolfpacks(function() {
-			self.onHashChange();
-		});		
+		self.onHashChange();		
 	};
 	
 	this.onHashChange = function() {
@@ -173,21 +183,457 @@ var eWolf = new function() {
 		return self;
 	};
 	
+	this.bind("select",function(event,eventId) {
+		self.selectedApp = eventId;
+	});
+	
 	return this;
 };
 
 $(document).ready(function () {
 	eWolf.init();	
 });
-var Application = function(id,container) {
+var Members = function() {
+	var self = this;
+	
+	this.knownUsersFullDescriptionArray = [];
+	this.knownUsersIDArray = [];
+	var knownUsersMapByID = {};
+	
+	var membersResponseHandler = new ResponseHandler("wolfpackMembers",
+			["membersList"],handleMembers);
+	
+	eWolf.serverRequest.registerRequest(eWolf.MEMBERS_REQUEST_NAME,
+			function() {
+				return { wolfpackMembers : {}	};
+			});	
+	
+	eWolf.serverRequest.registerHandler(eWolf.MEMBERS_REQUEST_NAME,
+			membersResponseHandler.getHandler());
+	
+	eWolf.serverRequest.bindRequest(eWolf.MEMBERS_REQUEST_NAME,"eWolfLogin");
+	
+	function handleMembers(data, textStatus, postData) {
+		$.each(data.membersList, function(i,userObj){
+			self.addKnownUsers(userObj.id,userObj.name);
+		});
+	}
+	
+	this.addKnownUsers = function(userID,userName) {
+		if(knownUsersMapByID[userID] == null) {
+			knownUsersMapByID[userID] = userName;
+			var fullDesc = userName+" ("+userID+")";
+			self.knownUsersFullDescriptionArray.push(fullDesc);
+			self.knownUsersIDArray.push(userID);
+			
+			eWolf.trigger("foundNewUser",[userID,userName,fullDesc]);
+		}		
+		
+		return self;
+	};
+	
+	this.getUserFromFullDescription = function (fullDescription) {
+		var idx = self.knownUsersFullDescriptionArray.indexOf(fullDescription);
+		if(idx != -1){
+			return self.knownUsersIDArray[idx];
+		} else {
+			return null;
+		}
+	};
+	
+	this.getUserName = function (userID, onReady) {
+		var itsName = knownUsersMapByID[userID];
+		if(!itsName && onReady) {
+			eWolf.serverRequest.request(null,{
+						profile: {
+							userID: userID
+						}
+					  },
+					new ResponseHandler("profile",["name"],
+							function(data, textStatus, postData) {
+						self.addKnownUsers(userID,data.name);
+						onReady(data.name);
+					}).getHandler());
+		}
+		
+		return itsName;
+	};
+	
+	return this;
+};WOLFPACK_CONSTANTS = {
+	WOLFPACK_APP_PREFIX : "wolfpack:"
+};
+
+var Wolfpacks = function (menuList,applicationFrame) {
+	var self = this;
+	$.extend(this,WOLFPACK_CONSTANTS);
+	
+	var wolfpacksApps = {},
+		UID = 100;
+	
+	this.wolfpacksArray = [];
+	
+	menuList.addExtraItem(CreateNewWolfpackLink());
+	
+	var wolfpacksResponseHandler = new ResponseHandler("wolfpacks",
+			["wolfpacksList"],handleWolfpacks);
+	
+	eWolf.serverRequest.registerHandler(eWolf.WOLFPACKS_REQUEST_NAME,
+			wolfpacksResponseHandler.getHandler());
+	
+	function handleWolfpacks(data, textStatus, postData) {
+		$.each(data.wolfpacksList, function(i,pack){
+			self.addWolfpack(pack);
+		});
+	}
+	
+	this.addWolfpack = function (pack) {
+		if(wolfpacksApps[pack] == null) {
+			var packID = self.WOLFPACK_APP_PREFIX + pack + "_" + UID;
+			UID += 1;
+			packID = packID.replace(/[^a-zA-Z0-9_:]/g,'_');
+			menuList.addMenuItem(packID,pack);			
+			var app = new WolfpackPage(packID,pack,applicationFrame);			
+			
+			wolfpacksApps[pack] = app;
+			self.wolfpacksArray.push(pack);
+		}
+		
+		return self;
+	};
+	
+	this.getWolfpackAppID = function(pack) {
+		var app = wolfpacksApps[pack];
+		if(app) {
+			return app.getId();
+		} else {
+			return null;
+		}
+	};
+	
+	this.removeWolfpack = function(pack) {
+		if(wolfpacksApps[pack] != null) {
+			menuList.removeMenuItem("__pack__"+pack);
+			wolfpacksApps[pack].destroy();
+			wolfpacksApps[pack] = null;
+			
+			var idx = wolfpacksArray.indexOf(pack);
+			if(idx != -1){
+				wolfpacksArray.splice(idx, 1);
+			}
+		}
+		
+		return self;
+	};
+	
+	return this;
+};
+
+
+
+var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
+	var self = this;
+	
+	var requestsMap = {},
+			appsRequests = {},
+			generalRequests = [];
+
+	var onCompleteAll = null;
+	var timer = null;
+	
+	this.stopRefreshInterval = function () {
+		clearTimeout(timer);
+	};
+	
+	this.restartRefreshInterval = function () {
+		clearTimeout(timer);
+		timer = setTimeout(timerTimeout,refreshIntervalSec*1000);
+	};
+	
+	function onPostBegin (appID) {
+		clearTimeout(timer);
+		eWolf.trigger("loading",[appID]);
+	}
+	
+	function onPostComplete (appID) {
+		eWolf.trigger("loadingEnd",[appID]);
+		
+		if(refreshIntervalSec > 0) {
+			clearTimeout(timer);
+			timer = setTimeout(timerTimeout,refreshIntervalSec*1000);
+		}
+		
+		if(appID && appsRequests[appID] && appsRequests[appID].onComplete) {
+			appsRequests[appID].onComplete();
+		}
+		
+		if(onCompleteAll) {
+			onCompleteAll();
+		}		
+	}
+	
+	function timerTimeout() {
+		self.requestAll(eWolf.selectedApp,false);
+	}
+	
+	eWolf.bind("select",function(event,eventId) {
+		self.requestAll(eventId,false);
+	});
+	
+	eWolf.bind("refresh",function(event,eventId) {
+		self.requestAll(eventId,true);
+	});
+	
+	this.registerRequest = function(requestName, requestFunction) {
+		if(!requestsMap[requestName]) {
+			requestsMap[requestName] = {
+					request : requestFunction,
+					handlers : [],
+					lastUpdate : 0
+			};
+		}
+		
+		return self;
+	};
+	
+	this.registerHandler = function(requestName, handleDataFunction) {
+		if(requestName && requestsMap[requestName]) {
+			requestsMap[requestName].handlers.push(handleDataFunction);
+		}
+		
+		return self;
+	};
+	
+	this.bindRequest = function(requestName,appID) {
+		if(requestName && requestsMap[requestName]) {
+			if(appID) {
+				if(!appsRequests[appID]) {
+					appsRequests[appID] = [];
+				}
+				appsRequests[appID].push(requestsMap[requestName]);
+			} else {
+				generalRequests.push(requestsMap[requestName]);
+			}			
+		}
+		
+		return self;
+	};
+	
+	this.unregisterApp = function(appID) {
+		if(appID && appsRequests[appID]) {
+			delete appsRequests[appID];
+		}
+		
+		return self;
+	};
+	
+	this.setRequestAddress = function(inputRequestAddress) {
+		requestAddress = inputRequestAddress;
+		return self;
+	};
+	
+	this._makeRequest = function (address,data,success) {
+		return self;
+	};
+	
+	this.request = function(appID,data,handleDataFunction) {
+		onPostBegin(appID);
+		
+		self._makeRequest(requestAddress,data,
+			function(receivedData,textStatus) {
+				handleDataFunction(receivedData,textStatus,data);
+			}).complete(function() {
+				onPostComplete(appID);
+			});
+		
+		return self;
+	};
+	
+
+	this.requestObjectArray = function(appID,requestsObj) {
+		if(requestsObj.length == 0) {
+			return self;
+		}
+		
+		var data = {};
+
+		$(requestsObj).each(function(i, reqObj) {
+			$.extend(data, reqObj.request());
+		});
+
+		this.request(appID, data, function(receivedData, textStatus, data) {
+			$(requestsObj).each(function(i, reqObj) {
+				$(reqObj.handlers).each(function(i, handlerFunc) {
+					handlerFunc(receivedData, textStatus, data);
+				});
+				
+				reqObj.lastUpdate = new Date().getTime();
+			});
+		});
+
+		return self;
+	};
+	
+	this.requestAll = function(appID,forceUpdate) {
+		var requestsObj = generalRequests;
+		
+		if(appID && appsRequests[appID]) {
+			requestsObj = requestsObj.concat(appsRequests[appID]);
+		}
+
+		var needRefresh = [];
+		
+		if(forceUpdate) {
+			needRefresh = requestsObj;
+		} else {
+			needRefresh = self.filterByLastUpdate(requestsObj);
+		}	
+		
+		return self.requestObjectArray(appID,needRefresh);
+	};
+	
+	this.filterByLastUpdate = function(requestsObj) {
+		var needRefresh = [];
+		
+		var needRefreshTime = new Date().getTime() - 
+							(refreshIntervalSec * 1000);
+
+		$(requestsObj).each(function(i,reqObj) {
+			if(reqObj.lastUpdate < needRefreshTime) {
+				needRefresh.push(reqObj);
+			}
+		});
+		
+		return needRefresh;
+	};
+	
+	this.complete = function(appID,newOnComplete) {
+		if(appID && appsRequests[appID]) {
+			appsRequests[appID].onComplete = newOnComplete;
+		} else {
+			onCompleteAll = newOnComplete;
+		}		
+		
+		return self;
+	};
+		
+	return this;
+};
+
+var PostRequestHandler = function(requestAddress,refreshIntervalSec) {
+	BasicRequestHandler.call(this,requestAddress,refreshIntervalSec);
+	
+	this._makeRequest = function (address,data,success) {
+		return $.post(address,JSON.stringify(data),success,"json");
+	};
+	
+	return this;
+};
+
+/*var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
+	BasicRequestHandler.call(this,id,requestAddress,refreshIntervalSec);
+	
+	this._makeRequest = function (address,data,success) {		
+		return $.getJSON(address,data,success);
+	};
+	
+	return this;
+};*/
+
+var RESPONSE_RESULT = {
+		SUCCESS :				"SUCCESS",
+			//	if everything went well.
+		BAD_REQUEST :			"BAD_REQUEST",
+			//	Missing an obligatory parameter.
+			//	Wrong type or format parameter.
+		INTERNAL_SERVER_ERROR :	"INTERNAL_SERVER_ERROR", 
+			//for any internal server error.
+		ITEM_NOT_FOUND :		"ITEM_NOT_FOUND",
+			//	if the requested item did not found (for any reason).
+		GENERAL_ERROR :			"GENERAL_ERROR",
+			// for errors from unknown reason (no one of above)
+		UNAVAILBLE_REQUEST :	"UNAVAILBLE_REQUEST",
+			// if the request category is unavailable or not exists.
+};
+
+var ResponseHandler = function(category, requiredFields, handler) {
+	var thisObj = this;
+	
+	var errorHandler = null;
+	var completeHandler = null;
+	var badResponseHandler = null;
+	
+	function theHandler(data, textStatus, postData) {
+		if (data[category] != null) {
+			if (data[category].result == RESPONSE_RESULT.SUCCESS) {
+				var valid = true;
+				$.each(requiredFields, function(i, field) {
+					if (field == null) {
+						console.log("No field: \"" + field + "\" in response");
+						valid = false;
+						return false;
+					}
+				});
+
+				if (valid && handler) {
+					handler(data[category], textStatus, postData[category]);
+				}
+			} else {
+				console.log(data[category].result + " : " +
+						data[category].errorMessage);
+				if(errorHandler) {
+					errorHandler(data[category], textStatus, postData[category]);
+				}
+			}
+
+		} else {
+			var errorMsg = "No category: \"" + category + "\" in response";
+			console.log(errorMsg);
+			
+			if(badResponseHandler) {
+				badResponseHandler(errorMsg, textStatus, postData[category]);
+			}
+		}
+		
+		if(completeHandler) {
+			completeHandler(textStatus, postData[category]);
+		}		
+	};
+	
+
+	this.getHandler = function() {
+		return theHandler;
+	};
+	
+	this.error = function (newErrorHandler) {
+		errorHandler = newErrorHandler;
+		return thisObj;
+	};
+	
+	this.success = function (newSuccessHandler) {
+		handler = newSuccessHandler;
+		return thisObj;
+	};
+	
+	this.complete = function (newCompleteHandler) {
+		completeHandler = newCompleteHandler;
+		return thisObj;
+	};
+	
+	this.badResponseHandler = function (newBadResponseHandler) {
+		badResponseHandler = newBadResponseHandler;
+		return thisObj;
+	};
+	
+	return this;
+};var Application = function(id,container) {
 	var self = this;
 	var selected = false;
-	var needRefresh = true;
 	
-	this.frame = $("<div/>").attr({
-		"class": "applicationContainer"
-	})	.appendTo(container)
-		.hide();
+	this.frame = $("<div/>")
+			.addClass("applicationContainer")
+			.appendTo(container)
+			.hide();
 	
 	eWolf.bind("select."+id,function(event,eventId) {
 		if(id == eventId) {	
@@ -199,10 +645,6 @@ var Application = function(id,container) {
 				});
 				
 				selected = true;
-			}
-			
-			if(needRefresh) {
-				eWolf.trigger("refresh",[id]);
 			}
 		} else {
 			if(selected) {
@@ -217,20 +659,6 @@ var Application = function(id,container) {
 				self.frame.stopAllYouTubePlayers();
 			}				
 		}			
-	});
-	
-	eWolf.bind("refresh."+id,function(event,eventId) {	
-		if(id == eventId) {
-			needRefresh = false;
-		}
-	});
-	
-	eWolf.bind("needRefresh."+id,function(event,eventId) {
-		needRefresh = true;
-		
-		if(selected) {
-			eWolf.trigger("refresh."+id.replace("+","\\+"),[id]);
-		}
 	});
 	
 	eWolf.bind("destroy."+id,function(event,eventId) {
@@ -256,8 +684,6 @@ var Application = function(id,container) {
 	
 	this.destroy = function() {
 		eWolf.unbind("select."+id);
-		eWolf.unbind("refresh."+id);
-		eWolf.unbind("needRefresh."+id);
 		eWolf.unbind("destroy."+id);
 		self.frame.remove();
 		delete self;
@@ -371,7 +797,34 @@ var Application = function(id,container) {
 	}
 	
 	return box;
-}DATE_FORMAT = "dd/MM/yyyy (HH:mm)";
+}var CreateNewWolfpackLink = function() {
+	var link = $("<a/>").append("+ Create Wolfpack");	
+	var li = $("<li/>").append(link).click(function() {
+		var diag = $("<div/>").attr({
+			"id" : "dialog-confirm",
+			"title" : "Create a new wolfpack"
+		}).addClass("DialogClass");
+		
+		$("<p/>").appendTo(diag).append("New wolfpack name:");
+
+		
+		diag.dialog({
+			resizable: true,
+			modal: true,
+			width: 550,
+			buttons: {
+				"Create": function() {
+					$( this ).dialog( "close" );
+				},
+				Cancel: function() {
+					$( this ).dialog( "close" );
+				}
+			}
+		});
+	});
+	
+	return li;
+};DATE_FORMAT = "dd/MM/yyyy (HH:mm)";
 
 function CreateTimestampBox(timestamp) {	
 	return $("<span/>").addClass("timestampBox")
@@ -412,13 +865,13 @@ function CreateTimestampBox(timestamp) {
 	}
 	
 	if (!name) {
-		var fullDescID = eWolf.wolfpacks.getUserFromFullDescription(id);
+		var fullDescID = eWolf.members.getUserFromFullDescription(id);
 		
 		if(fullDescID) {
 			id = fullDescID;
 		}
 		
-		name = eWolf.wolfpacks.getUserName(id,function(receivedName) {
+		name = eWolf.members.getUserName(id,function(receivedName) {
 			name = receivedName;
 			fillInformation();	
 		});
@@ -900,9 +1353,9 @@ $.fn.spin = function(opts) {
 
 var FriendsQueryTagList = function (minWidth) {
 	function sendToFuncReplace(query) {
-		var id = eWolf.wolfpacks.getUserFromFullDescription(query);
+		var id = eWolf.members.getUserFromFullDescription(query);
 		if(id) {
-			query = eWolf.wolfpacks.getUserName(id);
+			query = eWolf.members.getUserName(id);
 		} else {
 			id = query;
 			query = null;
@@ -915,7 +1368,7 @@ var FriendsQueryTagList = function (minWidth) {
 	}
 	
 	return new QueryTagList(minWidth,"Type user name or ID...",
-			eWolf.wolfpacks.knownUsersFullDescriptionArray,true,sendToFuncReplace);
+			eWolf.members.knownUsersFullDescriptionArray,true,sendToFuncReplace);
 };
 
 var WolfpackQueryTagList = function (minWidth) {
@@ -933,208 +1386,6 @@ var WolfpackQueryTagList = function (minWidth) {
 	
 	return new QueryTagList(minWidth,"Type wolfpack name...",
 			eWolf.wolfpacks.wolfpacksArray,false,sendToFuncReplace);
-};var BasicRequestHandler = function(id,requestAddress,
-		refreshIntervalSec) {
-	var self = this;
-	
-	var observersRequestFunction = [];
-	var observersHandleDataFunction = [];
-	var onCompleteAll = null;
-	var timer = null;
-	
-	function trigger() {
-		eWolf.trigger('needRefresh.'+id.replace("+","\\+"),[id]);
-	}
-	
-	function onPostComplete () {
-		eWolf.trigger("loadingEnd",[id]);
-		
-		if(refreshIntervalSec > 0) {
-			clearTimeout(timer);
-			timer = setTimeout(trigger,refreshIntervalSec*1000);
-		}
-		
-		if(onCompleteAll) {
-			onCompleteAll();
-		}		
-	}
-		
-	this.getId = function() {
-		return id;
-	};
-	
-	this.setRequestAddress = function(inputRequestAddress) {
-		requestAddress = inputRequestAddress;
-		return self;
-	};
-	
-	this._makeRequest = function (address,data,success) {
-		return self;
-	};
-	
-	this.request = function(data,handleDataFunction) {
-		clearTimeout(timer);
-		eWolf.trigger("loading",[id]);
-		
-		self._makeRequest(requestAddress,data,
-			function(receivedData,textStatus) {
-				handleDataFunction(receivedData,textStatus,data);
-			}).complete(onPostComplete);
-		
-		return self;
-	};
-	
-	this.requestAll = function() {
-		var data = {};
-		
-		$.each(observersRequestFunction, function(i, func) {
-			var res = func();
-			
-			if(res != null) {
-				$.extend(data,res);
-			}				
-		});
-		
-		this.request(data,function(receivedData,textStatus,data) {
-			$.each(observersHandleDataFunction, function(i, func) {
-				func(receivedData,textStatus,data);			
-			});
-		});
-		
-		return self;
-	};
-	
-	this.register = function(requestFunction,handleDataFunction) {
-		if(requestFunction != null && handleDataFunction != null) {
-			observersRequestFunction.push(requestFunction);
-			observersHandleDataFunction.push(handleDataFunction);
-		}
-		
-		return self;
-	};
-	
-	this.listenToRefresh = function() {
-		eWolf.bind("refresh."+id,function(event,eventId) {
-			if(id == eventId) {
-				self.requestAll();
-			}
-		});
-		
-		return self;
-	};
-	
-	this.complete = function(newOnCompleteAll) {
-		onCompleteAll = newOnCompleteAll;
-		return this;
-	};
-		
-	return this;
-};
-
-var PostRequestHandler = function(id,requestAddress,refreshIntervalSec) {
-	BasicRequestHandler.call(this,id,requestAddress,refreshIntervalSec);
-	
-	this._makeRequest = function (address,data,success) {
-		return $.post(address,JSON.stringify(data),success,"json");
-	};
-	
-	return this;
-};
-
-var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
-	BasicRequestHandler.call(this,id,requestAddress,refreshIntervalSec);
-	
-	this._makeRequest = function (address,data,success) {		
-		return $.getJSON(address,data,success);
-	};
-	
-	return this;
-};var RESPONSE_RESULT = {
-		SUCCESS :				"SUCCESS",
-			//	if everything went well.
-		BAD_REQUEST :			"BAD_REQUEST",
-			//	Missing an obligatory parameter.
-			//	Wrong type or format parameter.
-		INTERNAL_SERVER_ERROR :	"INTERNAL_SERVER_ERROR", 
-			//for any internal server error.
-		ITEM_NOT_FOUND :		"ITEM_NOT_FOUND",
-			//	if the requested item did not found (for any reason).
-		GENERAL_ERROR :			"GENERAL_ERROR",
-			// for errors from unknown reason (no one of above)
-		UNAVAILBLE_REQUEST :	"UNAVAILBLE_REQUEST",
-			// if the request category is unavailable or not exists.
-};
-
-var ResponseHandler = function(category, requiredFields, handler) {
-	var thisObj = this;
-	
-	var errorHandler = null;
-	var completeHandler = null;
-	var badResponseHandler = null;
-	
-	function theHandler(data, textStatus, postData) {
-		if (data[category] != null) {
-			if (data[category].result == RESPONSE_RESULT.SUCCESS) {
-				var valid = true;
-				$.each(requiredFields, function(i, field) {
-					if (field == null) {
-						console.log("No field: \"" + field + "\" in response");
-						valid = false;
-						return false;
-					}
-				});
-
-				if (valid && handler) {
-					handler(data[category], textStatus, postData[category]);
-				}
-			} else {
-				console.log(data[category].result + " : " +
-						data[category].errorMessage);
-				if(errorHandler) {
-					errorHandler(data[category], textStatus, postData[category]);
-				}
-			}
-
-		} else {
-			var errorMsg = "No category: \"" + category + "\" in response";
-			console.log(errorMsg);
-			
-			if(badResponseHandler) {
-				badResponseHandler(errorMsg, textStatus, postData[category]);
-			}
-		}
-		
-		if(completeHandler) {
-			completeHandler(textStatus, postData[category]);
-		}		
-	};
-	
-
-	this.getHandler = function() {
-		return theHandler;
-	};
-	
-	this.error = function (newErrorHandler) {
-		errorHandler = newErrorHandler;
-		return thisObj;
-	};
-	
-	this.success = function (newSuccessHandler) {
-		handler = newSuccessHandler;
-		return thisObj;
-	};
-	
-	this.complete = function (newCompleteHandler) {
-		completeHandler = newCompleteHandler;
-		return thisObj;
-	};
-	
-	this.badResponseHandler = function (newBadResponseHandler) {
-		badResponseHandler = newBadResponseHandler;
-		return thisObj;
-	};
-	
-	return this;
 };var Tag = function(id,onRemove,removable,multirow,withImage) {
 	var box = $("<p/>").addClass("TagClass");
 	
@@ -1580,138 +1831,7 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 	this.setTitle(title);
 	
 	return this;
-};WOLFPACK_CONSTANTS = {
-	WOLFPACK_APP_PREFIX : "wolfpack:"
-};
-
-var Wolfpacks = function (menuList,applicationFrame) {
-	var self = this;
-	$.extend(this,WOLFPACK_CONSTANTS);
-	
-	var request = new PostRequestHandler("eWolf","/json",0);
-	
-	var wolfpacksApps = {},
-		knownUsersMapByID = {},
-		UID = 100;
-	
-	this.wolfpacksArray = [];
-	this.knownUsersFullDescriptionArray = [];
-	this.knownUsersIDArray = [];
-	
-	request.register(function() {
-		return {
-			 wolfpacks:{}
-		};
-	},new ResponseHandler("wolfpacks",["wolfpacksList"],handleWolfpacks).getHandler());
-	
-	request.register(function() {
-		return {
-			wolfpackMembers:{}
-		};
-	},new ResponseHandler("wolfpackMembers",["membersList"],handleMembers).getHandler());
-	
-	function handleWolfpacks(data, textStatus, postData) {
-		$.each(data.wolfpacksList, function(i,pack){
-			self.addWolfpack(pack);
-		});
-	}
-	
-	function handleMembers(data, textStatus, postData) {
-		$.each(data.membersList, function(i,userObj){
-			self.addKnownUsers(userObj.id,userObj.name);
-		});
-	}
-	
-	this.addWolfpack = function (pack) {
-		if(wolfpacksApps[pack] == null) {
-			var packID = self.WOLFPACK_APP_PREFIX + pack + "_" + UID;
-			UID += 1;
-			packID = packID.replace(/[^a-zA-Z0-9_:]/g,'_');
-			menuList.addMenuItem(packID,pack);			
-			var app = new WolfpackPage(packID,pack,applicationFrame);			
-			
-			wolfpacksApps[pack] = app;
-			self.wolfpacksArray.push(pack);
-		}
-		
-		return self;
-	};
-	
-	this.getWolfpackAppID = function(pack) {
-		var app = wolfpacksApps[pack];
-		if(app) {
-			return app.getId();
-		} else {
-			return null;
-		}
-	};
-	
-	this.removeWolfpack = function(pack) {
-		if(wolfpacksApps[pack] != null) {
-			menuList.removeMenuItem("__pack__"+pack);
-			wolfpacksApps[pack].destroy();
-			wolfpacksApps[pack] = null;
-			
-			var idx = wolfpacksArray.indexOf(pack);
-			if(idx != -1){
-				wolfpacksArray.splice(idx, 1);
-			}
-		}
-		
-		return self;
-	};
-	
-	this.addKnownUsers = function(userID,userName) {
-		if(knownUsersMapByID[userID] == null) {
-			knownUsersMapByID[userID] = userName;
-			var fullDesc = userName+" ("+userID+")";
-			self.knownUsersFullDescriptionArray.push(fullDesc);
-			self.knownUsersIDArray.push(userID);
-			
-			eWolf.trigger("foundNewUser",[userID,userName,fullDesc]);
-		}		
-		
-		return self;
-	};
-	
-	this.getUserFromFullDescription = function (fullDescription) {
-		var idx = self.knownUsersFullDescriptionArray.indexOf(fullDescription);
-		if(idx != -1){
-			return self.knownUsersIDArray[idx];
-		} else {
-			return null;
-		}
-	};
-	
-	this.getUserName = function (userID, onReady) {
-		var itsName = knownUsersMapByID[userID];
-		if(!itsName && onReady) {
-			var request = new PostRequestHandler(userID,"/json",0).request({
-						profile: {
-							userID: userID
-						}
-					  },
-					new ResponseHandler("profile",["name"],
-							function(data, textStatus, postData) {
-						self.addKnownUsers(userID,data.name);
-						onReady(data.name);
-					}).getHandler());
-		}
-		
-		return itsName;
-	};
-	
-	this.requestWolfpacks = function(onReady) {
-		request.complete(onReady);
-		request.requestAll();
-	};	
-	
-	return this;
-};
-
-
-
-/**
+};/**
  * Version: 1.0 Alpha-1 
  * Build Date: 13-Nov-2007
  * Copyright (c) 2006-2007, Coolite Inc. (http://www.coolite.com/). All rights reserved.
@@ -2197,7 +2317,7 @@ var MenuItem = function(id,title,topbarFrame) {
 
 	refresh.click(function() {
 		if(isLoading == false) {
-			eWolf.trigger("refresh."+id.replace("+","\\+"),[id]);
+			eWolf.trigger("refresh",[id]);
 		}	
 	});
 	
@@ -2307,11 +2427,13 @@ var menuItemSpinnerOpts = {
 		.appendTo(frame);
 
 	var list = $("<ul/>").appendTo(frame);	
+	var menuItemList = $("<span/>").appendTo(list);
+	var xtraItemList = $("<span/>").appendTo(list);
 	
 	this.addMenuItem = function(id,title) {
 		if(items[id] == null) {
 			var menuItem = new MenuItem(id,title,topbarFrame)
-					.appendTo(list);
+					.appendTo(menuItemList);
 			
 			items[id] = menuItem;
 			
@@ -2320,7 +2442,14 @@ var menuItemSpinnerOpts = {
 			}
 		} else {
 			console.log("[Menu Error] Item with id: "+ id +" already exist");
-		}		
+		}
+		
+		return self;
+	};
+	
+	this.addExtraItem = function(item) {
+		xtraItemList.append(item);
+		return self;
 	};
 	
 	this.removeMenuItem = function(removeId) {
@@ -2332,22 +2461,30 @@ var menuItemSpinnerOpts = {
 		if(Object.keys(items).length <= 0) {
 			frame.hide();
 		}
+		
+		return self;
 	};
 	
 	this.renameMenuItem = function(id,newTitle) {
 		if(items[id] != null) {
 			items[id].renameTitle(newTitle);
 		}
+		
+		return self;
 	};
 	
 	this.hideMenu = function () {
 		frame.hide();
+		
+		return self;
 	};
 	
 	this.showMenu = function () {
 		if(Object.keys(items).length > 0) {
 			frame.show();
 		}
+		
+		return self;
 	};
 	
 	this.appendTo = function(container) {
@@ -2620,9 +2757,11 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	};
 	
 	return this;
-};var GenericMailList = function(mailType,request,serverSettings,
+};var GenericMailList = function(mailType,appID,serverSettings,
 		listClass,msgBoxClass,preMessageTitle,allowShrink) {
 	var self = this;
+	
+	var newsFeedRequestName = appID + "__newsfeed_request_name__";
 	
 	var newestDate = null;
 	var oldestDate = null;
@@ -2682,10 +2821,14 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	
 	var responseHandler = new ResponseHandler(mailType,
 			["mailList"],handleNewData);
-	request.register(this.updateFromServer ,responseHandler.getHandler());
+	
+	eWolf.serverRequest.registerRequest(newsFeedRequestName,this.updateFromServer);
+	eWolf.serverRequest.registerHandler(newsFeedRequestName,responseHandler.getHandler());
+	eWolf.serverRequest.bindRequest(newsFeedRequestName,appID);
 	
 	var showMore = new ShowMore(this.frame,function() {
-		request.request(self.updateFromServer (true),responseHandler.getHandler());
+		eWolf.serverRequest.request(self.updateFromServer (true),
+				responseHandler.getHandler());
 	}).draw();
 	
 	function handleNewData(data, textStatus, postData) {
@@ -2713,17 +2856,17 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	return this;
 };
 
-var NewsFeedList = function (request,serverSettings) {
+var NewsFeedList = function (appID,serverSettings) {
 	$.extend(serverSettings,{maxMessages:2});
 
 	var pow = "<img src='wolf-paw.svg' height='18px' style='padding-right:5px;'></img>";
-	GenericMailList.call(this,"newsFeed",request,serverSettings,
+	GenericMailList.call(this,"newsFeed",appID,serverSettings,
 			"postListItem","postBox",pow,false);
 	
 	return this;
 };
 
-var WolfpackNewsFeedList = function (request,wolfpack) {
+var WolfpackNewsFeedList = function (appID,wolfpack) {
 	var newsFeedRequestObj = {
 		newsOf:"wolfpack"
 	};
@@ -2732,29 +2875,29 @@ var WolfpackNewsFeedList = function (request,wolfpack) {
 		newsFeedRequestObj.wolfpackName = wolfpack;
 	}
 	
-	NewsFeedList.call(this,request,newsFeedRequestObj);
+	NewsFeedList.call(this,appID,newsFeedRequestObj);
 	
 	return this;
 };
 
-var ProfileNewsFeedList = function (request,profileID) {
+var ProfileNewsFeedList = function (appID,profileID) {
 	var newsFeedRequestObj = {
 		newsOf:"user"
 	};
 	
-	if(profileID != eWolf.userID) {
+	if(profileID != eWolf.profile.getID()) {
 		newsFeedRequestObj.userID = profileID;
 	}
 	
-	NewsFeedList.call(this,request,newsFeedRequestObj);
+	NewsFeedList.call(this,appID,newsFeedRequestObj);
 	
 	return this;
 };
 
-var InboxList = function (request,serverSettings) {	
+var InboxList = function (appID,serverSettings) {	
 	$.extend(serverSettings,{maxMessages:2});
 	
-	GenericMailList.call(this,"inbox",request,serverSettings,
+	GenericMailList.call(this,"inbox",appID,serverSettings,
 			"messageListItem","messageBox", ">> ",true);
 	
 	return this;
@@ -2781,7 +2924,7 @@ var InboxList = function (request,serverSettings) {
 		return thisObj;
 	};
 };var AddMembersToWolfpack = function(fatherID,wolfpack, existingMemebers,
-		onFinish,request) {
+		onFinish) {
 	var self = this;
 	this.frame = $("<span/>");
 	
@@ -2818,7 +2961,7 @@ var InboxList = function (request,serverSettings) {
 			
 			errorMessage.html("");
 			
-			request.request({
+			eWolf.serverRequest.request(fatherID,{
 				addWolfpackMember: {
 					wolfpackNames: [wolfpack],
 					userIDs: itemsToAdd.getData()
@@ -2838,7 +2981,7 @@ var InboxList = function (request,serverSettings) {
 		
 		if(madeChanges) {
 			madeChanges = false;
-			eWolf.trigger("needRefresh."+fatherID.replace("+","\\+"));
+			eWolf.serverRequest.requestAll(fatherID,true);
 		}
 		
 		delete self;
@@ -2887,7 +3030,7 @@ var InboxList = function (request,serverSettings) {
 	this.complete = function (textStatus, postData) {
 		if(madeChanges) {
 			madeChanges = false;
-			eWolf.trigger("needRefresh."+fatherID.replace("+","\\+"));
+			eWolf.serverRequest.requestAll(fatherID,true);
 		}
 		
 		applyBtn.show(200);
@@ -2903,7 +3046,7 @@ var InboxList = function (request,serverSettings) {
 		.complete(this.complete);
 	
 	return this;
-};var AddToWolfpack = function(id, userID, frame, activator, request, packsAlreadyIn) {
+};var AddToWolfpack = function(id, userID, frame, activator, packsAlreadyIn) {
 	var self = this;
 	PopUp.call(this,frame,activator);
 	
@@ -3049,7 +3192,7 @@ var InboxList = function (request,serverSettings) {
 				}
 			}).complete(onComplete);
 			
-			request.request({
+			eWolf.serverRequest.request(id,{
 				createWolfpack: {
 					wolfpackNames: wolfpacks
 				}
@@ -3065,10 +3208,10 @@ var InboxList = function (request,serverSettings) {
 			var response = new ResponseHandler("addWolfpackMember",[],null);
 			
 			response.complete(function (textStatus, postData) {
-				eWolf.trigger("needRefresh."+id.replace("+","\\+"));
+				eWolf.trigger("refresh",[id]);
 			});			
 			
-			request.request({
+			eWolf.serverRequest.request(id,{
 				addWolfpackMember: {
 					wolfpackNames: wolfpacks,
 					userIDs: [userID]
@@ -3093,16 +3236,13 @@ var InboxList = function (request,serverSettings) {
 };var Inbox = function (id,applicationFrame) {
 	Application.call(this,id,applicationFrame);
 	
-	var request = new PostRequestHandler(id,"/json",60)
-		.listenToRefresh();
-	
 	new TitleArea("Inbox")
 		.appendTo(this.frame)
 		.addFunction("New Message...", function() {
 			new NewMessage(id,applicationFrame).select();
 		});
 	
-	new InboxList(request,{}).appendTo(this.frame);
+	new InboxList(id,{}).appendTo(this.frame);
 	
 	return this;
 };
@@ -3246,7 +3386,6 @@ var SignUpArea = function(id) {
 	signup.appendAtBottomPart(base);
 	
 	function handleSignUp(data, textStatus, postData) {
-		eWolf.sendToProfile = {};
 		eWolf.getUserInformation();
 	}
 	
@@ -3270,7 +3409,7 @@ var SignUpArea = function(id) {
 				.error(errorHandler)
 				.badResponseHandler(badRequestHandler);
 			
-			new PostRequestHandler(id, "/json", 0).request({
+			eWolf.serverRequest.request(id,{
 				createAccount : {
 					name : fullName.val(),
 					username : username.val(),
@@ -3399,7 +3538,7 @@ var SignUpArea = function(id) {
 		return self;
 	};
 	
-	eWolf.bind("refresh."+id,function(event,eventID) {
+	eWolf.bind("select",function(event,eventID) {
 		if(id == eventID) {
 			self.clearAll();
 		}
@@ -3413,11 +3552,7 @@ var SignUpArea = function(id) {
 	})	.text(text)
 		.appendTo(container)
 		.click(function() {
-			// TODO: logout
-			eWolf.sendToProfile = {
-					userID: "THIS IS AN ERROR"
-			};
-			
+			// TODO: logout			
 			$(window).unbind('hashchange');
 			window.location.hash = "";
 			document.location.reload(true);
@@ -3455,8 +3590,6 @@ var NewMail = function(callerID,applicationFrame,options,
 	Application.call(this,id,applicationFrame);
 	
 	var settings = $.extend({}, self.NEW_MAIL_DAFAULTS, options);
-		
-	var request = new PostRequestHandler(id,"/json",0);
 		
 	var titleArea = new TitleArea(settings.TITLE).appendTo(this.frame);
 	
@@ -3527,6 +3660,7 @@ var NewMail = function(callerID,applicationFrame,options,
 		"class": "errorArea"
 	}).appendTo(errorBox);
 	
+	// TODO: on show (not refresh)
 	eWolf.bind("refresh."+id,function(event,eventID) {
 		if(eventID == id) {
 			window.setTimeout(function () {
@@ -3549,7 +3683,7 @@ var NewMail = function(callerID,applicationFrame,options,
 		}
 	});
 	
-	eWolf.bind("select."+callerID,function(event,eventId) {
+	eWolf.bind("select",function(event,eventId) {
 		if(eventId != id) {
 			self.destroy();
 		}
@@ -3661,7 +3795,7 @@ var NewMail = function(callerID,applicationFrame,options,
 			self.updateSend();
 		});
 		
-		request.request(
+		eWolf.serverRequest.request(id,
 				createRequestObj(destId,data),
 				responseHandler.getHandler());
 	};
@@ -3717,41 +3851,51 @@ var NewPost = function(id,applicationFrame,wolfpack) {
 	
 	return this;
 };
-var Profile = function (id,userID,userName,applicationFrame) {
+var Profile = function (id,applicationFrame,userID,userName) {
 	var self = this;
+	
+	var profileRequestName = id + "__ProfileRequest__",
+			wolfpacksRequestName = id + "__WolfpakcsRequest__";
 	
 	Application.call(this,id,applicationFrame);
 	
 	var waitingForName = [];
 	
-	var userObj = {};
+	var handleProfileResonse = new ResponseHandler("profile",
+			["id","name"],handleProfileData);
 	
-	if(userID != eWolf.userID) {
-		userObj.userID = userID;
+	var handleWolfpacksResponse = new ResponseHandler("wolfpacks",
+			["wolfpacksList"],handleWolfpacksData);
+	
+	if(userID) {
+		handleProfileResonse.error(onProfileNotFound)
+												.badResponseHandler(onProfileNotFound);
+		
+		eWolf.serverRequest.registerRequest(profileRequestName,getProfileData);
+		eWolf.serverRequest.registerRequest(wolfpacksRequestName,geWolfpacksData);
+	} else {
+		profileRequestName = eWolf.PROFILE_REQUEST_NAME;
+		wolfpacksRequestName = eWolf.WOLFPACKS_REQUEST_NAME;
 	}
 	
-	var handleProfileResonse = new ResponseHandler("profile",
-			["id","name"],handleProfileData)
-		.error(onProfileNotFound);
+	eWolf.serverRequest.registerHandler(profileRequestName,handleProfileResonse.getHandler());
+	eWolf.serverRequest.registerHandler(wolfpacksRequestName,handleWolfpacksResponse.getHandler());
 	
-	var request = new PostRequestHandler(id,"/json",60)
-		.listenToRefresh()
-		.register(getProfileData,handleProfileResonse.getHandler())
-		.register(geWolfpacksData,new ResponseHandler("wolfpacks",
-				["wolfpacksList"],handleWolfpacksData).getHandler());
-	
+	eWolf.serverRequest.bindRequest(profileRequestName,id);
+	eWolf.serverRequest.bindRequest(wolfpacksRequestName,id);
+
 	var topTitle = new TitleArea("Searching profile...").appendTo(this.frame);
 	
 	var wolfpacksContainer = new CommaSeperatedList("Wolfpakcs");
 	topTitle.appendAtBottomPart(wolfpacksContainer.getList());
 	
-	if(userID != eWolf.userID) {
+	if(userID) {
 		topTitle.addFunction("Send message...", function (event) {
 			new NewMessage(id,applicationFrame,userID).select();
 		});
 		
 		topTitle.addFunction("Add to wolfpack...", function () {
-			new AddToWolfpack(id, userID,self.frame, this, request, wolfpacksContainer.getItemNames());
+			new AddToWolfpack(id, userID,self.frame, this, wolfpacksContainer.getItemNames());
 			return false;
 		});
 	} else {
@@ -3764,21 +3908,14 @@ var Profile = function (id,userID,userName,applicationFrame) {
 	
 	var newsFeed = null;
 	
-	if(userName == null) {
-		request.request(getProfileData(),
-				handleProfileResonse.getHandler());
-	} else {
-		onProfileFound();
-	}
-	
 	function onProfileFound() {		
 		topTitle.setTitle(CreateUserBox(userID,userName,true));
-		eWolf.wolfpacks.addKnownUsers(userID,userName);
+		eWolf.members.addKnownUsers(userID,userName);
 		
 		topTitle.showAll();
 		
 		if(newsFeed == null) {			
-			newsFeed = new ProfileNewsFeedList(request,userID)
+			newsFeed = new ProfileNewsFeedList(id,userID)
 				.appendTo(self.frame);
 		} 	
 		
@@ -3798,7 +3935,8 @@ var Profile = function (id,userID,userName,applicationFrame) {
 		} 
 	}
 	
-	function handleProfileData(data, textStatus, postData) {		
+	function handleProfileData(data, textStatus, postData) {
+		userID = data.id;
 		userName = data.name;
 		onProfileFound();
 	}
@@ -3812,15 +3950,11 @@ var Profile = function (id,userID,userName,applicationFrame) {
 	  }
 	
 	function getProfileData() {		
-		return {
-			profile: userObj,
-		  };
+		return {	profile: { userID: userID	} };
 	}
 	
 	function geWolfpacksData() {
-		return {
-			wolfpacks: userObj
-		  };
+		return { wolfpacks: {	userID: userID } };
 	}
 	
 	this.onReceiveName = function(nameHandler) {
@@ -3831,6 +3965,14 @@ var Profile = function (id,userID,userName,applicationFrame) {
 		}
 		
 		return self;
+	};
+	
+	this.getID = function() {
+		return userID;
+	};
+	
+	this.getName = function() {
+		return userName;
 	};
 	
 	return this;
@@ -3860,13 +4002,13 @@ var SearchApp = function(menu,applicationFrame,container) {
 	}).css({
 		"width" : "400px"
 	}).autocomplete({
-		source: eWolf.wolfpacks.knownUsersFullDescriptionArray,
+		source: eWolf.members.knownUsersFullDescriptionArray,
 		select: onSelectAutocomplete
 	}).appendTo(this.frame);
 	
 	eWolf.bind("foundNewUser",function(event,id,name,fullDescription) {
 		query.autocomplete("destroy").autocomplete({
-			source: eWolf.wolfpacks.knownUsersFullDescriptionArray,
+			source: eWolf.members.knownUsersFullDescriptionArray,
 			select: onSelectAutocomplete
 		});
 	});
@@ -3891,7 +4033,7 @@ var SearchApp = function(menu,applicationFrame,container) {
 		
 		var searchAppKey = self.SEARCH_PROFILE_PREFIX + id;
 		menuList.addMenuItem(searchAppKey,tempName);
-		apps[searchAppKey] = new Profile(searchAppKey,id,name,applicationFrame)
+		apps[searchAppKey] = new Profile(searchAppKey,applicationFrame,id,name)
 			.onReceiveName(function(newName) {
 				menuList.renameMenuItem(searchAppKey,newName);
 			});	
@@ -3928,21 +4070,21 @@ var SearchApp = function(menu,applicationFrame,container) {
 		
 		if(key != null && key != "") {				
 			if(!name) {
-				name = eWolf.wolfpacks.getUserName(key);
+				name = eWolf.members.getUserName(key);
 			}
 
 			if(!name) {
-				var fullDescID = eWolf.wolfpacks.getUserFromFullDescription(key);
+				var fullDescID = eWolf.members.getUserFromFullDescription(key);
 				
 				if(fullDescID) {
 					key = fullDescID;
-					name = eWolf.wolfpacks.getUserName(key);
+					name = eWolf.members.getUserName(fullDescID);
 				}
 			}
 			
 			var searchAppKey = self.SEARCH_PROFILE_PREFIX + key;
 			
-			if(key == eWolf.userID) {
+			if(key == eWolf.profile.getID()) {
 				eWolf.selectApp(eWolf.MYPROFILE_APP_ID);
 			} else if(apps[searchAppKey] != null) {
 				eWolf.selectApp(searchAppKey);
@@ -3999,10 +4141,7 @@ var SearchApp = function(menu,applicationFrame,container) {
 	var self = this;
 	
 	Application.call(this,id,applicationFrame);
-	
-	var request = new PostRequestHandler(id,"/json",60)
-		.listenToRefresh();
-				
+			
 	var topTitle = new TitleArea().appendTo(this.frame)
 		.addFunction("Post", function() {
 			new NewPost(id,applicationFrame,wolfpackName).select();
@@ -4014,7 +4153,7 @@ var SearchApp = function(menu,applicationFrame,container) {
 		topTitle.setTitle("News Feed");
 	}
 	
-	new WolfpackNewsFeedList(request,wolfpackName)
+	new WolfpackNewsFeedList(id,wolfpackName)
 		.appendTo(this.frame);
 	
 	if(wolfpackName != null) {
@@ -4034,7 +4173,7 @@ var SearchApp = function(menu,applicationFrame,container) {
 			topTitle.appendAtBottomPart(addMembers);
 			
 			new AddMembersToWolfpack(id,wolfpackName,members.getItemNames(),
-					self.removeAddMemebers,request).frame.appendTo(addMembers);
+					self.removeAddMemebers).frame.appendTo(addMembers);
 		};
 		
 		this.removeAddMemebers = function () {
@@ -4093,15 +4232,23 @@ var SearchApp = function(menu,applicationFrame,container) {
 			});
 		}
 		
-		request.register(getWolfpacksMembersData,
-				new ResponseHandler("wolfpackMembers",
+		var wolfpackMembersRequestName = id + "__wolfpack_members_request_name__";
+		
+		eWolf.serverRequest
+			.registerRequest(wolfpackMembersRequestName,
+					getWolfpacksMembersData)
+			.registerHandler(wolfpackMembersRequestName,
+					new ResponseHandler("wolfpackMembers",
 					["membersList"],
-					handleWolfpacksMembersData).getHandler());
+					handleWolfpacksMembersData).getHandler())
+			.bindRequest(wolfpackMembersRequestName,
+					id);
+					
 		
 		topTitle.addFunction("Add members...", this.showAddMembers);		
 		topTitle.addFunction("Delete wolfpack", this.deleteWolfpack);
 		
-		eWolf.bind("select."+id,function(event,eventId) {
+		eWolf.bind("select",function(event,eventId) {
 			self.removeAddMemebers();
 		});
 	}
