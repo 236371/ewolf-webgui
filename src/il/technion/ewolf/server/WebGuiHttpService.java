@@ -59,7 +59,7 @@ public class WebGuiHttpService extends HttpService {
 		
 		if (!authorized) {
 			String uri = req.getRequestLine().getUri();
-			if (!uri.equals("/json")){
+			if (uri.equals("/sfs") || uri.equals("/sfsupload")) {
 				res.setStatusCode(HttpStatus.SC_FORBIDDEN);
 				return;
 			} else {
