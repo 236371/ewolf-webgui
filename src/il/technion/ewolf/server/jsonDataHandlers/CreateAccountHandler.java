@@ -2,9 +2,12 @@ package il.technion.ewolf.server.jsonDataHandlers;
 
 import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import static il.technion.ewolf.server.EWolfResponse.RES_GENERIC_ERROR;
+import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.EwolfServer;
 import il.technion.ewolf.server.ServerResources;
+import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
+import il.technion.ewolf.server.jsonDataHandlers.LoginHandler.LoginResponse;
 
 import org.apache.commons.configuration.ConfigurationException;
 
@@ -42,6 +45,18 @@ public class CreateAccountHandler implements JsonDataHandler {
 
 	@Override
 	public EWolfResponse handleData(JsonElement jsonReq) {
+		EwolfConfigurations configurations;
+		try {
+			configurations = ServerResources.getConfigurations(configFile);
+		} catch (ConfigurationException e) {
+			e.printStackTrace();
+			return new LoginResponse(RES_INTERNAL_SERVER_ERROR);
+		}
+		if (configurations.name != null && configurations.username != null
+				&& configurations.password != null) {
+			return new CreateAccountResponse(RES_BAD_REQUEST, "User already exists.");
+		}
+
 		Gson gson = new Gson();
 		JsonReqCreateAccountParams jsonReqParams;
 		try {

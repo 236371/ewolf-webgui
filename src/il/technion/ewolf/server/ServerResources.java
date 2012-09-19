@@ -22,7 +22,7 @@ public class ServerResources {
 	public static class EwolfConfigurations {
 		public String username;
 		public String password;
-		String name;
+		public String name;
 		List<URI> kbrURIs = new ArrayList<URI>();
 		int serverPort;
 		int ewolfPort;
