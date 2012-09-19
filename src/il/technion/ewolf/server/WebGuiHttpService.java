@@ -51,6 +51,7 @@ public class WebGuiHttpService extends HttpService {
 				String cookie = h.getValue();
 				if (sessionStore.isValid(cookie)) {
 					authorized = true;
+					context.setAttribute("authorized", true);
 					break;
 				}
 			}
