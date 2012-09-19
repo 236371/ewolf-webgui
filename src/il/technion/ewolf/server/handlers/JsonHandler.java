@@ -73,7 +73,6 @@ public class JsonHandler implements HttpRequestHandler {
 				EWolfResponse handlerRes = handler.handleData(obj.getValue());
 				jsonRes.add(key, gson.toJsonTree(handlerRes));
 				if (handlerRes.getResult().equals(RES_SUCCESS) && !authorized) {
-					//TODO set cookie
 					String cookie = sessionStore.createSession();
 					res.addHeader("Set-Cookie", "session=" + cookie);
 				}

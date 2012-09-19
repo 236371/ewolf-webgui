@@ -25,20 +25,22 @@ public class WebGuiHttpService extends HttpService {
 	public WebGuiHttpService(HttpProcessor processor,
 			ConnectionReuseStrategy connStrategy,
 			HttpResponseFactory responseFactory,
-			HttpRequestHandlerResolver handlerResolver, HttpParams params, HttpSessionStore sessionStore) {
+			HttpRequestHandlerResolver handlerResolver, HttpParams params,
+			HttpSessionStore sessionStore) {
 		super(processor, connStrategy, responseFactory, handlerResolver, params);
 		this.sessionStore = sessionStore;
-		// TODO Auto-generated constructor stub
 	}
 
+	@Inject
 	public WebGuiHttpService(HttpProcessor processor,
 			ConnectionReuseStrategy connStrategy,
 			HttpResponseFactory responseFactory,
 			HttpRequestHandlerResolver handlerResolver,
-			HttpExpectationVerifier expectationVerifier, HttpParams params) {
+			HttpExpectationVerifier expectationVerifier, HttpParams params,
+			HttpSessionStore sessionStore) {
 		super(processor, connStrategy, responseFactory, handlerResolver,
 				expectationVerifier, params);
-		// TODO Auto-generated constructor stub
+		this.sessionStore = sessionStore;
 	}
 
 	@Override
