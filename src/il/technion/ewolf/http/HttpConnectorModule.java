@@ -46,53 +46,53 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 
 public class HttpConnectorModule extends AbstractModule {
-	
+
 	private final Properties properties;
-	
+
 	private Properties getDefaultProperties() {
 		Properties defaultProps = new Properties();
-		
+
 		// testing params, DONT TOUCH !!!
 		// scheme name
 		defaultProps.setProperty("httpconnector.scheme", "http");
-				
-				
+
+
 		// performance
 		// number of server threads
 		defaultProps.setProperty("httpconnector.executor.nrthread", "1");
-		
+
 		// config, plz touch
 		// port for opening the tcp socket on
 		defaultProps.setProperty("httpconnector.net.port", "2345");
-		
+
 		defaultProps.setProperty("httpconnector.httpservice", "");
-		
+
 		return defaultProps;
 	}
-	
+
 	public HttpConnectorModule() {
 		this(new Properties());
 	}
-	
+
 	public HttpConnectorModule(Properties properties) {
 		this.properties = getDefaultProperties();
 		this.properties.putAll(properties);
 	}
-	
+
 	public HttpConnectorModule setProperty(String name, String value) {
 		this.properties.setProperty(name, value);
 		return this;
 	}
-	
-	
-	
+
+
+
 	@Override
 	protected void configure() {
 		Names.bindProperties(binder(), properties);
 		bind(HttpConnector.class).in(Scopes.SINGLETON);
 		bind(HttpSessionStore.class).in(Scopes.SINGLETON);
 	}
-	
+
 	@Provides
 	@Singleton
 	@Named("httpconnector.net.sock")
@@ -104,78 +104,84 @@ public class HttpConnectorModule extends AbstractModule {
 		//System.out.println("http binding: "+port);
 		return new ServerSocket(port);
 	}
-	
-	
+
+
 	@Provides
 	@Singleton
 	ExecutorService provideExecutor(@Named("httpconnector.executor.nrthread") int nrthread) {
 		return Executors.newFixedThreadPool(nrthread); 
 	}
-	
+
 	@Provides
 	@Singleton
 	HttpRequestHandlerRegistry provideRegistry() {
 		return new HttpRequestHandlerRegistry();
 	}
-	
+
 	@Provides
 	@Singleton
 	@Named("httpconnector.params.server")
-	HttpParams provideHttpServerParams() {
-		return new SyncBasicHttpParams()
-	        .setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 5000)
-	        .setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 8 * 1024)
-	        .setBooleanParameter(CoreConnectionPNames.STALE_CONNECTION_CHECK, false)
-	        .setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true)
-	        .setParameter(CoreProtocolPNames.ORIGIN_SERVER, "MyServer !!");
+	HttpParams provideHttpServerParams(@Named("httpconnector.httpservice") String service) {
+		HttpParams params = new SyncBasicHttpParams()
+			.setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 5000)
+			.setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 8 * 1024)
+			.setBooleanParameter(CoreConnectionPNames.STALE_CONNECTION_CHECK, false)
+			.setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true);
+
+		if (service.equals("webgui")) {
+			params.setParameter(CoreProtocolPNames.ORIGIN_SERVER, "e-WolfNode");
+		} else {
+			params.setParameter(CoreProtocolPNames.ORIGIN_SERVER, "MyServer !!");
+		}
+		return params;
 	}
-	
+
 	@Provides
 	@Singleton
 	@Named("httpconnector.params.client")
 	HttpParams provideHttpClientParams() {
 		HttpParams params = new SyncBasicHttpParams();
-        HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
-        HttpProtocolParams.setContentCharset(params, "UTF-8");
-        HttpProtocolParams.setUserAgent(params, "KadNet :)");
-        HttpProtocolParams.setUseExpectContinue(params, true);
-        return params;
+		HttpProtocolParams.setVersion(params, HttpVersion.HTTP_1_1);
+		HttpProtocolParams.setContentCharset(params, "UTF-8");
+		HttpProtocolParams.setUserAgent(params, "KadNet :)");
+		HttpProtocolParams.setUseExpectContinue(params, true);
+		return params;
 	}
-	
+
 	@Provides
 	@Singleton
 	@Named("httpconnector.proc.server")
 	HttpProcessor provideHttpServerProcessor() {
 		return  new ImmutableHttpProcessor(new HttpResponseInterceptor[] {
-                new ResponseDate(),
-                new ResponseServer(),
-                new ResponseContent(),
-                new ResponseConnControl()
-        });
+				new ResponseDate(),
+				new ResponseServer(),
+				new ResponseContent(),
+				new ResponseConnControl()
+		});
 	}
-	
+
 	@Provides
 	@Singleton
 	@Named("httpconnector.proc.client")
 	HttpProcessor provideHttpClientProcessor() {
 		return  new ImmutableHttpProcessor(new HttpRequestInterceptor[] {
 				// Required protocol interceptors
-                new RequestContent(),
-                new RequestTargetHost(),
-                // Recommended protocol interceptors
-                new RequestConnControl(),
-                new RequestUserAgent(),
-                new RequestExpectContinue()
-        });
+				new RequestContent(),
+				new RequestTargetHost(),
+				// Recommended protocol interceptors
+				new RequestConnControl(),
+				new RequestUserAgent(),
+				new RequestExpectContinue()
+		});
 	}
-	
+
 	@Provides
 	@Singleton
 	@Named("httpconnector.sessionStore")
 	HttpSessionStore provideHttpSessionStore() {
 		return new HttpSessionStore();
 	}
-	
+
 	@Provides
 	@Singleton
 	HttpService provideHttpService(@Named("httpconnector.httpservice") String service,
@@ -186,34 +192,34 @@ public class HttpConnectorModule extends AbstractModule {
 		if (service.equals("webgui")) {
 			return  new WebGuiHttpService(
 					serverProc,
-	                new NoConnectionReuseStrategy(),
-	                new DefaultHttpResponseFactory(),
-	                registry,
-	                serverParams,
-	                httpSessionStore);
+					new NoConnectionReuseStrategy(),
+					new DefaultHttpResponseFactory(),
+					registry,
+					serverParams,
+					httpSessionStore);
 		}
 		return  new HttpService(
 				serverProc, 
-                new NoConnectionReuseStrategy(),
-                new DefaultHttpResponseFactory(),
-                registry,
-                serverParams);
+				new NoConnectionReuseStrategy(),
+				new DefaultHttpResponseFactory(),
+				registry,
+				serverParams);
 	}
 
 	@Provides
 	HttpContext provideHttpContext() {
 		return new BasicHttpContext();
 	}
-	
+
 	@Provides
 	@Singleton
 	HttpRequestExecutor provideHttpRequestExecutor() {
 		return new HttpRequestExecutor();
 	}
-	
+
 	@Provides
 	DefaultHttpClientConnection provideDefaultHttpClientConnection() {
 		return new DefaultHttpClientConnection();
 	}
-	
+
 }

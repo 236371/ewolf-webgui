@@ -13,7 +13,6 @@ import java.util.Set;
 
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
-import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -47,8 +46,6 @@ public class JsonHandler implements HttpRequestHandler {
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) throws HttpException, IOException {
-		//TODO move adding server header to response intercepter
-		res.addHeader(HttpHeaders.SERVER, "e-WolfNode");
 
 		boolean authorized = (Boolean) context.getAttribute("authorized");
 

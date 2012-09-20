@@ -32,8 +32,6 @@ public class SFSHandler implements HttpRequestHandler {
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) {
-		//TODO move adding server header to response intercepter
-		res.addHeader(HttpHeaders.SERVER, "e-WolfNode");
 
 		if (req.containsHeader(HttpHeaders.IF_MODIFIED_SINCE)) {
 			res.setStatusCode(HttpStatus.SC_NOT_MODIFIED);

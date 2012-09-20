@@ -14,7 +14,6 @@ import java.util.List;
 
 import org.apache.http.Consts;
 import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpHeaders;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -34,8 +33,6 @@ public class SFSUploadHandler implements HttpRequestHandler {
 	@Override
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) {
-		//TODO move adding server header to response intercepter
-		res.addHeader(HttpHeaders.SERVER, "e-WolfNode");
 
 		String uri = req.getRequestLine().getUri();
 

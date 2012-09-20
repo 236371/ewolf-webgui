@@ -31,8 +31,6 @@ public class JarResourceHandler implements HttpRequestHandler {
 			HttpContext context) throws IOException {
 		String reqUri = req.getRequestLine().getUri();
 		System.out.println("\t[JarResourceHandler] requesting: " + reqUri);
-		//TODO move adding general headers to response intercepter
-		res.addHeader(HttpHeaders.SERVER, "e-WolfNode");
 
 		try {
 			if (req.containsHeader(HttpHeaders.IF_MODIFIED_SINCE)) {
