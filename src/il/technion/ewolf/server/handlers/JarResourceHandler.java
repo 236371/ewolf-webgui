@@ -42,7 +42,7 @@ public class JarResourceHandler implements HttpRequestHandler {
 				}
 			}
 		} catch (DateParseException e) {
-			// TODO Auto-generated catch block
+			System.err.println("Received date in \"If-Modified-Since\" header is of unknown format.");
 			e.printStackTrace();
 		}
 
