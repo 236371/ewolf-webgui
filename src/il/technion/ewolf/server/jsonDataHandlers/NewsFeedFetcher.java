@@ -154,8 +154,8 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			return new NewsFeedResponse(RES_NOT_FOUND, "User with given ID wasn't found.");
 		}
 
-		return new NewsFeedResponse(filterPosts(posts, jsonReqParams.maxMessages, jsonReqParams.newerThan,
-				jsonReqParams.olderThan));
+		return new NewsFeedResponse(filterPosts(posts, jsonReqParams.maxMessages,
+				jsonReqParams.newerThan, jsonReqParams.olderThan));
 	}
 
 	private Set<PostData> filterPosts(List<Post> posts, Integer filterNumOfPosts,
@@ -201,6 +201,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			if (wp == null) {
 				//FIXME how to handle?
 				//throw new NotFoundException("wolfpack " + socialGroupName + " not found");
+				return new ArrayList<Post>();
 			} else {
 				wolfpacks.add(wp);
 			}
@@ -237,14 +238,12 @@ public class NewsFeedFetcher implements JsonDataHandler {
 				System.err.println("User " + user.getName() + ": " + user.getUserId() +
 						" isn't allowed to view posts of " +
 						profile.getName() + ": " + profile.getUserId() + ".");
-				//XXX
 				//e.printStackTrace();
 			} catch (FileNotFoundException e) {
 				Profile user = socialFS.getCredentials().getProfile();
 				System.err.println("User " + user.getName() + ": " + user.getUserId() +
 						" isn't allowed to view posts of " +
 						profile.getName() + ": " + profile.getUserId() + ".");
-				//XXX
 				//e.printStackTrace();
 			}
 		}		
