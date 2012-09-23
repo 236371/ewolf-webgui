@@ -11,6 +11,7 @@ import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 import com.google.gson.Gson;
@@ -23,9 +24,15 @@ public class InboxFetcher implements JsonDataHandler {
 	private static final String SENDER_NOT_FOUND_MESSAGE = "Not found";
 	private final SocialMail smail;
 
+	private List<SocialMessage> messages;
+	private Date lastModified;
+	private static final long cachedTime = 60000; // 60000ms = 1min
+
 	@Inject
 	public InboxFetcher(SocialMail smail) {
 		this.smail = smail;
+		messages = smail.readInbox();
+		lastModified = new Date();
 	}
 
 	private static class JsonReqInboxParams {
@@ -86,7 +93,12 @@ public class InboxFetcher implements JsonDataHandler {
 		}
 		List<InboxMessage> lst = new ArrayList<InboxMessage>();			
 
-		List<SocialMessage> messages = smail.readInbox();
+		Long curTime = new Date().getTime();
+		if (curTime - lastModified.getTime() > cachedTime) {
+			messages = smail.readInbox();
+			lastModified = new Date();
+		}
+
 		for (SocialMessage m : messages) {
 			if (m.getClass() != ContentMessage.class) {
 				continue;
