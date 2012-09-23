@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.http.Header;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
@@ -64,6 +65,17 @@ public class JsonHandler implements HttpRequestHandler {
 					res.setStatusCode(HttpStatus.SC_FORBIDDEN);
 					return;
 				}
+			}
+
+			if (key.equals("logout")) {
+				Header[] headers = req.getHeaders("Cookie");
+				for (Header h : headers) {
+					String cookie = h.getValue();
+					sessionStore.deleteSession(cookie);
+				}
+				res.setStatusCode(HttpStatus.SC_SEE_OTHER);
+				res.setHeader("Location", "/");
+				return;
 			}
 			JsonDataHandler handler = handlers.get(key);
 			if (handler != null) {
