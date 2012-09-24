@@ -18,8 +18,11 @@ import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -27,18 +30,25 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class NewsFeedFetcher implements JsonDataHandler {
+public class NewsFeedFetcherWithCache implements JsonDataHandler {
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
 	private final UserIDFactory userIDFactory;
 	private final SocialNetwork snet;
 
+	private  static final long cachedTime = 60000; // 60000ms = 1min
+	private Date lastModified;
+	private Map<Profile, List<Post>> newsFeed;
+
 	@Inject
-	public NewsFeedFetcher(SocialFS socialFS, WolfPackLeader socialGroupsManager, UserIDFactory userIDFactory, SocialNetwork snet) {
+	public NewsFeedFetcherWithCache(SocialFS socialFS, WolfPackLeader socialGroupsManager, UserIDFactory userIDFactory, SocialNetwork snet) {
 		this.socialFS = socialFS;
 		this.socialGroupsManager = socialGroupsManager;
 		this.userIDFactory = userIDFactory;
 		this.snet = snet;
+
+		newsFeed = fetchAllPosts();
+		lastModified = new Date();
 	}
 
 	private static final String POST_OWNER_NOT_FOUND_MESSAGE = "Not found";
@@ -123,6 +133,12 @@ public class NewsFeedFetcher implements JsonDataHandler {
 	 */
 	@Override
 	public EWolfResponse handleData(JsonElement jsonReq) {
+		Long curTime = new Date().getTime();
+		if (curTime - lastModified.getTime() > cachedTime) {
+			newsFeed = fetchAllPosts();
+			lastModified = new Date();
+		}
+		
 		Gson gson = new Gson();
 		JsonReqNewsFeedParams jsonReqParams;
 		try {
@@ -131,12 +147,13 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_BAD_REQUEST);
 		}
-
-		List<Post> posts;
+		
 		if (jsonReqParams.newsOf == null) {
 			return new NewsFeedResponse(RES_BAD_REQUEST,
 					"Must specify whose news feed to fetch.");
 		}
+		
+		List<Post> posts;
 		try {
 			if (jsonReqParams.newsOf.equals("user")) {
 				posts = fetchPostsForUser(jsonReqParams.userID);
@@ -153,11 +170,45 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_NOT_FOUND, "User with given ID wasn't found.");
 		}
-
+		
 		return new NewsFeedResponse(filterPosts(posts, jsonReqParams.maxMessages,
 				jsonReqParams.newerThan, jsonReqParams.olderThan));
 	}
 
+	private Map<Profile, List<Post>> fetchAllPosts() {
+		Map<Profile, List<Post>> allPosts = new HashMap<Profile, List<Post>>();
+
+		List<WolfPack> wolfpacks = socialGroupsManager.getAllSocialGroups();
+		Set<Profile> profiles = new HashSet<Profile>();
+
+		for (WolfPack w : wolfpacks) {
+			profiles.addAll(w.getMembers());
+		}
+		//add self profile
+		profiles.add(socialFS.getCredentials().getProfile());
+
+		for (Profile profile: profiles) {
+			try {
+				List<Post> posts = snet.getWall(profile).getAllPosts();
+				allPosts.put(profile, posts);
+			} catch (WallNotFound e) {
+				Profile user = socialFS.getCredentials().getProfile();
+				System.err.println("User " + user.getName() + ": " + user.getUserId() +
+						" isn't allowed to view posts of " +
+						profile.getName() + ": " + profile.getUserId() + ".");
+				//e.printStackTrace();
+			} catch (FileNotFoundException e) {
+				Profile user = socialFS.getCredentials().getProfile();
+				System.err.println("User " + user.getName() + ": " + user.getUserId() +
+						" isn't allowed to view posts of " +
+						profile.getName() + ": " + profile.getUserId() + ".");
+				//e.printStackTrace();
+			}
+		}
+
+		return allPosts;
+	}
+	
 	private Set<PostData> filterPosts(List<Post> posts, Integer filterNumOfPosts,
 			Long filterFromDate, Long filterToDate) {
 		List<PostData> lst = new ArrayList<PostData>();
@@ -190,28 +241,25 @@ public class NewsFeedFetcher implements JsonDataHandler {
 	}
 
 	private List<Post> fetchPostsForWolfpack(String socialGroupName) {
-		Set<Profile> profiles = new HashSet<Profile>();
-		List<WolfPack> wolfpacks = new ArrayList<WolfPack>();
+		List<Post> posts = new ArrayList<Post>();
 
-		if (socialGroupName==null) {
-			wolfpacks = socialGroupsManager.getAllSocialGroups();
-			profiles.add(socialFS.getCredentials().getProfile());
+		if (socialGroupName == null) {
+			for (Map.Entry<Profile, List<Post>> entry : newsFeed.entrySet()) {
+				posts.addAll(entry.getValue());
+			}
 		} else {
 			WolfPack wp = socialGroupsManager.findSocialGroup(socialGroupName);
 			if (wp == null) {
-				//FIXME how to handle?
-				//throw new NotFoundException("wolfpack " + socialGroupName + " not found");
-				return new ArrayList<Post>();
-			} else {
-				wolfpacks.add(wp);
+				return posts;
+			}
+			List<Profile> profiles = wp.getMembers();
+			//TODO improve
+			for (Profile p : profiles) {
+				posts.addAll(newsFeed.get(p));
 			}
 		}
 
-		for (WolfPack w : wolfpacks) {
-			profiles.addAll(w.getMembers());
-		}
-
-		return fetchPostsForProfiles(profiles);
+		return posts;
 	}
 
 	private List<Post> fetchPostsForUser(String strUid) throws ProfileNotFoundException {
@@ -222,31 +270,7 @@ public class NewsFeedFetcher implements JsonDataHandler {
 			UserID uid = userIDFactory.getFromBase64(strUid);
 			profile = socialFS.findProfile(uid);
 		}
-
-		Set<Profile> profiles = new HashSet<Profile>();
-		profiles.add(profile);
-		return fetchPostsForProfiles(profiles);
+		return newsFeed.get(profile);
 	}
 
-	private List<Post> fetchPostsForProfiles(Set<Profile> profiles) {
-		List<Post> posts = new ArrayList<Post>();
-		for (Profile profile: profiles) {
-			try {
-				posts.addAll(snet.getWall(profile).getAllPosts());
-			} catch (WallNotFound e) {
-				Profile user = socialFS.getCredentials().getProfile();
-				System.err.println("User " + user.getName() + ": " + user.getUserId() +
-						" isn't allowed to view posts of " +
-						profile.getName() + ": " + profile.getUserId() + ".");
-				//e.printStackTrace();
-			} catch (FileNotFoundException e) {
-				Profile user = socialFS.getCredentials().getProfile();
-				System.err.println("User " + user.getName() + ": " + user.getUserId() +
-						" isn't allowed to view posts of " +
-						profile.getName() + ": " + profile.getUserId() + ".");
-				//e.printStackTrace();
-			}
-		}
-		return posts;
-	}
 }
