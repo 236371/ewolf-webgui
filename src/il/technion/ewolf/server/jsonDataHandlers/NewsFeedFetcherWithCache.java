@@ -170,9 +170,11 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_NOT_FOUND, "User with given ID wasn't found.");
 		}
-		
-		return new NewsFeedResponse(filterPosts(posts, jsonReqParams.maxMessages,
-				jsonReqParams.newerThan, jsonReqParams.olderThan));
+
+		return (posts != null) ?
+				(new NewsFeedResponse(filterPosts(posts, jsonReqParams.maxMessages,
+						jsonReqParams.newerThan, jsonReqParams.olderThan)))
+				: (new NewsFeedResponse(new HashSet<PostData>()));
 	}
 
 	private Map<Profile, List<Post>> fetchAllPosts() {
