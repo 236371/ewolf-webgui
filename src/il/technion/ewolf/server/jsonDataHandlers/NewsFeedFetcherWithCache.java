@@ -18,7 +18,6 @@ import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,14 +29,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class NewsFeedFetcherWithCache implements JsonDataHandler {
+public class NewsFeedFetcherWithCache implements JsonDataHandler, Runnable {
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
 	private final UserIDFactory userIDFactory;
 	private final SocialNetwork snet;
 
 	private  static final long cachedTime = 60000; // 60000ms = 1min
-	private Date lastModified;
 	private Map<Profile, List<Post>> newsFeed;
 
 	@Inject
@@ -47,8 +45,7 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 		this.userIDFactory = userIDFactory;
 		this.snet = snet;
 
-		newsFeed = fetchAllPosts();
-		lastModified = new Date();
+		new Thread(this, "FetchAllPostsThread").start();
 	}
 
 	private static final String POST_OWNER_NOT_FOUND_MESSAGE = "Not found";
@@ -133,12 +130,6 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 	 */
 	@Override
 	public EWolfResponse handleData(JsonElement jsonReq) {
-		Long curTime = new Date().getTime();
-		if (curTime - lastModified.getTime() > cachedTime) {
-			newsFeed = fetchAllPosts();
-			lastModified = new Date();
-		}
-		
 		Gson gson = new Gson();
 		JsonReqNewsFeedParams jsonReqParams;
 		try {
@@ -244,9 +235,10 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 
 	private List<Post> fetchPostsForWolfpack(String socialGroupName) {
 		List<Post> posts = new ArrayList<Post>();
+		Map<Profile, List<Post>> allPosts = getNewsFeed();
 
 		if (socialGroupName == null) {
-			for (Map.Entry<Profile, List<Post>> entry : newsFeed.entrySet()) {
+			for (Map.Entry<Profile, List<Post>> entry : allPosts.entrySet()) {
 				posts.addAll(entry.getValue());
 			}
 		} else {
@@ -255,9 +247,9 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 				return posts;
 			}
 			List<Profile> profiles = wp.getMembers();
-			//TODO improve
+
 			for (Profile p : profiles) {
-				posts.addAll(newsFeed.get(p));
+				posts.addAll(allPosts.get(p));
 			}
 		}
 
@@ -265,6 +257,7 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 	}
 
 	private List<Post> fetchPostsForUser(String strUid) throws ProfileNotFoundException {
+		Map<Profile, List<Post>> allPosts = getNewsFeed();
 		Profile profile;
 		if (strUid==null) {
 			profile = socialFS.getCredentials().getProfile();
@@ -272,7 +265,27 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 			UserID uid = userIDFactory.getFromBase64(strUid);
 			profile = socialFS.findProfile(uid);
 		}
-		return newsFeed.get(profile);
+		return allPosts.get(profile);
 	}
 
+	@Override
+	public void run() {
+		try {
+			while (true) {
+				setNewsFeed(fetchAllPosts());
+				Thread.sleep(cachedTime);
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			//TODO what can I do here?
+		}
+	}
+
+	public synchronized void setNewsFeed(Map<Profile, List<Post>> allPosts) {
+		newsFeed = allPosts;
+	}
+
+	public synchronized Map<Profile, List<Post>> getNewsFeed() {
+		return newsFeed;
+	}
 }
