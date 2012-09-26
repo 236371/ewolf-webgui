@@ -84,21 +84,16 @@ var eWolf = new function() {
 	this.getUserInformation = function () {
 		if(self.loginApp) {
 			self.loginApp.destroy();
+			self.loginApp = null;
 		}
 		
-		self.serverRequest.complete(null,function() {			
+		self.serverRequest.complete(null,function() {
 			self.serverRequest.complete(null,null);
-			
+
 			if(self.profile.getID()) {
 				self.createMainApps();
 			} else {
-				self.serverRequest.stopRefreshInterval();
-				
-				// Welcome
-				self.welcome.addMenuItem(self.LOGIN_APP_ID,"Login");
-				if(!self.loginApp) {
-					self.loginApp = new Login(self.LOGIN_APP_ID,self.applicationFrame).select();
-				}
+				self.presentLoginScreen();
 			}
 		});
 		
@@ -120,7 +115,19 @@ var eWolf = new function() {
 		self.searchApp = new SearchApp(self.sideMenu,
 				self.applicationFrame,$("#"+self.TOPBAR_FRAME));
 		
-		self.onHashChange();		
+		self.serverRequest.setRequestAllOnSelect(true);
+		self.onHashChange();
+	};
+	
+	this.presentLoginScreen = function() {
+		self.serverRequest.stopRefreshInterval();
+		self.serverRequest.setRequestAllOnSelect(false);
+		
+		// Welcome
+		self.welcome.addMenuItem(self.LOGIN_APP_ID,"Login");
+		if(!self.loginApp) {
+			self.loginApp = new Login(self.LOGIN_APP_ID,self.applicationFrame).select();
+		}
 	};
 	
 	this.onHashChange = function() {
@@ -340,28 +347,33 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 
 	var onCompleteAll = null;
 	var timer = null;
+	var requestAllOnSelect = false;
 	
 	this.stopRefreshInterval = function () {
 		clearTimeout(timer);
 	};
 	
 	this.restartRefreshInterval = function () {
-		clearTimeout(timer);
-		timer = setTimeout(timerTimeout,refreshIntervalSec*1000);
-	};
-	
-	function onPostBegin (appID) {
-		clearTimeout(timer);
-		eWolf.trigger("loading",[appID]);
-	}
-	
-	function onPostComplete (appID) {
-		eWolf.trigger("loadingEnd",[appID]);
-		
 		if(refreshIntervalSec > 0) {
 			clearTimeout(timer);
 			timer = setTimeout(timerTimeout,refreshIntervalSec*1000);
 		}
+	};
+	
+	function onRequestBegin (appID) {
+		eWolf.trigger("loading",[appID]);
+	}
+	
+	function onRequestComplete (appID) {
+		eWolf.trigger("loadingEnd",[appID]);		
+	}
+	
+	function omRequestAllBegin(appID) {
+		self.stopRefreshInterval();
+	}
+	
+	function onRequestAllComplete(appID) {
+		self.restartRefreshInterval();
 		
 		if(appID && appsRequests[appID] && appsRequests[appID].onComplete) {
 			appsRequests[appID].onComplete();
@@ -371,18 +383,24 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 			onCompleteAll();
 		}		
 	}
-	
+		
 	function timerTimeout() {
 		self.requestAll(eWolf.selectedApp,false);
 	}
 	
 	eWolf.bind("select",function(event,eventId) {
-		self.requestAll(eventId,false);
+		if(requestAllOnSelect) {
+			self.requestAll(eventId,false);
+		}		
 	});
 	
 	eWolf.bind("refresh",function(event,eventId) {
 		self.requestAll(eventId,true);
 	});
+	
+	this.setRequestAllOnSelect = function (enable) {
+		requestAllOnSelect = enable;
+	};
 	
 	this.registerRequest = function(requestName, requestFunction) {
 		if(!requestsMap[requestName]) {
@@ -436,21 +454,24 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 		return self;
 	};
 	
-	this.request = function(appID,data,handleDataFunction) {
-		onPostBegin(appID);
+	this.request = function(appID,data,handleDataFunction,handleOnComplete) {
+		onRequestBegin(appID);
 		
 		self._makeRequest(requestAddress,data,
 			function(receivedData,textStatus) {
 				handleDataFunction(receivedData,textStatus,data);
 			}).complete(function() {
-				onPostComplete(appID);
+				onRequestComplete(appID);
+
+				if(handleOnComplete != null) {
+					handleOnComplete(appID);
+				}				
 			});
 		
 		return self;
-	};
-	
+	};	
 
-	this.requestObjectArray = function(appID,requestsObj) {
+	this.requestObjectArray = function(appID,requestsObj,handleOnComplete) {
 		if(requestsObj.length == 0) {
 			return self;
 		}
@@ -469,12 +490,14 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 				
 				reqObj.lastUpdate = new Date().getTime();
 			});
-		});
+		}, handleOnComplete);
 
 		return self;
 	};
 	
 	this.requestAll = function(appID,forceUpdate) {
+		omRequestAllBegin(appID);
+		
 		var requestsObj = generalRequests;
 		
 		if(appID && appsRequests[appID]) {
@@ -489,7 +512,8 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 			needRefresh = self.filterByLastUpdate(requestsObj);
 		}	
 		
-		return self.requestObjectArray(appID,needRefresh);
+		return self.requestObjectArray(appID,needRefresh,
+				onRequestAllComplete);
 	};
 	
 	this.filterByLastUpdate = function(requestsObj) {
@@ -637,27 +661,9 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	
 	eWolf.bind("select."+id,function(event,eventId) {
 		if(id == eventId) {	
-			if(!selected) {
-				self.frame.show(0);
-				self.frame.animate({
-					opacity : 1,
-				}, 700, function() {
-				});
-				
-				selected = true;
-			}
+			self.doSelect();
 		} else {
-			if(selected) {
-				self.frame.animate({
-					opacity : 0,
-				}, 300, function() {
-					self.frame.hide(0);
-				});
-				
-				selected = false;
-				
-				self.frame.stopAllYouTubePlayers();
-			}				
+			self.doUnselect();
 		}			
 	});
 	
@@ -679,6 +685,34 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	
 	this.select = function() {
 		eWolf.trigger("select",[id]);
+		return self;
+	};
+	
+	this.doSelect = function() {
+		if(!selected) {
+			self.frame.show(0);
+			self.frame.animate({
+				opacity : 1,
+			}, 700, function() {
+			});
+			
+			selected = true;
+		}
+		return self;
+	};
+	
+	this.doUnselect = function() {
+		if(selected) {
+			self.frame.animate({
+				opacity : 0,
+			}, 300, function() {
+				self.frame.hide(0);
+			});
+			
+			selected = false;
+			
+			self.frame.stopAllYouTubePlayers();
+		}	
 		return self;
 	};
 	
@@ -3249,11 +3283,18 @@ var InboxList = function (appID,serverSettings) {
 var Login = function(id,applicationFrame) {
 	Application.call(this,id,applicationFrame);
 	
-	new LoginArea(id).appendTo(this.frame);
+	var login = new LoginArea(id).appendTo(this.frame);
 	
 	this.frame.append("<br>");
 	
-	new SignUpArea(id).appendTo(this.frame);
+	var signup = new SignUpArea(id).appendTo(this.frame);
+	
+	eWolf.bind("select",function(event,eventID) {
+		if(id == eventID) {
+			login.clearAll();
+			signup.clearAll();
+		}
+	});
 	
 	return this;
 };
@@ -3262,21 +3303,22 @@ var LoginArea = function(id) {
 	var self = this;
 	
 	var login = new TitleArea("Login").appendTo(this.frame);
-	login.addFunction("Login",function() {
-		// TODO: Login
-		eWolf.sendToProfile = {};
-		eWolf.getUserInformation();
-	});
 	
 	var username = $("<input/>").attr({
 		"type" : "text",
 		"placeholder" : "Username"
 	});
 	
+	var usernameError = $("<span/>").addClass("errorArea");
+	
 	var password = $("<input/>").attr({
 		"type" : "password",
 		"placeholder" : "Password"
 	});
+	
+	var passwordError = $("<span/>").addClass("errorArea");
+	
+	var loginError = $("<span/>").addClass("errorArea");
 	
 	var base = $("<table/>");
 	
@@ -3286,6 +3328,7 @@ var LoginArea = function(id) {
 		.appendTo(usernameRaw);	
 	$("<td/>")
 		.append(username)
+		.append(usernameError)
 		.appendTo(usernameRaw);
 	
 	var passwordRaw = $("<tr/>").appendTo(base);
@@ -3294,9 +3337,68 @@ var LoginArea = function(id) {
 		.appendTo(passwordRaw);	
 	$("<td/>")
 		.append(password)
+		.append(passwordError)
 		.appendTo(passwordRaw);
 	
+	var loginErrorRow = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("loginFieldDescription")
+		.appendTo(loginErrorRow);	
+	$("<td/>")
+		.append(loginError)
+		.appendTo(loginErrorRow);
+	
 	login.appendAtBottomPart(base);
+	
+	function handleLogin(data, textStatus, postData) {
+		eWolf.getUserInformation();
+	}
+	
+	function errorHandler(data, textStatus, postData) {
+		loginError.html(data.errorMessage);
+	}
+	
+	function badRequestHandler(data, textStatus, postData) {
+		loginError.html("Server Error. Could not login.");
+	}
+	
+	this.showErrors = function() {
+		checkForError(username, usernameError, "* Must specify a user name.");
+		checkForError(password, passwordError, "* Must specify a password.");		
+	};
+	
+	this.clearAll = function() {
+		clearField(username, usernameError);
+		clearField(password, passwordError);
+	};
+	
+	this.commitLogin = function () {
+		self.showErrors();
+		
+		if(	username.val() != "" &&
+				password.val() != "" ) {
+			var handler = new ResponseHandler("login",[])
+				.success(handleLogin)
+				.error(errorHandler)
+				.badResponseHandler(badRequestHandler);
+			
+			eWolf.serverRequest.request(id,{
+				login : {
+					username : username.val(),
+					password : password.val()
+				}
+			}, handler.getHandler());
+		}
+	};
+	
+	function onKeyUp(event) {
+		if (event.keyCode == 13) {
+			self.commitLogin();
+		}
+	}
+	
+	login.addFunction("Login",this.commitLogin);	
+	username.keyup(onKeyUp);
+	password.keyup(onKeyUp);
 	
 	this.appendTo = function (someFrame) {
 		login.appendTo(someFrame);
@@ -3330,12 +3432,14 @@ var SignUpArea = function(id) {
 		"placeholder" : "Password"
 	});
 	
+	var passwordError = $("<span/>").addClass("errorArea");
+	
 	var verifyPassword = $("<input/>").attr({
 		"type" : "password",
 		"placeholder" : "Verify Password"
 	});
 	
-	var passwordError = $("<span/>").addClass("errorArea");
+	var verifyPasswordError = $("<span/>").addClass("errorArea");
 	
 	var signUpError = $("<span/>").addClass("errorArea");
 	
@@ -3368,13 +3472,14 @@ var SignUpArea = function(id) {
 		.append(passwordError)
 		.appendTo(passwordRaw);
 	
-	var passwordRaw = $("<tr/>").appendTo(base);
+	var verifyPasswordRaw = $("<tr/>").appendTo(base);
 	$("<td/>").addClass("loginFieldDescription")
 		.append("Verify Password:")
-		.appendTo(passwordRaw);	
+		.appendTo(verifyPasswordRaw);	
 	$("<td/>")
 		.append(verifyPassword)
-		.appendTo(passwordRaw);
+		.append(verifyPasswordError)
+		.appendTo(verifyPasswordRaw);
 	
 	var signUpErrorRow = $("<tr/>").appendTo(base);
 	$("<td/>").addClass("loginFieldDescription")
@@ -3397,7 +3502,23 @@ var SignUpArea = function(id) {
 		signUpError.html("Server Error. Could not sign up.");
 	}
 	
-	signup.addFunction("Sign Up",function() {		
+	this.showErrors = function() {
+		checkForError(fullName, fullNameError, "* Must specify a name.");
+		checkForError(username, usernameError, "* Must specify a user name.");
+		checkForError(password, passwordError, "* Must specify a password.");		
+		checkForError(verifyPassword, verifyPasswordError, "* Must verify the password.",
+				password.val() == verifyPassword.val() ?
+						null : "* Password do not mach.");
+	};
+	
+	this.clearAll = function() {
+		clearField(fullName, fullNameError);
+		clearField(username, usernameError);
+		clearField(password, passwordError);
+		clearField(verifyPassword, verifyPasswordError);
+	};
+	
+	this.commitSignUp = function() {
 		if(		fullName.val() == "" ||
 				username.val() == "" ||
 				password.val() == "" ||
@@ -3417,135 +3538,80 @@ var SignUpArea = function(id) {
 				}
 			}, handler.getHandler());
 		}
-	});
-	
-	this.showErrors = function() {
-		fullNameError.animate({
-			"opacity" : "0"
-		},500,function() {
-			if(fullName.val() == "") {
-				fullNameError.html("* Must specify a name.");
-				fullNameError.animate({
-					"opacity" : "1"
-				},1000);
-				
-				fullName.animate({
-					"background-color" : "#debdbd"
-				},1000);
-			} else {
-				fullName.animate({
-					"background-color" : "#bddec0"
-				},1000);
-			}
-		});
-		
-		usernameError.animate({
-			"opacity" : "0"
-		},500,function() {
-			if(username.val() == "") {
-				usernameError.html("* Must specify a user name.");
-				usernameError.animate({
-					"opacity" : "1"
-				},1000);
-				
-				username.animate({
-					"background-color" : "#debdbd"
-				},1000);
-			} else {
-				username.animate({
-					"background-color" : "#bddec0"
-				},1000);
-			}
-		});;
-		
-		passwordError.animate({
-			"opacity" : "0"
-		},500,function() {
-			if(password.val() == "") {
-				passwordError.html("* Must specify a password.");
-				passwordError.animate({
-					"opacity" : "1"
-				},1000);
-				
-				password.animate({
-					"background-color" : "#debdbd"
-				},1000);
-			} else if(password.val() != verifyPassword.val()) {
-				passwordError.html("* Password do not mach.");
-				passwordError.animate({
-					"opacity" : "1"
-				},1000);
-				
-				password.animate({
-					"background-color" : "#debdbd"
-				},1000);
-				verifyPassword.animate({
-					"background-color" : "#debdbd"
-				},1000);
-			} else {
-				password.animate({
-					"background-color" : "#bddec0"
-				},1000);
-				verifyPassword.animate({
-					"background-color" : "#bddec0"
-				},1000);
-			}
-		});
 	};
 	
-	this.clearAll = function() {
-		fullNameError.animate({
-			"opacity" : "0"
-		},500,function() {
-			fullNameError.val("");	
-		});
-		
-		fullName.val("");			
-		fullName.css({
-			"background-color" : ""
-		});
-		
-		usernameError.animate({
-			"opacity" : "0"
-		},500,function() {
-			usernameError.val("");	
-		});
-		
-		username.val("");			
-		username.css({
-			"background-color" : ""
-		});
-		
-		passwordError.animate({
-			"opacity" : "0"
-		},500,function() {
-			passwordError.val("");	
-		});
-		
-		password.val("");			
-		password.css({
-			"background-color" : ""
-		});
-		
-		verifyPassword.val("");
-		verifyPassword.css({
-			"background-color" : ""
-		});
-	};
+	function onKeyUp(event) {
+		if (event.keyCode == 13) {
+			self.commitSignUp();
+		}
+	}
 	
+	signup.addFunction("Sign Up",this.commitSignUp);	
+	fullName.keyup(onKeyUp);
+	username.keyup(onKeyUp);
+	password.keyup(onKeyUp);
+	verifyPassword.keyup(onKeyUp);
+
 	this.appendTo = function (someFrame) {
 		signup.appendTo(someFrame);
 		return self;
 	};
 	
-	eWolf.bind("select",function(event,eventID) {
-		if(id == eventID) {
-			self.clearAll();
+	return this;
+};
+
+function clearField(field,errorField) {
+	errorField.animate({
+		"opacity" : "0"
+	},500,function() {
+		errorField.val("");
+	});
+	
+	field.val("");		
+	
+	field.animate({
+		"background-color" : "#ddd"
+	},500);
+	
+//	field.css({
+//		"background-color" : ""
+//	});
+}
+
+function checkForError(field,errorField,emptyErrorMessage,
+		forceErrorMessage) {
+	var fieldEmpty = field.val() == "";
+	var forecedError = 	forceErrorMessage != undefined &&
+											forceErrorMessage != null;
+	
+	var haveError = fieldEmpty || forecedError;
+	
+	errorField.animate({
+		"opacity" : "0"
+	},500,function() {
+		if(fieldEmpty) {
+			errorField.html(emptyErrorMessage);	
+		} else if(forecedError) {
+			errorField.html(forceErrorMessage);
+		}
+		
+		if(haveError) {
+			errorField.animate({
+				"opacity" : "1"
+			},1000);
+			
+			field.animate({
+				"background-color" : "#debdbd"
+			},1000);
+		} else {
+			field.animate({
+				"background-color" : "#bddec0"
+			},1000);
 		}
 	});
 	
-	return this;
-};var Logout = function(text,container) {
+	return haveError;
+}var Logout = function(text,container) {
 	var self = this;	
 	this.frame =$("<div/>").attr({
 		"class": "logoutLink aLink"
