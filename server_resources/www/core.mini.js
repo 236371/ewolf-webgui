@@ -85,17 +85,25 @@ var eWolf = new function() {
 		if(self.loginApp) {
 			self.loginApp.destroy();
 			self.loginApp = null;
+			console.log("Login app destroy");
 		}
 		
+		console.log("Setting complete function");
+		
 		self.serverRequest.complete(null,function() {
+			console.log("Enter complete function");
 			self.serverRequest.complete(null,null);
 
 			if(self.profile.getID()) {
+				console.log("creating main apps (should not happen)");
 				self.createMainApps();
 			} else {
+				console.log("present login apps");
 				self.presentLoginScreen();
 			}
 		});
+		
+		console.log("Request user data");
 		
 		self.serverRequest.requestAll("eWolfLogin");
 	};
@@ -120,12 +128,15 @@ var eWolf = new function() {
 	};
 	
 	this.presentLoginScreen = function() {
+		console.log("prepere serverRequest setting to login mode");
 		self.serverRequest.stopRefreshInterval();
 		self.serverRequest.setRequestAllOnSelect(false);
 		
 		// Welcome
+		console.log("add login menu item");
 		self.welcome.addMenuItem(self.LOGIN_APP_ID,"Login");
 		if(!self.loginApp) {
+			console.log("create login app and select it");
 			self.loginApp = new Login(self.LOGIN_APP_ID,self.applicationFrame).select();
 		}
 	};
