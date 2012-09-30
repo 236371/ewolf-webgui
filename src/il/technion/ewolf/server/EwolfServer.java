@@ -56,7 +56,7 @@ public class EwolfServer {
 	private SFSUploadHandler sfsUploadHandler = new SFSUploadHandler();
 	private SFSHandler sfsHandler;
 
-	private boolean isReady = false;
+	public volatile boolean isReady = false;
 	private Date startTime;
 
 	public EwolfServer(String config) {
@@ -86,13 +86,6 @@ public class EwolfServer {
 					.setProperty("openkad.bucket.kbuckets.maxsize", "20")
 					.setProperty("openkad.seed", port)
 					.setProperty("openkad.net.udp.port", port));
-	}
-
-	public synchronized boolean isServerReady() {
-		return isReady;
-	}
-	private synchronized void serverIsReady() {
-		isReady = true;
 	}
 
 	public Date startTime() {
@@ -142,7 +135,7 @@ public class EwolfServer {
 		addEwolfHandlers();
 
 		startTime = new Date();
-		serverIsReady();
+		isReady = true;
 		System.out.println("Server started.");
 	}
 

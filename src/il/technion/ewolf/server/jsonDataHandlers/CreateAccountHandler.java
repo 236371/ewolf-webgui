@@ -84,7 +84,7 @@ public class CreateAccountHandler implements JsonDataHandler {
 					"Error while saving to the properties file.");
 		}
 
-		while (!ewolfServer.isServerReady()) {
+		while (!ewolfServer.isReady) {
 
 		}
 		return new CreateAccountResponse();
