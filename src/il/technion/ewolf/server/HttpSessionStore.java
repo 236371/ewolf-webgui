@@ -7,7 +7,7 @@ import org.apache.commons.lang.RandomStringUtils;
 
 public class HttpSessionStore {
 	private static final int SESSION_ID_LENGTH = 10;
-	Set<String> keys = new HashSet<String>();
+	volatile Set<String> keys = new HashSet<String>();
 
 	public String createSession() {
 		String key = generateKey();
