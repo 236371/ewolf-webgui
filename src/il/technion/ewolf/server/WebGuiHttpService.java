@@ -51,8 +51,10 @@ public class WebGuiHttpService extends HttpService {
 			Header[] headers = req.getHeaders("Cookie");
 			for (Header h : headers) {
 				String cookie = h.getValue();
-				String key = cookie.substring("session=".length());
-				if (sessionStore.isValid(key)) {
+				String content = cookie.substring("session=".length());
+//				String[] nameContent = cookie.split("=");
+//				String content = nameContent[1];
+				if (sessionStore.isValid(content)) {
 					authorized = true;
 					context.setAttribute("authorized", true);
 					break;
