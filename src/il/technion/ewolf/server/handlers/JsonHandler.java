@@ -6,6 +6,8 @@ import il.technion.ewolf.server.HttpSessionStore;
 import il.technion.ewolf.server.jsonDataHandlers.JsonDataHandler;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -68,10 +70,13 @@ public class JsonHandler implements HttpRequestHandler {
 			}
 
 			if (key.equals("logout")) {
+				DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.FULL, DateFormat.LONG);
 				Header[] headers = req.getHeaders("Cookie");
 				for (Header h : headers) {
 					String cookie = h.getValue();
 					sessionStore.deleteSession(cookie);
+					res.setHeader("Set-Cookie", ";Expires=" +
+							dateFormat.format(new Date()));
 				}
 				res.setStatusCode(HttpStatus.SC_SEE_OTHER);
 				res.setHeader("Location", "/");
