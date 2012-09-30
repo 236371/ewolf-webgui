@@ -177,18 +177,11 @@ public class HttpConnectorModule extends AbstractModule {
 
 	@Provides
 	@Singleton
-	@Named("httpconnector.sessionStore")
-	HttpSessionStore provideHttpSessionStore() {
-		return new HttpSessionStore();
-	}
-
-	@Provides
-	@Singleton
 	HttpService provideHttpService(@Named("httpconnector.httpservice") String service,
 			HttpRequestHandlerRegistry registry,
 			@Named("httpconnector.params.server") HttpParams serverParams,
 			@Named("httpconnector.proc.server") HttpProcessor serverProc,
-			@Named("httpconnector.sessionStore") HttpSessionStore httpSessionStore) {
+			HttpSessionStore httpSessionStore) {
 		if (service.equals("webgui")) {
 			return  new WebGuiHttpService(
 					serverProc,
