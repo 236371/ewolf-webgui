@@ -85,25 +85,17 @@ var eWolf = new function() {
 		if(self.loginApp) {
 			self.loginApp.destroy();
 			self.loginApp = null;
-			console.log("Login app destroy");
 		}
 		
-		console.log("Setting complete function");
-		
 		self.serverRequest.complete(null,function() {
-			console.log("Enter complete function");
 			self.serverRequest.complete(null,null);
 
 			if(self.profile.getID()) {
-				console.log("creating main apps (should not happen)");
 				self.createMainApps();
 			} else {
-				console.log("present login apps");
 				self.presentLoginScreen();
 			}
 		});
-		
-		console.log("Request user data");
 		
 		self.serverRequest.requestAll("eWolfLogin");
 	};
@@ -128,15 +120,12 @@ var eWolf = new function() {
 	};
 	
 	this.presentLoginScreen = function() {
-		console.log("prepere serverRequest setting to login mode");
 		self.serverRequest.stopRefreshInterval();
 		self.serverRequest.setRequestAllOnSelect(false);
 		
 		// Welcome
-		console.log("add login menu item");
 		self.welcome.addMenuItem(self.LOGIN_APP_ID,"Login");
 		if(!self.loginApp) {
-			console.log("create login app and select it");
 			self.loginApp = new Login(self.LOGIN_APP_ID,self.applicationFrame).select();
 		}
 	};
@@ -1202,6 +1191,16 @@ var FunctionsArea = function () {
 		return self;
 	};
 	
+	this.hideFunctionArea = function() {
+		self.frame.hide(0);		
+		return self;
+	};
+	
+	this.showFunctionArea = function() {
+		self.frame.show(0);		
+		return self;
+	};
+	
 	return this;
 };var Loading = function(indicator) {
 	var loadingCount = 0;
@@ -1870,6 +1869,16 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 	
 	this.showAll = function () {
 		functions.showAll();
+		return self;
+	};
+	
+	this.hideFunctionArea = function() {
+		functions.hideFunctionArea();
+		return self;
+	};
+	
+	this.showFunctionArea = function() {
+		functions.showFunctionArea();
 		return self;
 	};
 	
@@ -3965,6 +3974,7 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	
 	var wolfpacksContainer = new CommaSeperatedList("Wolfpakcs");
 	topTitle.appendAtBottomPart(wolfpacksContainer.getList());
+	topTitle.hideFunctionArea();
 	
 	if(userID) {
 		topTitle.addFunction("Send message...", function (event) {
@@ -3981,7 +3991,6 @@ var Profile = function (id,applicationFrame,userID,userName) {
 		});
 	}
 	
-	topTitle.hideAll();
 	
 	var newsFeed = null;
 	
@@ -3989,7 +3998,7 @@ var Profile = function (id,applicationFrame,userID,userName) {
 		topTitle.setTitle(CreateUserBox(userID,userName,true));
 		eWolf.members.addKnownUsers(userID,userName);
 		
-		topTitle.showAll();
+		topTitle.showFunctionArea();
 		
 		if(newsFeed == null) {			
 			newsFeed = new ProfileNewsFeedList(id,userID)
@@ -4004,7 +4013,7 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	function onProfileNotFound() {
 		topTitle.setTitle("Profile not found");
 		
-		topTitle.hideAll();
+		topTitle.hideFunctionArea();
 		
 		if(newsFeed != null) {			
 			newsFeed.destroy();
