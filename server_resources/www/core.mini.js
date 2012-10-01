@@ -91,8 +91,10 @@ var eWolf = new function() {
 			self.serverRequest.complete(null,null);
 
 			if(self.profile.getID()) {
+				self.serverRequest.restartRefreshInterval();
 				self.createMainApps();
 			} else {
+				self.serverRequest.stopRefreshInterval();
 				self.presentLoginScreen();
 			}
 		});
