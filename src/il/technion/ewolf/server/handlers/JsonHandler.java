@@ -74,8 +74,11 @@ public class JsonHandler implements HttpRequestHandler {
 				Header[] headers = req.getHeaders("Cookie");
 				for (Header h : headers) {
 					String cookie = h.getValue();
-					sessionStore.deleteSession(cookie);
-					res.setHeader("Set-Cookie", ";Expires=" +
+					String content = cookie.substring("session=".length());
+//					String[] nameContent = cookie.split("=");
+//					String content = nameContent[1];
+					sessionStore.deleteSession(content);
+					res.setHeader("Set-Cookie", "session=;Expires=" +
 							dateFormat.format(new Date()));
 				}
 				res.setStatusCode(HttpStatus.SC_SEE_OTHER);
