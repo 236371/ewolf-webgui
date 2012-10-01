@@ -867,7 +867,14 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	}
 	
 	return box;
-}var CreateNewWolfpackLink = function() {
+}CREATE_NEW_WOLFPACK_LINK_CONSTANTS = {
+	QUERY_ID : "query"	
+};
+
+var CreateNewWolfpackLink = function() {
+	var self = this;
+	$.extend(this,CREATE_NEW_WOLFPACK_LINK_CONSTANTS);
+	
 	var link = $("<a/>").append("+ Create Wolfpack");	
 	var li = $("<li/>").append(link).click(function() {
 		var diag = $("<div/>").attr({
@@ -882,88 +889,28 @@ var ResponseHandler = function(category, requiredFields, handler) {
 			"placeholder": "Wolfpack name"
 		}).css({
 			"min-width" : 200
-		}).appendTo(line);
+		}).appendTo(line);		
 		
 		var errorBox = $("<span/>").addClass("errorArea").appendTo(diag);
 		
-		var lastFieldEmpty = false;
-		var lastAlreadyExist = false;
-		
-		function isMissingWolfpackName(showError) {
-			var fieldEmpty = query.val() == "";
-			var alreadyExist = $.inArray(query.val(),eWolf.wolfpacks.wolfpacksArray) != -1;
-			var hasError = (fieldEmpty || alreadyExist);
-			
-			var lastHasError = (lastFieldEmpty == true || lastAlreadyExist == true);
-			
-			if(lastFieldEmpty && fieldEmpty) {
-				return hasError;
-			}
-			
-			if(lastAlreadyExist && alreadyExist) {
-				return hasError;
-			}
-			
-			if(lastHasError == false && hasError == false) {
-				return hasError;
-			}
-			
-			errorBox.animate({
-				"opacity" : "0"
-			},200,function() {
-				if(hasError && showError) {
-					errorBox.html(fieldEmpty ? " * Please enter a wolfpack name" : 
-						" * Wolfpack with that name already exist");
-					
-					errorBox.animate({
-						"opacity" : "1"
-					},400);
-					
-					query.animate({
-						"background-color" : "#debdbd"
-					},400);
-				}
-				
-				if(!hasError) {
-					query.animate({
-						"background-color" : "#ddd"
-					},400);
-				}
-			});
-					
-			
-			lastAlreadyExist = alreadyExist;
-			lastFieldEmpty = fieldEmpty;
-			
-			return hasError;
-		}
-		
-		query.bind('input propertychange',function() {
-			isMissingWolfpackName(true);			
-		});
-		
-		query.keyup(function(event) {
-		    if(event.keyCode == 13 && query.val() != "") {
-		    	doCreate();	
-		    	}
-		});
-		
-		function doCreate() {
-			if(isMissingWolfpackName(true)) {
-				return;
-			}
-			
-			eWolf.wolfpacks.createWolfpacks([query.val()], null);
-			
-			$( this ).dialog( "close" );
-		}
+		var formValidator = new FormValidator()
+					.registerField(self.QUERY_ID, query, errorBox)
+					.attachOnSend(function() {
+							eWolf.wolfpacks.createWolfpacks([query.val()], null);			
+							diag.dialog( "close" );
+						})
+					.addValidator(self.QUERY_ID, VALIDATOR_IS_NOT_EMPTY
+							, " * Please enter a wolfpack name")
+					.addValidator(self.QUERY_ID, function(field) {
+							return $.inArray(field.val(),eWolf.wolfpacks.wolfpacksArray) == -1;
+						}, " * Wolfpack with that name already exist");
 		
 		diag.dialog({
 			resizable: true,
 			modal: true,
 			width: 550,
 			buttons: {
-				"Create": doCreate,
+				"Create": formValidator.sendForm,
 				Cancel: function() {
 					$( this ).dialog( "close" );
 				}
@@ -1237,6 +1184,159 @@ function CreateTimestampBox(timestamp) {
 		});
 		
 		return this;
+	};
+	
+	return this;
+};
+VALIDATOR_IS_NOT_EMPTY = function(field) {
+	return field.val() != "";
+};
+
+var FormValidator = function() {
+	var self = this;
+	
+	var fields = {};
+	var onSend = null;
+	
+	this.attachOnSend = function(newOnSend) {
+		onSend = newOnSend;
+		return self;
+	};
+	
+	this.sendForm = function() {
+		if(self.isValid(true) && onSend) {
+			onSend();
+		}
+	};
+	
+	this.registerField = function (fieldId, field, itsErrorBox) {
+		if(fieldId) {
+			fields[fieldId] = {
+				field	: field,
+				error : itsErrorBox,
+				lastCheckStatus : true,
+				isVergin : true,
+				isMarkedOK : false,
+				validators : []
+			};
+			
+			field.bind('input propertychange',function() {
+				fields[fieldId].isVergin = false;
+				self.isValid(false);
+			});
+			
+			field.keyup(function(event) {
+			    if(event.keyCode == 13) {
+			    	self.sendForm();
+			    	}
+			});
+		}
+		
+		return self;
+	};
+	
+	this.addValidator = function (fieldId, validator, errorMessage) {
+		if(fieldId && fields[fieldId]) {
+			fields[fieldId].validators.push( {
+				isValid : validator,
+				errorMessage : errorMessage
+			});
+		}
+		
+		return self;
+	};
+	
+	this.isValid = function(markOK) {
+		var allValid = true;
+		
+		$.each(fields, function(fieldId, f) {
+			if(!markOK && f.isVergin) {
+				return true;
+			}
+			
+			var fieldValid = true;
+			var fieldErrorMessage = "";
+			
+			$.each(f.validators, function(j, validator) {
+				var fieldValidatorValid = validator.isValid(f.field);
+				
+				if(fieldValidatorValid == false) {
+					fieldErrorMessage = validator.errorMessage;
+					fieldValid = false;
+					allValid = false;
+				}
+				
+				return fieldValidatorValid;
+			});
+			
+			if(fieldValid) {
+				if(f.lastCheckStatus == false || (markOK && !f.isMarkedOK)) {
+					f.isMarkedOK = markOK;
+					
+					f.field.animate({
+						"background-color" : markOK ? "#bddec0" : "#ddd" 
+					},300, function() {
+						if(!markOK) {
+							f.field.css("background-color","");
+						}						
+					});
+				}
+				
+				if(f.lastCheckStatus == false) {
+					f.error.animate({
+						"opacity" : "0"
+					},300, function() {
+						f.error.html("");
+					});
+				}
+			} else {
+				if(f.lastCheckStatus == true) {
+					f.isMarkedOK = false;
+					
+					f.field.animate({
+						"background-color" : "#debdbd"
+					},300);	
+				}
+				
+				if(f.error.html() != fieldErrorMessage) {
+					f.error.animate({
+						"opacity" : "0"
+					},150, function() {
+						f.error.html(fieldErrorMessage);
+						
+						f.error.animate({
+							"opacity" : "1"
+						},300);
+					});
+				}
+			}
+			
+			f.lastCheckStatus = fieldValid;
+		});		
+		
+		return allValid;
+	};
+	
+	this.clearField = function (fieldId) {
+		if(fieldId && fields[fieldId] &&
+				!fields[fieldId].isVergin &&
+					(		fields[fieldId].isMarkedOK || 
+							fields[fieldId].lastCheckStatus == false)) {
+			fields[fieldId].field.animate({
+				"background-color" : "#ddd" 
+			},150, function() {
+				fields[fieldId].field.css("background-color","");				
+			});
+		}
+		
+		return self;
+	};
+	
+	this.clearAllFields = function () {
+		$.each(fields, function(fieldId, f) {
+			self.clearField(fieldId);
+		});
+		return self;
 	};
 	
 	return this;
@@ -3398,6 +3498,18 @@ var InboxList = function (appID,serverSettings) {
 	
 	return this;
 };
+LOGIN_CONSTANTS = {
+	LOGIN_USERNAME_ID : "login username",
+	LOGIN_PASSWORD_ID : "login password"
+};
+
+SIGNUP_CONSTANTS = {
+	SIGNUP_FULL_NAME_ID : "signup full name",
+	SIGNUP_USERNAME_ID : "signup username",
+	SIGNUP_PASSWORD_ID : "signup password",
+	SIGNUP_VERIFY_PASSWORD_ID : "signup verify password"
+};
+
 var Login = function(id,applicationFrame) {
 	Application.call(this,id,applicationFrame);
 	
@@ -3407,7 +3519,7 @@ var Login = function(id,applicationFrame) {
 	
 	var signup = new SignUpArea(id).appendTo(this.frame);
 	
-	eWolf.bind("select",function(event,eventID) {
+	eWolf.bind("refresh",function(event,eventID) {
 		if(id == eventID) {
 			login.clearAll();
 			signup.clearAll();
@@ -3419,6 +3531,7 @@ var Login = function(id,applicationFrame) {
 
 var LoginArea = function(id) {
 	var self = this;
+	$.extend(this,LOGIN_CONSTANTS);
 	
 	var login = new TitleArea("Login").appendTo(this.frame);
 	
@@ -3473,10 +3586,12 @@ var LoginArea = function(id) {
 	
 	function errorHandler(data, textStatus, postData) {
 		loginError.html(data.errorMessage);
+		self.clearAll();
 	}
 	
 	function badRequestHandler(data, textStatus, postData) {
 		loginError.html("Server Error. Could not login.");
+		self.clearAll();
 	}
 	
 	this.showErrors = function() {
@@ -3484,39 +3599,33 @@ var LoginArea = function(id) {
 		checkForError(password, passwordError, "* Must specify a password.");		
 	};
 	
+	var formValidator = new FormValidator()
+			.registerField(self.LOGIN_USERNAME_ID, username, usernameError)
+			.registerField(self.LOGIN_PASSWORD_ID, password, passwordError)
+			.attachOnSend(function() {
+						var handler = new ResponseHandler("login",[])
+							.success(handleLogin)
+							.error(errorHandler)
+							.badResponseHandler(badRequestHandler);
+						
+						eWolf.serverRequest.request(id,{
+							login : {
+								username : username.val(),
+								password : password.val()
+							}
+						}, handler.getHandler());
+				})
+			.addValidator(self.LOGIN_USERNAME_ID, VALIDATOR_IS_NOT_EMPTY,
+					"* Must specify a user name.")
+			.addValidator(self.LOGIN_PASSWORD_ID, VALIDATOR_IS_NOT_EMPTY,
+					"* Must specify a password.");
+	
+	login.addFunction("Login",formValidator.sendForm);
+	
 	this.clearAll = function() {
-		clearField(username, usernameError);
-		clearField(password, passwordError);
+		formValidator.clearAllFields();
+		return self;
 	};
-	
-	this.commitLogin = function () {
-		self.showErrors();
-		
-		if(	username.val() != "" &&
-				password.val() != "" ) {
-			var handler = new ResponseHandler("login",[])
-				.success(handleLogin)
-				.error(errorHandler)
-				.badResponseHandler(badRequestHandler);
-			
-			eWolf.serverRequest.request(id,{
-				login : {
-					username : username.val(),
-					password : password.val()
-				}
-			}, handler.getHandler());
-		}
-	};
-	
-	function onKeyUp(event) {
-		if (event.keyCode == 13) {
-			self.commitLogin();
-		}
-	}
-	
-	login.addFunction("Login",this.commitLogin);	
-	username.keyup(onKeyUp);
-	password.keyup(onKeyUp);
 	
 	this.appendTo = function (someFrame) {
 		login.appendTo(someFrame);
@@ -3528,6 +3637,7 @@ var LoginArea = function(id) {
 
 var SignUpArea = function(id) {
 	var self = this;
+	$.extend(this,SIGNUP_CONSTANTS);
 	
 	var signup = new TitleArea("Sign Up");
 	
@@ -3614,61 +3724,51 @@ var SignUpArea = function(id) {
 	
 	function errorHandler(data, textStatus, postData) {
 		signUpError.html(data.errorMessage);
+		self.clearAll();
 	}
 	
 	function badRequestHandler(data, textStatus, postData) {
 		signUpError.html("Server Error. Could not sign up.");
+		self.clearAll();
 	}
 	
-	this.showErrors = function() {
-		checkForError(fullName, fullNameError, "* Must specify a name.");
-		checkForError(username, usernameError, "* Must specify a user name.");
-		checkForError(password, passwordError, "* Must specify a password.");		
-		checkForError(verifyPassword, verifyPasswordError, "* Must verify the password.",
-				password.val() == verifyPassword.val() ?
-						null : "* Password do not mach.");
-	};
+	var formValidator = new FormValidator()
+			.registerField(self.SIGNUP_FULL_NAME_ID, fullName, fullNameError)
+			.registerField(self.SIGNUP_USERNAME_ID, username, usernameError)
+			.registerField(self.SIGNUP_PASSWORD_ID, password, passwordError)
+			.registerField(self.SIGNUP_VERIFY_PASSWORD_ID, verifyPassword, verifyPasswordError)
+			.attachOnSend(function() {
+				var handler = new ResponseHandler("createAccount",[])
+					.success(handleSignUp)
+					.error(errorHandler)
+					.badResponseHandler(badRequestHandler);
+				
+				eWolf.serverRequest.request(id,{
+						createAccount : {
+							name : fullName.val(),
+							username : username.val(),
+							password : password.val()
+						}
+					}, handler.getHandler());
+				})
+			.addValidator(self.SIGNUP_FULL_NAME_ID, VALIDATOR_IS_NOT_EMPTY,
+					"* Must specify a name.")
+			.addValidator(self.SIGNUP_USERNAME_ID, VALIDATOR_IS_NOT_EMPTY,
+					"* Must specify a user name.")
+			.addValidator(self.SIGNUP_PASSWORD_ID, VALIDATOR_IS_NOT_EMPTY,
+					"* Must specify a password.")
+			.addValidator(self.SIGNUP_VERIFY_PASSWORD_ID, VALIDATOR_IS_NOT_EMPTY,
+					"* Must verify the password.")
+			.addValidator(self.SIGNUP_VERIFY_PASSWORD_ID, function(field) {
+				return password.val() == field.val();
+			},"* Password do not mach.");
+			
+	signup.addFunction("Sign Up",formValidator.sendForm);
 	
 	this.clearAll = function() {
-		clearField(fullName, fullNameError);
-		clearField(username, usernameError);
-		clearField(password, passwordError);
-		clearField(verifyPassword, verifyPasswordError);
+		formValidator.clearAllFields();
+		return self;
 	};
-	
-	this.commitSignUp = function() {
-		if(		fullName.val() == "" ||
-				username.val() == "" ||
-				password.val() == "" ||
-				password.val() != verifyPassword.val()) {
-			self.showErrors();
-		} else {
-			var handler = new ResponseHandler("createAccount",[])
-				.success(handleSignUp)
-				.error(errorHandler)
-				.badResponseHandler(badRequestHandler);
-			
-			eWolf.serverRequest.request(id,{
-				createAccount : {
-					name : fullName.val(),
-					username : username.val(),
-					password : password.val()
-				}
-			}, handler.getHandler());
-		}
-	};
-	
-	function onKeyUp(event) {
-		if (event.keyCode == 13) {
-			self.commitSignUp();
-		}
-	}
-	
-	signup.addFunction("Sign Up",this.commitSignUp);	
-	fullName.keyup(onKeyUp);
-	username.keyup(onKeyUp);
-	password.keyup(onKeyUp);
-	verifyPassword.keyup(onKeyUp);
 
 	this.appendTo = function (someFrame) {
 		signup.appendTo(someFrame);
@@ -3676,60 +3776,7 @@ var SignUpArea = function(id) {
 	};
 	
 	return this;
-};
-
-function clearField(field,errorField) {
-	errorField.animate({
-		"opacity" : "0"
-	},500,function() {
-		errorField.val("");
-	});
-	
-	field.val("");		
-	
-	field.animate({
-		"background-color" : "#ddd"
-	},500);
-	
-//	field.css({
-//		"background-color" : ""
-//	});
-}
-
-function checkForError(field,errorField,emptyErrorMessage,
-		forceErrorMessage) {
-	var fieldEmpty = field.val() == "";
-	var forecedError = 	forceErrorMessage != undefined &&
-											forceErrorMessage != null;
-	
-	var haveError = fieldEmpty || forecedError;
-	
-	errorField.animate({
-		"opacity" : "0"
-	},500,function() {
-		if(fieldEmpty) {
-			errorField.html(emptyErrorMessage);	
-		} else if(forecedError) {
-			errorField.html(forceErrorMessage);
-		}
-		
-		if(haveError) {
-			errorField.animate({
-				"opacity" : "1"
-			},1000);
-			
-			field.animate({
-				"background-color" : "#debdbd"
-			},1000);
-		} else {
-			field.animate({
-				"background-color" : "#bddec0"
-			},1000);
-		}
-	});
-	
-	return haveError;
-}var Logout = function(text,container) {
+};var Logout = function(text,container) {
 	var self = this;	
 	var LOGOUT = "logout";
 	this.frame =$("<div/>").attr({
@@ -3744,7 +3791,7 @@ function checkForError(field,errorField,emptyErrorMessage,
 		});
 	
 	function onLogout(appID) {
-		//document.location.reload(true);
+		document.location.reload(true);
 	}
 	
 	this.commitLogout = function () {
