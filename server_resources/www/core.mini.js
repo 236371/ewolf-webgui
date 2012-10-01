@@ -403,7 +403,7 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 	};
 	
 	this.registerRequest = function(requestName, requestFunction) {
-		if(!requestsMap[requestName]) {
+		if(requestName && requestFunction) {
 			requestsMap[requestName] = {
 					request : requestFunction,
 					handlers : [],
@@ -722,6 +722,7 @@ var ResponseHandler = function(category, requiredFields, handler) {
 		eWolf.unbind("select."+id);
 		eWolf.unbind("destroy."+id);
 		self.frame.remove();
+		eWolf.serverRequest.unregisterApp(id);
 		delete self;
 	};
 	
