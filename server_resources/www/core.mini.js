@@ -333,6 +333,39 @@ var Wolfpacks = function (menuList,applicationFrame) {
 		return self;
 	};
 	
+	this.createWolfpacks = function(wolfpacks,onComplete) {
+		if(wolfpacks.length > 0) {			
+			var responseHandler = new ResponseHandler("createWolfpack",[],null);
+			
+			responseHandler.success(function(data, textStatus, postData) {
+				$.each(wolfpacks,function(i,pack) {
+					self.addWolfpack(pack);
+				});
+			}).error(function(data, textStatus, postData) {				
+				if(data.wolfpacksResult == null) {
+					console.log("No wolfpacksResult in response");
+				} else {
+					$.each(data.wolfpacksResult, function(i,response) {
+						if(response.result == RESPONSE_RESULT.SUCCESS) {
+							self.addWolfpack(postData.wolfpackNames[i]);
+						}
+					});
+				}
+			}).complete(onComplete);
+			
+			eWolf.serverRequest.request("wolfpacks",{
+				createWolfpack: {
+					wolfpackNames: wolfpacks
+				}
+			},responseHandler.getHandler());
+			
+		} else {
+			if(onComplete) {
+				onComplete();
+			}			
+		}
+	};
+	
 	return this;
 };
 
@@ -842,17 +875,95 @@ var ResponseHandler = function(category, requiredFields, handler) {
 			"title" : "Create a new wolfpack"
 		}).addClass("DialogClass");
 		
-		$("<p/>").appendTo(diag).append("New wolfpack name:");
-
+		var line = $("<p/>").append("New wolfpack name: ").appendTo(diag);
+		
+		var query = $("<input/>").attr({
+			"type": "text",
+			"placeholder": "Wolfpack name"
+		}).css({
+			"min-width" : 200
+		}).appendTo(line);
+		
+		var errorBox = $("<span/>").addClass("errorArea").appendTo(diag);
+		
+		var lastFieldEmpty = false;
+		var lastAlreadyExist = false;
+		
+		function isMissingWolfpackName(showError) {
+			var fieldEmpty = query.val() == "";
+			var alreadyExist = $.inArray(query.val(),eWolf.wolfpacks.wolfpacksArray) != -1;
+			var hasError = (fieldEmpty || alreadyExist);
+			
+			var lastHasError = (lastFieldEmpty == true || lastAlreadyExist == true);
+			
+			if(lastFieldEmpty && fieldEmpty) {
+				return hasError;
+			}
+			
+			if(lastAlreadyExist && alreadyExist) {
+				return hasError;
+			}
+			
+			if(lastHasError == false && hasError == false) {
+				return hasError;
+			}
+			
+			errorBox.animate({
+				"opacity" : "0"
+			},200,function() {
+				if(hasError && showError) {
+					errorBox.html(fieldEmpty ? " * Please enter a wolfpack name" : 
+						" * Wolfpack with that name already exist");
+					
+					errorBox.animate({
+						"opacity" : "1"
+					},400);
+					
+					query.animate({
+						"background-color" : "#debdbd"
+					},400);
+				}
+				
+				if(!hasError) {
+					query.animate({
+						"background-color" : "#ddd"
+					},400);
+				}
+			});
+					
+			
+			lastAlreadyExist = alreadyExist;
+			lastFieldEmpty = fieldEmpty;
+			
+			return hasError;
+		}
+		
+		query.bind('input propertychange',function() {
+			isMissingWolfpackName(true);			
+		});
+		
+		query.keyup(function(event) {
+		    if(event.keyCode == 13 && query.val() != "") {
+		    	doCreate();	
+		    	}
+		});
+		
+		function doCreate() {
+			if(isMissingWolfpackName(true)) {
+				return;
+			}
+			
+			eWolf.wolfpacks.createWolfpacks([query.val()], null);
+			
+			$( this ).dialog( "close" );
+		}
 		
 		diag.dialog({
 			resizable: true,
 			modal: true,
 			width: 550,
 			buttons: {
-				"Create": function() {
-					$( this ).dialog( "close" );
-				},
+				"Create": doCreate,
 				Cancel: function() {
 					$( this ).dialog( "close" );
 				}
@@ -3244,38 +3355,6 @@ var InboxList = function (appID,serverSettings) {
 		return result;	
 	};
 	
-	this.createWolfpacks = function(wolfpacks,onComplete) {
-		if(wolfpacks.length > 0) {			
-			var responseHandler = new ResponseHandler("createWolfpack",[],null);
-			
-			responseHandler.success(function(data, textStatus, postData) {
-				$.each(wolfpacks,function(i,pack) {
-					eWolf.wolfpacks.addWolfpack(pack);
-				});
-			}).error(function(data, textStatus, postData) {				
-				if(data.wolfpacksResult == null) {
-					console.log("No wolfpacksResult in response");
-				} else {
-					$.each(data.wolfpacksResult, function(i,response) {
-						if(response.result == RESPONSE_RESULT.SUCCESS) {
-							eWolf.wolfpacks.addWolfpack(postData.wolfpackNames[i]);
-						}
-					});
-					
-				}
-			}).complete(onComplete);
-			
-			eWolf.serverRequest.request(id,{
-				createWolfpack: {
-					wolfpackNames: wolfpacks
-				}
-			},responseHandler.getHandler());
-			
-		} else {
-			onComplete();
-		}
-	};
-	
 	this.addToAllWolfpacks = function (wolfpacks) {
 		if(wolfpacks.length > 0) {
 			var response = new ResponseHandler("addWolfpackMember",[],null);
@@ -3298,7 +3377,7 @@ var InboxList = function (appID,serverSettings) {
 		
 		self.destroy();
 		
-		self.createWolfpacks(result.create, function () {
+		eWolf.wolfpacks.createWolfpacks(result.create, function () {
 			self.addToAllWolfpacks(result.add);
 		});
 	};
@@ -3665,7 +3744,7 @@ function checkForError(field,errorField,emptyErrorMessage,
 		});
 	
 	function onLogout(appID) {
-		document.location.reload(true);
+		//document.location.reload(true);
 	}
 	
 	this.commitLogout = function () {
