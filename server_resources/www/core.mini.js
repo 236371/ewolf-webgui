@@ -4099,7 +4099,7 @@ var SearchApp = function(menu,applicationFrame,container) {
 	var self = this;
 	$.extend(this,SEARCHAPP_CONSTANTS);
 	
-	var menuList = menu.createNewMenuList(this.SEARCH_MENU_ITEM_ID,"Search");
+	//var menuList = menu.createNewMenuList(this.SEARCH_MENU_ITEM_ID,"Search");
 	var apps = new Object();
 	var lastSearch = null;
 	
@@ -4137,18 +4137,18 @@ var SearchApp = function(menu,applicationFrame,container) {
 	}).appendTo(this.frame).hide();
 	
 	function addSearchMenuItem(id,name) {
-		var tempName;
-		if(name == null) {
-			tempName = "Search: " + id;
-		} else {
-			tempName = name;
-		}
-		
+//		var tempName;
+//		if(name == null) {
+//			tempName = "Search: " + id;
+//		} else {
+//			tempName = name;
+//		}
+//		
 		var searchAppKey = self.SEARCH_PROFILE_PREFIX + id;
-		menuList.addMenuItem(searchAppKey,tempName);
+		//menuList.addMenuItem(searchAppKey,tempName);
 		apps[searchAppKey] = new Profile(searchAppKey,applicationFrame,id,name)
 			.onReceiveName(function(newName) {
-				menuList.renameMenuItem(searchAppKey,newName);
+				//menuList.renameMenuItem(searchAppKey,newName);
 			});	
 		
 		eWolf.selectApp(searchAppKey);
@@ -4161,7 +4161,7 @@ var SearchApp = function(menu,applicationFrame,container) {
 			apps[searchAppKey].destroy();
 			delete apps[searchAppKey];
 			apps[searchAppKey] = null;
-			menuList.removeMenuItem(searchAppKey);
+			//menuList.removeMenuItem(searchAppKey);
 		}
 	}
 	
