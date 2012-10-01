@@ -1,5 +1,5 @@
 EWOLF_CONSTANTS = {
-	REFRESH_INTERVAL : 60,
+	REFRESH_INTERVAL_SEC : 60,
 	LOADING_FRAME : "loadingFrame",
 	APPLICATION_FRAME : "applicationFrame",
 	MAIN_FRAME : "mainFrame",
@@ -31,7 +31,7 @@ var eWolf = new function() {
 	this.serverRequest = null;
 	
 	this.init = function() {
-		self.serverRequest = new PostRequestHandler("/json",self.REFRESH_INTERVAL);
+		self.serverRequest = new PostRequestHandler("/json",self.REFRESH_INTERVAL_SEC);
 		
 		$(window).bind('hashchange', self.onHashChange);
 		
@@ -459,7 +459,9 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 		
 		self._makeRequest(requestAddress,data,
 			function(receivedData,textStatus) {
-				handleDataFunction(receivedData,textStatus,data);
+				if(handleDataFunction != null) {
+					handleDataFunction(receivedData,textStatus,data);
+				}				
 			}).complete(function() {
 				onRequestComplete(appID);
 
@@ -1139,12 +1141,16 @@ var FunctionsArea = function () {
 		return self;
 	};
 	
-	this.addFunction = function (functionName,functionOp) {
+	this.addFunction = function (functionName,functionOp, hide) {
 		if(functions[functionName] == null) {
 			functions[functionName] = $("<input/>").attr({
 				"type": "button",
 				"value": functionName
-			}).click(functionOp).appendTo(this.frame);
+			}).click(functionOp).appendTo(self.frame);
+			
+			if(hide) {
+				functions[functionName].hide();
+			}
 		}
 		
 		return self;
@@ -1188,16 +1194,6 @@ var FunctionsArea = function () {
 			self.showFunction(functionName);
 		}
 		
-		return self;
-	};
-	
-	this.hideFunctionArea = function() {
-		self.frame.hide(0);		
-		return self;
-	};
-	
-	this.showFunctionArea = function() {
-		self.frame.show(0);		
 		return self;
 	};
 	
@@ -1310,7 +1306,7 @@ $.fn.spin = function(opts) {
 	return this;
 };var QueryTagList = function(minWidth,queryPlaceHolder,availableQueries,
 		allowMultipleDestinations,commitQuery) {
-	var thisObj = this;
+	var self = this;
 	
 	this.frame = $("<div/>").attr("class","seachListClass");	
 	var queryBox = $("<div/>").appendTo(this.frame);
@@ -1326,18 +1322,20 @@ $.fn.spin = function(opts) {
 		"type": "button",
 		"value": "Add"
 	}).click(function() {
-		thisObj.addTagByQuery(query.val(),true);
+		self.addTagByQuery(query.val(),true);
 	}).appendTo(queryBox).hide();
+	
+	var errorBox = $("<span/>").addClass("errorArea").appendTo(queryBox);
 	
 	query.autocomplete({
 		source: availableQueries,
 		select: onSelectSendTo
 	}).keyup(function(event) {
 	    if(event.keyCode == 13 && query.val() != "") {
-	    	thisObj.addTagByQuery(query.val(),true);   	
+	    	self.addTagByQuery(query.val(),true);   	
 	    } else {
 	    	updateQuery();
-	    }	    
+	    	}	    
 	});
 	
 	query.bind('input propertychange',function() {
@@ -1349,13 +1347,13 @@ $.fn.spin = function(opts) {
 	});
 	
 	function onSelectSendTo(event,ui) {		
-		thisObj.addTagByQuery(ui.item.label,true);
+		self.addTagByQuery(ui.item.label,true);
 		return false;
 	}
 	
 	function updateQuery (id) {			
 		if(!allowMultipleDestinations) {
-			if(! thisObj.tagList.match().isEmpty()) {
+			if(! self.tagList.isEmpty()) {
 				queryBox.hide();
 			} else {
 				queryBox.show();
@@ -1373,13 +1371,43 @@ $.fn.spin = function(opts) {
 			return false;
 		}
 		
-		if(thisObj.tagList.addTag(res.term,res.term,res.display,removable)) {
-			query.val("");
+		if(self.tagList.addTag(res.term,res.term,res.display,removable)) {
+				query.val("");
+				addBtn.hide(200);
     		updateQuery();
+    		self.isMissingField(false);
     		return true;
 		} else {
 			return false;
 		}		
+	};
+	
+	this.isMissingField = function (showError) {
+		var fieldEmpty = self.tagList.isEmpty();
+		
+		errorBox.animate({
+			"opacity" : "0"
+		},500,function() {
+			if(fieldEmpty && showError) {
+				errorBox.html(" * Please select a destination(s).");
+				
+				errorBox.animate({
+					"opacity" : "1"
+				},1000);
+				
+				query.animate({
+					"background-color" : "#debdbd"
+				},1000);
+			}
+			
+			if(!fieldEmpty) {
+				query.animate({
+					"background-color" : "#ddd"
+				},1000);
+			}
+		});
+		
+		return fieldEmpty;
 	};
 	
 	this.appendTo = function(someFrame) {
@@ -1411,7 +1439,7 @@ var FriendsQueryTagList = function (minWidth) {
 		};
 	}
 	
-	return new QueryTagList(minWidth,"Type user name or ID...",
+	return new QueryTagList(minWidth,"Type friend name or ID...",
 			eWolf.members.knownUsersFullDescriptionArray,true,sendToFuncReplace);
 };
 
@@ -1842,8 +1870,8 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 		return self;
 	};
 	
-	this.addFunction = function (functionName,functionOp) {
-		functions.addFunction(functionName,functionOp);
+	this.addFunction = function (functionName,functionOp, hide) {
+		functions.addFunction(functionName,functionOp, hide);
 		return self;
 	};
 	
@@ -1869,16 +1897,6 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 	
 	this.showAll = function () {
 		functions.showAll();
-		return self;
-	};
-	
-	this.hideFunctionArea = function() {
-		functions.hideFunctionArea();
-		return self;
-	};
-	
-	this.showFunctionArea = function() {
-		functions.showFunctionArea();
 		return self;
 	};
 	
@@ -3633,16 +3651,27 @@ function checkForError(field,errorField,emptyErrorMessage,
 	return haveError;
 }var Logout = function(text,container) {
 	var self = this;	
+	var LOGOUT = "logout";
 	this.frame =$("<div/>").attr({
 		"class": "logoutLink aLink"
 	})	.text(text)
 		.appendTo(container)
 		.click(function() {
-			// TODO: logout			
 			$(window).unbind('hashchange');
 			window.location.hash = "";
-			document.location.reload(true);
+			
+			self.commitLogout();			
 		});
+	
+	function onLogout(appID) {
+		document.location.reload(true);
+	}
+	
+	this.commitLogout = function () {
+		eWolf.serverRequest.request(LOGOUT,{
+				logout : {}
+			}, null, onLogout);
+	};
 	
 	this.destroy = function() {
 		if(self.frame != null) {
@@ -3822,8 +3851,7 @@ var NewMail = function(callerID,applicationFrame,options,
 	};
 	
 	this.send = function (event,resend) {
-		if(sendToQuery.tagList.isEmpty()) {
-			errorMessage.html("Please select a destination(s)");
+		if(sendToQuery.isMissingField(true)) {
 			return false;
 		}
 
@@ -3836,7 +3864,7 @@ var NewMail = function(callerID,applicationFrame,options,
 			
 		sendToQuery.tagList.unmarkTags({markedError:true});		
 		self.updateSend();		
-		errorMessage.html("");		
+		errorMessage.html("");
 		
 		self.sendToAll();
 	};
@@ -3973,24 +4001,22 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	var topTitle = new TitleArea("Searching profile...").appendTo(this.frame);
 	
 	var wolfpacksContainer = new CommaSeperatedList("Wolfpakcs");
-	topTitle.appendAtBottomPart(wolfpacksContainer.getList());
-	topTitle.hideFunctionArea();
+	topTitle.appendAtBottomPart(wolfpacksContainer.getList());	
 	
 	if(userID) {
 		topTitle.addFunction("Send message...", function (event) {
 			new NewMessage(id,applicationFrame,userID).select();
-		});
+		}, true);
 		
 		topTitle.addFunction("Add to wolfpack...", function () {
 			new AddToWolfpack(id, userID,self.frame, this, wolfpacksContainer.getItemNames());
 			return false;
-		});
+		}, true);
 	} else {
 		topTitle.addFunction("Post", function() {
 			new NewPost(id,applicationFrame).select();
-		});
+		}, true);
 	}
-	
 	
 	var newsFeed = null;
 	
@@ -3998,7 +4024,7 @@ var Profile = function (id,applicationFrame,userID,userName) {
 		topTitle.setTitle(CreateUserBox(userID,userName,true));
 		eWolf.members.addKnownUsers(userID,userName);
 		
-		topTitle.showFunctionArea();
+		topTitle.showAll();
 		
 		if(newsFeed == null) {			
 			newsFeed = new ProfileNewsFeedList(id,userID)
@@ -4013,7 +4039,7 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	function onProfileNotFound() {
 		topTitle.setTitle("Profile not found");
 		
-		topTitle.hideFunctionArea();
+		topTitle.hideAll();
 		
 		if(newsFeed != null) {			
 			newsFeed.destroy();
@@ -4173,7 +4199,7 @@ var SearchApp = function(menu,applicationFrame,container) {
 			if(key == eWolf.profile.getID()) {
 				eWolf.selectApp(eWolf.MYPROFILE_APP_ID);
 			} else if(apps[searchAppKey] != null) {
-				eWolf.selectApp(searchAppKey);
+				console.log("not deleted");
 			} else {
 				removeLastSearch();
 				lastSearch = key;
