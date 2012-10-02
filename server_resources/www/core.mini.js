@@ -14,7 +14,9 @@ EWOLF_CONSTANTS = {
 	NEWSFEED_APP_ID : "newsfeed",
 	INBOX_APP_ID : "inbox",
 	LOGIN_APP_ID : "login",
+	SIGNUP_APP_ID : "signup",
 	
+	LOGIN_REQUEST_NAME : "eWolfLogin",
 	PROFILE_REQUEST_NAME : "__main_profile_request__",
 	WOLFPACKS_REQUEST_NAME : "__main_wolfpacks_request",
 	MEMBERS_REQUEST_NAME : "__main_members_request__"
@@ -65,7 +67,7 @@ var eWolf = new function() {
 					return { wolfpacks : {}	};
 				});
 		
-		self.serverRequest.bindRequest(self.PROFILE_REQUEST_NAME);
+		self.serverRequest.bindRequest(self.PROFILE_REQUEST_NAME,self.LOGIN_REQUEST_NAME);
 		self.serverRequest.bindRequest(self.WOLFPACKS_REQUEST_NAME);
 		
 		self.members = new Members();		
@@ -87,6 +89,11 @@ var eWolf = new function() {
 			self.loginApp = null;
 		}
 		
+		if(self.signupApp) {
+			self.signupApp.destroy();
+			self.signupApp = null;
+		}
+		
 		self.serverRequest.complete(null,function() {
 			self.serverRequest.complete(null,null);
 
@@ -99,7 +106,7 @@ var eWolf = new function() {
 			}
 		});
 		
-		self.serverRequest.requestAll("eWolfLogin");
+		self.serverRequest.requestAll(self.LOGIN_REQUEST_NAME);
 	};
 	
 	this.createMainApps = function () {
@@ -114,7 +121,7 @@ var eWolf = new function() {
 		self.mainApps.addMenuItem(self.INBOX_APP_ID,"Messages");
 		self.inboxApp = new Inbox(self.INBOX_APP_ID,self.applicationFrame);
 		
-		self.searchApp = new SearchApp(self.sideMenu,
+		self.searchBar = new SearchBar(self.sideMenu,
 				self.applicationFrame,$("#"+self.TOPBAR_FRAME));
 		
 		self.serverRequest.setRequestAllOnSelect(true);
@@ -129,6 +136,11 @@ var eWolf = new function() {
 		self.welcome.addMenuItem(self.LOGIN_APP_ID,"Login");
 		if(!self.loginApp) {
 			self.loginApp = new Login(self.LOGIN_APP_ID,self.applicationFrame).select();
+		}
+		
+		self.welcome.addMenuItem(self.SIGNUP_APP_ID,"Signup");
+		if(!self.signupApp) {
+			self.signupApp = new Signup(self.SIGNUP_APP_ID,self.applicationFrame);
 		}
 	};
 	
@@ -149,10 +161,10 @@ var eWolf = new function() {
 				self.trigger("select",[selected]);
 			} else {
 				var selectedSubString = selected.substring(0,
-						self.searchApp.SEARCH_PROFILE_PREFIX.length);
+						self.searchBar.SEARCH_PROFILE_PREFIX.length);
 				
 				if(selectedSubString ==
-					self.searchApp.SEARCH_PROFILE_PREFIX) {
+					self.searchBar.SEARCH_PROFILE_PREFIX) {
 					var searchTerm = selected.substring(selectedSubString.length);
 					if(searchTerm != "") {
 						self.trigger("search",[searchTerm]);
@@ -220,7 +232,7 @@ var Members = function() {
 	eWolf.serverRequest.registerHandler(eWolf.MEMBERS_REQUEST_NAME,
 			membersResponseHandler.getHandler());
 	
-	eWolf.serverRequest.bindRequest(eWolf.MEMBERS_REQUEST_NAME,"eWolfLogin");
+	eWolf.serverRequest.bindRequest(eWolf.MEMBERS_REQUEST_NAME,eWolf.LOGIN_REQUEST_NAME);
 	
 	function handleMembers(data, textStatus, postData) {
 		$.each(data.membersList, function(i,userObj){
@@ -373,7 +385,31 @@ var Wolfpacks = function (menuList,applicationFrame) {
 
 
 
-var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
+var ApplicationUI = function(container,titleText) {
+	UI.call(this);
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	this.frame = $("<div/>")
+			.addClass("applicationContainer")
+			.append(this.context)
+			.appendTo(container)
+			.hide();
+	
+	this.title = new TitleArea(titleText).appendTo(this.frame);
+	
+	return this;
+};var UI = function() {
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	if(!this.frame) {
+		this.context = $("<span/>");
+	}
+	
+	return this;
+};var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 	var self = this;
 	
 	var requestsMap = {},
@@ -687,15 +723,18 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	};
 	
 	return this;
-};var Application = function(id,container) {
+};var Application = function(id,container,titleText) {
+	ApplicationUI.call(this, applicationFrame, titleText);
+	
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	var selected = false;
 	
-	this.frame = $("<div/>")
-			.addClass("applicationContainer")
-			.appendTo(container)
-			.hide();
-	
+	/****************************************************************************
+	 * Event Listeners
+	  ***************************************************************************/	
 	eWolf.bind("select."+id,function(event,eventId) {
 		if(id == eventId) {	
 			self.doSelect();
@@ -706,8 +745,11 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	
 	eWolf.bind("destroy."+id,function(event,eventId) {
 		self.destroy();
-	});	
+	});		
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	this.getFrame = function() {
 		return self.frame;
 	};
@@ -761,6 +803,475 @@ var ResponseHandler = function(category, requiredFields, handler) {
 		delete self;
 	};
 	
+	return this;
+};VALIDATOR_IS_NOT_EMPTY = function(field) {
+	return field.val() != "";
+};
+
+var FormValidator = function() {
+	var self = this;
+	
+	var fields = {};
+	var onSend = null;
+	
+	this.attachOnSend = function(newOnSend) {
+		onSend = newOnSend;
+		return self;
+	};
+	
+	this.sendForm = function() {
+		if(self.isValid(true) && onSend) {
+			onSend();
+		}
+	};
+	
+	this.registerField = function (fieldId, field, itsErrorBox) {
+		if(fieldId) {
+			fields[fieldId] = {
+				field	: field,
+				error : itsErrorBox,
+				lastCheckStatus : true,
+				isVergin : true,
+				isMarkedOK : false,
+				validators : []
+			};
+			
+			field.bind('input propertychange',function() {
+				fields[fieldId].isVergin = false;
+				self.isValid(false);
+			});
+			
+			field.keyup(function(event) {
+			    if(event.keyCode == 13) {
+			    	self.sendForm();
+			    	}
+			});
+		}
+		
+		return self;
+	};
+	
+	this.addValidator = function (fieldId, validator, errorMessage) {
+		if(fieldId && fields[fieldId]) {
+			fields[fieldId].validators.push( {
+				isValid : validator,
+				errorMessage : errorMessage
+			});
+		}
+		
+		return self;
+	};
+	
+	this.isValid = function(markOK) {
+		var allValid = true;
+		
+		$.each(fields, function(fieldId, f) {
+			if(!markOK && f.isVergin) {
+				return true;
+			}
+			
+			var fieldValid = true;
+			var fieldErrorMessage = "";
+			
+			$.each(f.validators, function(j, validator) {
+				var fieldValidatorValid = validator.isValid(f.field);
+				
+				if(fieldValidatorValid == false) {
+					fieldErrorMessage = validator.errorMessage;
+					fieldValid = false;
+					allValid = false;
+				}
+				
+				return fieldValidatorValid;
+			});
+			
+			if(fieldValid) {
+				if(f.lastCheckStatus == false || (markOK && !f.isMarkedOK)) {
+					f.isMarkedOK = markOK;
+					
+					f.field.animate({
+						"background-color" : markOK ? "#bddec0" : "#ddd" 
+					},300, function() {
+						if(!markOK) {
+							f.field.css("background-color","");
+						}						
+					});
+				}
+				
+				if(f.lastCheckStatus == false) {
+					f.error.animate({
+						"opacity" : "0"
+					},300, function() {
+						f.error.html("");
+					});
+				}
+			} else {
+				if(f.lastCheckStatus == true) {
+					f.isMarkedOK = false;
+					
+					f.field.animate({
+						"background-color" : "#debdbd"
+					},300);	
+				}
+				
+				if(f.error.html() != fieldErrorMessage) {
+					f.error.animate({
+						"opacity" : "0"
+					},150, function() {
+						f.error.html(fieldErrorMessage);
+						
+						f.error.animate({
+							"opacity" : "1"
+						},300);
+					});
+				}
+			}
+			
+			f.lastCheckStatus = fieldValid;
+		});		
+		
+		return allValid;
+	};
+	
+	this.clearField = function (fieldId) {
+		if(fieldId && fields[fieldId] &&
+				!fields[fieldId].isVergin &&
+					(		fields[fieldId].isMarkedOK || 
+							fields[fieldId].lastCheckStatus == false)) {
+			fields[fieldId].field.animate({
+				"background-color" : "#ddd" 
+			},150, function() {
+				fields[fieldId].field.css("background-color","");				
+			});
+		}
+		
+		return self;
+	};
+	
+	this.clearAllFields = function () {
+		$.each(fields, function(fieldId, f) {
+			self.clearField(fieldId);
+		});
+		return self;
+	};
+	
+	return this;
+};
+var PopUp = function(frame, activator) {
+	var self = this;
+	
+	var pos = $(activator).position();
+
+	// .outerWidth() takes into account border and padding.
+	var width = $(activator).outerWidth() - 26;
+	var height = $(activator).outerHeight();
+	
+	var leftMargin = parseInt($(activator).css("margin-left"));
+
+	//show the menu directly over the placeholder
+	this.frame = $("<div/>").css({
+		position : "absolute",
+		top : (pos.top + height + 1) + "px",
+		left : (pos.left + 13 + leftMargin) + "px",
+		width : width,
+		"border": "1px solid #999",
+		"background-color" : "white"
+	}).appendTo(frame).hide();
+	
+	function clickFunc() {
+		if(! self.frame.is(":hover")) {
+			self.destroy();
+		}		
+	};
+	
+	$(document).bind("click",clickFunc);
+	
+	this.destroy = function () {
+		self.frame.hide(200,function() {
+			self.frame.remove();
+		});
+		 $(document).unbind("click",clickFunc);
+		 delete self;
+	};
+	
+	this.frame.show(200);
+	
+	return this;
+};var AddMembersToWolfpack = function(fatherID,wolfpack, existingMemebers,
+		onFinish) {
+	var self = this;
+	this.frame = $("<span/>");
+	
+	madeChanges = false;	
+
+	addMembersQuery = new FriendsQueryTagList(400).appendTo(this.frame);
+	
+	$.each(existingMemebers, function(i, item) {
+		addMembersQuery.addTagByQuery(item,false);
+	});
+	
+	applyBtn = $("<input/>").attr({
+		"type": "button",
+		"value": "Apply"
+	}).appendTo(this.frame);
+	
+	cancelBtn = $("<input/>").attr({
+		"type": "button",
+		"value": "Cancel"
+	}).appendTo(this.frame);
+	
+	errorMessage = $("<div/>").addClass("errorArea").appendTo(this.frame);
+	
+	responseHandler = new ResponseHandler("addWolfpackMember",[],null);
+	
+	this.apply = function() {
+		var itemsToAdd = addMembersQuery.tagList.match({removable:true});
+		
+		if(!addMembersQuery.isMissingField(true, "Please add new members...")) {
+			applyBtn.hide(200);
+			cancelBtn.hide(200);
+			
+			errorMessage.html("");
+			
+			eWolf.serverRequest.request(fatherID,{
+				addWolfpackMember: {
+					wolfpackNames: [wolfpack],
+					userIDs: itemsToAdd.getData()
+				}
+			},responseHandler.getHandler());
+		}		
+		
+		return self;
+	};
+	
+	this.cancel = function() {
+		if(onFinish != null) {
+			onFinish();
+		}
+		
+		self.frame.remove();
+		
+		if(madeChanges) {
+			madeChanges = false;
+			eWolf.serverRequest.requestAll(fatherID,true);
+		}
+		
+		delete self;
+	};
+	
+	this.success = function(data, textStatus, postData) {
+		madeChanges = true;
+		self.cancel();
+	};
+	
+	this.error = function(data, textStatus, postData) {
+		var errorMsg = null;
+		
+		if(data.wolfpacksResult == null) {
+			console.log("No wolfpacksResult in response");
+		} else if(data.wolfpacksResult[0] != "success") {
+			errorMsg = "Error: " + data.wolfpacksResult[0];
+			errorMessage.append(errorMsg+"<br>");
+		}
+		
+		if(data.usersResult == null) {
+			console.log("No usersResult in response");
+		} else {
+			$.each(data.usersResult, function(i, result) {
+				var itemID = postData.userID[i];
+				var item = addMembersQuery.tagList.match({id:itemID});
+				
+				if(result == "success") {
+					madeChanges = true;
+					item.unremovable().markOK();
+				} else {
+					var errorMsg = "Failed to add: " + itemID +
+							" with error: " + result;
+					errorMessage.append(errorMsg+"<br>");
+					
+					item.markError(errorMsg);
+				}					
+			});
+		}
+		
+		if(errorMsg == null) {
+			errorMessage.append("Unknown error...<br>");
+		}			
+	};
+	
+	this.complete = function (textStatus, postData) {
+		if(madeChanges) {
+			madeChanges = false;
+			eWolf.serverRequest.requestAll(fatherID,true);
+		}
+		
+		applyBtn.show(200);
+		cancelBtn.show(200);
+	};
+	
+	applyBtn.click(this.apply);	
+	cancelBtn.click(this.cancel);
+	
+	responseHandler
+		.success(this.success)	
+		.error(this.error)	
+		.complete(this.complete);
+	
+	return this;
+};var AddToWolfpack = function(id, userID, frame, activator, packsAlreadyIn) {
+	var self = this;
+	PopUp.call(this,frame,activator);
+	
+	var packList = $("<ul/>").attr({
+		"class": "packListSelect"
+	}).appendTo(this.frame);	
+
+	$.each(eWolf.wolfpacks.wolfpacksArray,function(i,pack) {
+		var box = $("<input/>").attr({
+			"value" : pack,
+			"type": "checkbox"
+		});
+		
+		if(packsAlreadyIn.indexOf(pack) >= 0) {
+			box.attr({
+				"checked" : "checked",
+				"disabled" : true
+			});
+			box.data("isMember",true);
+		} else {
+			box.data("isMember",false);
+		}
+
+		$("<li/>").attr({
+			"class": "packListSelectItem"
+		}).append(box).append(pack).appendTo(packList);
+	});
+	
+	var createItem = $("<li/>").attr({
+		"class": "packListSelectItem"
+	}).css({
+		"margin-top": "5px"
+	}).appendTo(packList);
+	
+	var createLink = $("<span/>").attr({
+		"class": "aLink createLink"
+	});
+	
+	createLink.append("+ new wolfpack").appendTo(createItem).click(function() {
+		var newPackItem = $("<li/>").attr({
+			"class": "packListSelectItem"
+		});		
+
+		
+		var newPack = $("<input/>").attr({
+			"type":"text",
+			"class": "newWolfpackInput"
+		}).css({
+			"width" : (parseInt(createLink.css("width")) - 5) + "px"
+		});
+		
+		var itsCheckbox = $("<input/>").attr({
+			"type": "checkbox",
+			"disabled" : true
+		}).data({
+			"isNew" : true,
+			"itsInput" : newPack
+		}).appendTo(newPackItem);
+		
+		newPack.appendTo(newPackItem);
+		newPack.keyup(function(event) {
+		    if(newPack.val() != "") {
+		    	itsCheckbox.attr("checked",true);
+		    	itsCheckbox.removeAttr("disabled");
+		    } else {
+		    	itsCheckbox.attr({
+		    		"checked" : false,
+		    		"disabled" : true
+		    	});
+		    }
+		});
+			
+		createItem.before(newPackItem);
+		
+		window.setTimeout(function () {
+			newPack.focus();
+		}, 0);	
+	});
+	
+	function trimSpaces(s) {
+		s = s.replace(/(^\s*)|(\s*$)/gi,"");
+		s = s.replace(/[ ]{2,}/gi," ");
+		s = s.replace(/\n /,"\n");
+		return s;
+	}
+	
+	$("<hr/>").css({
+		"margin":"0"
+	}).appendTo(this.frame);
+	
+	var applyBtn = $("<span/>").attr({
+		"class": "aLink applyLink"
+	}).append("Apply").appendTo(this.frame);
+	
+	this.getSelection = function () {
+		var result = {
+			add : [],
+			create : [],
+			remove : []	
+		};
+	
+		$.each(packList.find("input"),function(i,item) {
+			var itsBox = $(item);
+	
+			if(itsBox.is(':checked') == true) {
+				if(itsBox.data("isMember") != true) {
+					if(itsBox.data("isNew") == true) {
+						var packName = trimSpaces(itsBox.data("itsInput").val());
+						result.add.push(packName);
+						result.create.push(packName);
+					} else {
+						result.add.push(itsBox.attr("value"));
+					}		
+				}
+			} else {
+				if(itsBox.data("isMember") == true) {
+					result.remove.push(itsBox.attr("value"));
+				}
+			}
+		});
+		
+		return result;	
+	};
+	
+	this.addToAllWolfpacks = function (wolfpacks) {
+		if(wolfpacks.length > 0) {
+			var response = new ResponseHandler("addWolfpackMember",[],null);
+			
+			response.complete(function (textStatus, postData) {
+				eWolf.trigger("refresh",[id]);
+			});			
+			
+			eWolf.serverRequest.request(id,{
+				addWolfpackMember: {
+					wolfpackNames: wolfpacks,
+					userIDs: [userID]
+				}
+			},response.getHandler());
+		}
+	};
+	
+	this.apply = function() {
+		result = self.getSelection();
+		
+		self.destroy();
+		
+		eWolf.wolfpacks.createWolfpacks(result.create, function () {
+			self.addToAllWolfpacks(result.add);
+		});
+	};
+	
+	applyBtn.click(this.apply);
+		
 	return this;
 };var CommaSeperatedList = function(title) {
 	var list = $("<span/>")
@@ -1190,159 +1701,6 @@ function CreateTimestampBox(timestamp) {
 	
 	return this;
 };
-VALIDATOR_IS_NOT_EMPTY = function(field) {
-	return field.val() != "";
-};
-
-var FormValidator = function() {
-	var self = this;
-	
-	var fields = {};
-	var onSend = null;
-	
-	this.attachOnSend = function(newOnSend) {
-		onSend = newOnSend;
-		return self;
-	};
-	
-	this.sendForm = function() {
-		if(self.isValid(true) && onSend) {
-			onSend();
-		}
-	};
-	
-	this.registerField = function (fieldId, field, itsErrorBox) {
-		if(fieldId) {
-			fields[fieldId] = {
-				field	: field,
-				error : itsErrorBox,
-				lastCheckStatus : true,
-				isVergin : true,
-				isMarkedOK : false,
-				validators : []
-			};
-			
-			field.bind('input propertychange',function() {
-				fields[fieldId].isVergin = false;
-				self.isValid(false);
-			});
-			
-			field.keyup(function(event) {
-			    if(event.keyCode == 13) {
-			    	self.sendForm();
-			    	}
-			});
-		}
-		
-		return self;
-	};
-	
-	this.addValidator = function (fieldId, validator, errorMessage) {
-		if(fieldId && fields[fieldId]) {
-			fields[fieldId].validators.push( {
-				isValid : validator,
-				errorMessage : errorMessage
-			});
-		}
-		
-		return self;
-	};
-	
-	this.isValid = function(markOK) {
-		var allValid = true;
-		
-		$.each(fields, function(fieldId, f) {
-			if(!markOK && f.isVergin) {
-				return true;
-			}
-			
-			var fieldValid = true;
-			var fieldErrorMessage = "";
-			
-			$.each(f.validators, function(j, validator) {
-				var fieldValidatorValid = validator.isValid(f.field);
-				
-				if(fieldValidatorValid == false) {
-					fieldErrorMessage = validator.errorMessage;
-					fieldValid = false;
-					allValid = false;
-				}
-				
-				return fieldValidatorValid;
-			});
-			
-			if(fieldValid) {
-				if(f.lastCheckStatus == false || (markOK && !f.isMarkedOK)) {
-					f.isMarkedOK = markOK;
-					
-					f.field.animate({
-						"background-color" : markOK ? "#bddec0" : "#ddd" 
-					},300, function() {
-						if(!markOK) {
-							f.field.css("background-color","");
-						}						
-					});
-				}
-				
-				if(f.lastCheckStatus == false) {
-					f.error.animate({
-						"opacity" : "0"
-					},300, function() {
-						f.error.html("");
-					});
-				}
-			} else {
-				if(f.lastCheckStatus == true) {
-					f.isMarkedOK = false;
-					
-					f.field.animate({
-						"background-color" : "#debdbd"
-					},300);	
-				}
-				
-				if(f.error.html() != fieldErrorMessage) {
-					f.error.animate({
-						"opacity" : "0"
-					},150, function() {
-						f.error.html(fieldErrorMessage);
-						
-						f.error.animate({
-							"opacity" : "1"
-						},300);
-					});
-				}
-			}
-			
-			f.lastCheckStatus = fieldValid;
-		});		
-		
-		return allValid;
-	};
-	
-	this.clearField = function (fieldId) {
-		if(fieldId && fields[fieldId] &&
-				!fields[fieldId].isVergin &&
-					(		fields[fieldId].isMarkedOK || 
-							fields[fieldId].lastCheckStatus == false)) {
-			fields[fieldId].field.animate({
-				"background-color" : "#ddd" 
-			},150, function() {
-				fields[fieldId].field.css("background-color","");				
-			});
-		}
-		
-		return self;
-	};
-	
-	this.clearAllFields = function () {
-		$.each(fields, function(fieldId, f) {
-			self.clearField(fieldId);
-		});
-		return self;
-	};
-	
-	return this;
-};
 var FunctionsArea = function () {
 	var self = this;
 	
@@ -1478,47 +1836,42 @@ $.fn.spin = function(opts) {
 		}
 	});
 	return this;
-};var PopUp = function(frame, activator) {
-	var self = this;
-	
-	var pos = $(activator).position();
-
-	// .outerWidth() takes into account border and padding.
-	var width = $(activator).outerWidth() - 26;
-	var height = $(activator).outerHeight();
-	
-	var leftMargin = parseInt($(activator).css("margin-left"));
-
-	//show the menu directly over the placeholder
-	this.frame = $("<div/>").css({
-		position : "absolute",
-		top : (pos.top + height + 1) + "px",
-		left : (pos.left + 13 + leftMargin) + "px",
-		width : width,
-		"border": "1px solid #999",
-		"background-color" : "white"
-	}).appendTo(frame).hide();
-	
-	function clickFunc() {
-		if(! self.frame.is(":hover")) {
-			self.destroy();
-		}		
-	};
-	
-	$(document).bind("click",clickFunc);
-	
-	this.destroy = function () {
-		self.frame.hide(200,function() {
-			self.frame.remove();
+};var Logout = function(text,container) {
+	var self = this;	
+	var LOGOUT = "logout";
+	this.frame =$("<div/>").attr({
+		"class": "logoutLink aLink"
+	})	.text(text)
+		.appendTo(container)
+		.click(function() {
+			$(window).unbind('hashchange');
+			window.location.hash = "";
+			
+			self.commitLogout();			
 		});
-		 $(document).unbind("click",clickFunc);
-		 delete self;
+	
+	function onLogout(appID) {
+		document.location.reload(true);
+	}
+	
+	this.commitLogout = function () {
+		eWolf.serverRequest.request(LOGOUT,{
+				logout : {}
+			}, null, onLogout);
 	};
 	
-	this.frame.show(200);
+	this.destroy = function() {
+		if(self.frame != null) {
+			self.frame.remove();
+			self.frame = null;
+			delete self;
+		}
+	};
 	
 	return this;
-};var QueryTagList = function(minWidth,queryPlaceHolder,availableQueries,
+};
+
+var QueryTagList = function(minWidth,queryPlaceHolder,availableQueries,
 		allowMultipleDestinations,commitQuery) {
 	var self = this;
 	
@@ -1539,7 +1892,7 @@ $.fn.spin = function(opts) {
 		self.addTagByQuery(query.val(),true);
 	}).appendTo(queryBox).hide();
 	
-	var errorBox = $("<span/>").addClass("errorArea").appendTo(queryBox);
+	var errorBox = $("<div/>").addClass("errorArea").appendTo(queryBox).hide();
 	
 	query.autocomplete({
 		source: availableQueries,
@@ -1596,14 +1949,16 @@ $.fn.spin = function(opts) {
 		}		
 	};
 	
-	this.isMissingField = function (showError) {
-		var fieldEmpty = self.tagList.isEmpty();
+	this.isMissingField = function (showError, errorMessage) {
+		var fieldEmpty = self.tagList.match({removable:true}).isEmpty();
 		
 		errorBox.animate({
 			"opacity" : "0"
 		},500,function() {
 			if(fieldEmpty && showError) {
-				errorBox.html(" * Please select a destination(s).");
+				query.focus();
+				errorBox.html(errorMessage);
+				errorBox.show();
 				
 				errorBox.animate({
 					"opacity" : "1"
@@ -1618,6 +1973,8 @@ $.fn.spin = function(opts) {
 				query.animate({
 					"background-color" : "#ddd"
 				},1000);
+				
+				errorBox.hide();
 			}
 		});
 		
@@ -1672,6 +2029,166 @@ var WolfpackQueryTagList = function (minWidth) {
 	
 	return new QueryTagList(minWidth,"Type wolfpack name...",
 			eWolf.wolfpacks.wolfpacksArray,false,sendToFuncReplace);
+};SEARCHBAR_CONSTANTS = {
+	SEARCH_PROFILE_PREFIX : "profile:",
+	SEARCH_MENU_ITEM_ID : "__seach_menu_id__"
+};
+
+var SearchBar = function(menu,applicationFrame,container) {
+	var self = this;
+	$.extend(this,SEARCHBAR_CONSTANTS);
+	
+	//var menuList = menu.createNewMenuList(this.SEARCH_MENU_ITEM_ID,"Search");
+	var apps = new Object();
+	var lastSearch = null;
+	
+	this.frame = $("<div/>")
+		.addClass("title-bar")
+		.appendTo(container);
+	
+	var query = $("<input/>").attr({
+		"type" : "text",
+		"placeholder" : "Search",
+		"autocomplete" : "off",
+		"spellcheck" : "false"
+	}).css({
+		"width" : "400px"
+	}).autocomplete({
+		source: eWolf.members.knownUsersFullDescriptionArray,
+		select: onSelectAutocomplete
+	}).appendTo(this.frame);
+	
+	eWolf.bind("foundNewUser",function(event,id,name,fullDescription) {
+		query.autocomplete("destroy").autocomplete({
+			source: eWolf.members.knownUsersFullDescriptionArray,
+			select: onSelectAutocomplete
+		});
+	});
+	
+	function onSelectAutocomplete(event,ui) {
+		self.search(ui.item.label);
+		return false;
+	}
+
+	var searchBtn = $("<input/>").attr({
+		"type" : "button",
+		"value" : "Search"
+	}).appendTo(this.frame).hide();
+	
+	function addSearchMenuItem(id,name) {
+//		var tempName;
+//		if(name == null) {
+//			tempName = "Search: " + id;
+//		} else {
+//			tempName = name;
+//		}
+//		
+		var searchedProfileAppKey = self.SEARCH_PROFILE_PREFIX + id;
+		//menuList.addMenuItem(searchedProfileAppKey,tempName);
+		apps[searchedProfileAppKey] = new Profile(searchedProfileAppKey,applicationFrame,id,name)
+			.onReceiveName(function(newName) {
+				//menuList.renameMenuItem(searchedProfileAppKey,newName);
+			});	
+		
+		eWolf.selectApp(searchedProfileAppKey);
+	};
+	
+	function removeSearchMenuItem(searchKey) {
+		var searchedProfileAppKey = self.SEARCH_PROFILE_PREFIX + searchKey;
+		
+		if(apps[searchedProfileAppKey] != null) {
+			apps[searchedProfileAppKey].destroy();
+			delete apps[searchedProfileAppKey];
+			apps[searchedProfileAppKey] = null;
+			//menuList.removeMenuItem(searchedProfileAppKey);
+		}
+	}
+	
+	function removeLastSearch() {
+		if(lastSearch != null) {
+			removeSearchMenuItem(lastSearch);
+			lastSearch = null;
+		}
+	}
+	
+	this.search = function (key,name) {
+		if(key == null) {
+			key = query.val();
+		}
+		
+		if(name == "") {
+			name == null;
+		}
+		
+		if(key != null && key != "") {				
+			if(!name) {
+				name = eWolf.members.getUserName(key);
+			}
+
+			if(!name) {
+				var fullDescID = eWolf.members.getUserFromFullDescription(key);
+				
+				if(fullDescID) {
+					key = fullDescID;
+					name = eWolf.members.getUserName(fullDescID);
+				}
+			}
+			
+			var searchedProfileAppKey = self.SEARCH_PROFILE_PREFIX + key;
+			
+			if(key == eWolf.profile.getID()) {
+				eWolf.selectApp(eWolf.MYPROFILE_APP_ID);
+			} else if(apps[searchedProfileAppKey] != null) {
+				console.log("not deleted");
+			} else {
+				removeLastSearch();
+				lastSearch = key;
+				addSearchMenuItem(key,name);
+			}			
+		}
+		
+		return self;
+	};
+	
+	searchBtn.click(function() {
+		self.search(query.val());	
+	});
+	
+	eWolf.bind("select",function(event,eventId) {
+		var lastSearchedProfileAppKey = self.SEARCH_PROFILE_PREFIX + lastSearch;
+		var lastSearchNewMailAppKey = NEWMAIL_CONSTANTS.NEWMAIL_APP_ID_PREFIX
+			+ lastSearchedProfileAppKey;
+		if(eventId != lastSearchedProfileAppKey && eventId != lastSearchNewMailAppKey) {
+			removeLastSearch();
+		}
+	});
+	
+	query.bind('input propertychange',function() {
+		 if(query.val() == "") {
+	    	searchBtn.hide(200);
+	    } else {
+	    	searchBtn.show(200);
+	    }
+	});
+	
+	query.keyup(function(event){
+	    if(event.keyCode == 13 && query.val() != ""){
+//	    	if(event.shiftKey) {
+//	    		addBtn.click();
+//	    	} else {
+//	    		searchBtn.click();
+//	    	}
+	    	
+	    	searchBtn.click();
+	    }   
+	});
+		
+	
+	eWolf.bind("search",function(event,key,name) {
+		self.search(key,name);
+	});
+	
+	return this;
 };var Tag = function(id,onRemove,removable,multirow,withImage) {
 	var box = $("<p/>").addClass("TagClass");
 	
@@ -2033,6 +2550,9 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 };var TitleArea = function (title) {
 	var self = this;
 	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	this.frame = $("<div/>").attr("class","titleArea");
 	
 	var topPart = $("<div/>").appendTo(this.frame);
@@ -2056,6 +2576,9 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 	
 	var titleExtraText = $("<span/>").appendTo(titleTextArea);
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	this.setTitle = function (newTitle) {
 		if(newTitle != null) {
 			theTitle.html(newTitle);
@@ -3209,294 +3732,17 @@ var InboxList = function (appID,serverSettings) {
 		
 		return thisObj;
 	};
-};var AddMembersToWolfpack = function(fatherID,wolfpack, existingMemebers,
-		onFinish) {
-	var self = this;
-	this.frame = $("<span/>");
-	
-	madeChanges = false;	
-
-	addMembersQuery = new FriendsQueryTagList(400).appendTo(this.frame);
-	
-	$.each(existingMemebers, function(i, item) {
-		addMembersQuery.addTagByQuery(item,false);
-	});
-	
-	applyBtn = $("<input/>").attr({
-		"type": "button",
-		"value": "Apply"
-	}).appendTo(this.frame);
-	
-	cancelBtn = $("<input/>").attr({
-		"type": "button",
-		"value": "Cancel"
-	}).appendTo(this.frame);
-	
-	errorMessage = $("<div/>").addClass("errorArea").appendTo(this.frame);
-	
-	responseHandler = new ResponseHandler("addWolfpackMember",[],null);
-	
-	this.apply = function() {
-		var itemsToAdd = addMembersQuery.tagList.match({removable:true});
-		
-		if(itemsToAdd.isEmpty()) {
-			errorMessage.html("Please add new members...");
-		} else {
-			applyBtn.hide(200);
-			cancelBtn.hide(200);
-			
-			errorMessage.html("");
-			
-			eWolf.serverRequest.request(fatherID,{
-				addWolfpackMember: {
-					wolfpackNames: [wolfpack],
-					userIDs: itemsToAdd.getData()
-				}
-			},responseHandler.getHandler());
-		}		
-		
-		return self;
-	};
-	
-	this.cancel = function() {
-		if(onFinish != null) {
-			onFinish();
-		}
-		
-		self.frame.remove();
-		
-		if(madeChanges) {
-			madeChanges = false;
-			eWolf.serverRequest.requestAll(fatherID,true);
-		}
-		
-		delete self;
-	};
-	
-	this.success = function(data, textStatus, postData) {
-		madeChanges = true;
-		self.cancel();
-	};
-	
-	this.error = function(data, textStatus, postData) {
-		var errorMsg = null;
-		
-		if(data.wolfpacksResult == null) {
-			console.log("No wolfpacksResult in response");
-		} else if(data.wolfpacksResult[0] != "success") {
-			errorMsg = "Error: " + data.wolfpacksResult[0];
-			errorMessage.append(errorMsg+"<br>");
-		}
-		
-		if(data.usersResult == null) {
-			console.log("No usersResult in response");
-		} else {
-			$.each(data.usersResult, function(i, result) {
-				var itemID = postData.userID[i];
-				var item = addMembersQuery.tagList.match({id:itemID});
-				
-				if(result == "success") {
-					madeChanges = true;
-					item.unremovable().markOK();
-				} else {
-					var errorMsg = "Failed to add: " + itemID +
-							" with error: " + result;
-					errorMessage.append(errorMsg+"<br>");
-					
-					item.markError(errorMsg);
-				}					
-			});
-		}
-		
-		if(errorMsg == null) {
-			errorMessage.append("Unknown error...<br>");
-		}			
-	};
-	
-	this.complete = function (textStatus, postData) {
-		if(madeChanges) {
-			madeChanges = false;
-			eWolf.serverRequest.requestAll(fatherID,true);
-		}
-		
-		applyBtn.show(200);
-		cancelBtn.show(200);
-	};
-	
-	applyBtn.click(this.apply);	
-	cancelBtn.click(this.cancel);
-	
-	responseHandler
-		.success(this.success)	
-		.error(this.error)	
-		.complete(this.complete);
-	
-	return this;
-};var AddToWolfpack = function(id, userID, frame, activator, packsAlreadyIn) {
-	var self = this;
-	PopUp.call(this,frame,activator);
-	
-	var packList = $("<ul/>").attr({
-		"class": "packListSelect"
-	}).appendTo(this.frame);	
-
-	$.each(eWolf.wolfpacks.wolfpacksArray,function(i,pack) {
-		var box = $("<input/>").attr({
-			"value" : pack,
-			"type": "checkbox"
-		});
-		
-		if(packsAlreadyIn.indexOf(pack) >= 0) {
-			box.attr({
-				"checked" : "checked",
-				"disabled" : true
-			});
-			box.data("isMember",true);
-		} else {
-			box.data("isMember",false);
-		}
-
-		$("<li/>").attr({
-			"class": "packListSelectItem"
-		}).append(box).append(pack).appendTo(packList);
-	});
-	
-	var createItem = $("<li/>").attr({
-		"class": "packListSelectItem"
-	}).css({
-		"margin-top": "5px"
-	}).appendTo(packList);
-	
-	var createLink = $("<span/>").attr({
-		"class": "aLink createLink"
-	});
-	
-	createLink.append("+ new wolfpack").appendTo(createItem).click(function() {
-		var newPackItem = $("<li/>").attr({
-			"class": "packListSelectItem"
-		});		
-
-		
-		var newPack = $("<input/>").attr({
-			"type":"text",
-			"class": "newWolfpackInput"
-		}).css({
-			"width" : (parseInt(createLink.css("width")) - 5) + "px"
-		});
-		
-		var itsCheckbox = $("<input/>").attr({
-			"type": "checkbox",
-			"disabled" : true
-		}).data({
-			"isNew" : true,
-			"itsInput" : newPack
-		}).appendTo(newPackItem);
-		
-		newPack.appendTo(newPackItem);
-		newPack.keyup(function(event) {
-		    if(newPack.val() != "") {
-		    	itsCheckbox.attr("checked",true);
-		    	itsCheckbox.removeAttr("disabled");
-		    } else {
-		    	itsCheckbox.attr({
-		    		"checked" : false,
-		    		"disabled" : true
-		    	});
-		    }
-		});
-			
-		createItem.before(newPackItem);
-		
-		window.setTimeout(function () {
-			newPack.focus();
-		}, 0);	
-	});
-	
-	function trimSpaces(s) {
-		s = s.replace(/(^\s*)|(\s*$)/gi,"");
-		s = s.replace(/[ ]{2,}/gi," ");
-		s = s.replace(/\n /,"\n");
-		return s;
-	}
-	
-	$("<hr/>").css({
-		"margin":"0"
-	}).appendTo(this.frame);
-	
-	var applyBtn = $("<span/>").attr({
-		"class": "aLink applyLink"
-	}).append("Apply").appendTo(this.frame);
-	
-	this.getSelection = function () {
-		var result = {
-			add : [],
-			create : [],
-			remove : []	
-		};
-	
-		$.each(packList.find("input"),function(i,item) {
-			var itsBox = $(item);
-	
-			if(itsBox.is(':checked') == true) {
-				if(itsBox.data("isMember") != true) {
-					if(itsBox.data("isNew") == true) {
-						var packName = trimSpaces(itsBox.data("itsInput").val());
-						result.add.push(packName);
-						result.create.push(packName);
-					} else {
-						result.add.push(itsBox.attr("value"));
-					}		
-				}
-			} else {
-				if(itsBox.data("isMember") == true) {
-					result.remove.push(itsBox.attr("value"));
-				}
-			}
-		});
-		
-		return result;	
-	};
-	
-	this.addToAllWolfpacks = function (wolfpacks) {
-		if(wolfpacks.length > 0) {
-			var response = new ResponseHandler("addWolfpackMember",[],null);
-			
-			response.complete(function (textStatus, postData) {
-				eWolf.trigger("refresh",[id]);
-			});			
-			
-			eWolf.serverRequest.request(id,{
-				addWolfpackMember: {
-					wolfpackNames: wolfpacks,
-					userIDs: [userID]
-				}
-			},response.getHandler());
-		}
-	};
-	
-	this.apply = function() {
-		result = self.getSelection();
-		
-		self.destroy();
-		
-		eWolf.wolfpacks.createWolfpacks(result.create, function () {
-			self.addToAllWolfpacks(result.add);
-		});
-	};
-	
-	applyBtn.click(this.apply);
-		
-	return this;
 };var Inbox = function (id,applicationFrame) {
-	Application.call(this,id,applicationFrame);
+	Application.call(this, id, applicationFrame, "Inbox");
 	
-	new TitleArea("Inbox")
-		.appendTo(this.frame)
-		.addFunction("New Message...", function() {
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/		
+	this.title.addFunction("New Message...", function() {
 			new NewMessage(id,applicationFrame).select();
 		});
 	
-	new InboxList(id,{}).appendTo(this.frame);
+	this.inbox = new InboxList(id,{}).appendTo(this.frame);
 	
 	return this;
 };
@@ -3505,35 +3751,22 @@ LOGIN_CONSTANTS = {
 	LOGIN_PASSWORD_ID : "login password"
 };
 
-SIGNUP_CONSTANTS = {
-	SIGNUP_FULL_NAME_ID : "signup full name",
-	SIGNUP_USERNAME_ID : "signup username",
-	SIGNUP_PASSWORD_ID : "signup password",
-	SIGNUP_VERIFY_PASSWORD_ID : "signup verify password"
-};
-
 var Login = function(id,applicationFrame) {
-	Application.call(this,id,applicationFrame);
+	Application.call(this, id, applicationFrame, "Welcome to eWolf");
 	
-	var login = new LoginArea(id).appendTo(this.frame);
+	var itro = $("<div/>").css({
+		"font-size" : "12px"
+	}).append("If it is your first time using eWolf, please take the time to signup first.");
 	
-	this.frame.append("<br>");
-	
-	var signup = new SignUpArea(id).appendTo(this.frame);
-	
-	eWolf.bind("refresh",function(event,eventID) {
-		if(id == eventID) {
-			login.clearAll();
-			signup.clearAll();
-		}
+	this.title.appendAtBottomPart(itro);
+	this.title.addFunction("Signup",function() {
+		eWolf.selectApp(eWolf.SIGNUP_APP_ID);
 	});
 	
-	return this;
-};
-
-var LoginArea = function(id) {
 	var self = this;
 	$.extend(this,LOGIN_CONSTANTS);
+	
+	this.frame.append("<br>");
 	
 	var login = new TitleArea("Login").appendTo(this.frame);
 	
@@ -3629,191 +3862,15 @@ var LoginArea = function(id) {
 		return self;
 	};
 	
-	this.appendTo = function (someFrame) {
-		login.appendTo(someFrame);
-		return self;
-	};
-	
-	return this;
-};
-
-var SignUpArea = function(id) {
-	var self = this;
-	$.extend(this,SIGNUP_CONSTANTS);
-	
-	var signup = new TitleArea("Sign Up");
-	
-	var fullName = $("<input/>").attr({
-		"type" : "text",
-		"placeholder" : "Full Name"
-	});
-	
-	var fullNameError = $("<span/>").addClass("errorArea");
-	
-	var username = $("<input/>").attr({
-		"type" : "text",
-		"placeholder" : "Username"
-	});
-	
-	var usernameError = $("<span/>").addClass("errorArea");
-	
-	var password = $("<input/>").attr({
-		"type" : "password",
-		"placeholder" : "Password"
-	});
-	
-	var passwordError = $("<span/>").addClass("errorArea");
-	
-	var verifyPassword = $("<input/>").attr({
-		"type" : "password",
-		"placeholder" : "Verify Password"
-	});
-	
-	var verifyPasswordError = $("<span/>").addClass("errorArea");
-	
-	var signUpError = $("<span/>").addClass("errorArea");
-	
-	var base = $("<table/>");
-	
-	var fullNameRaw = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("loginFieldDescription")
-		.append("Full Name:")
-		.appendTo(fullNameRaw);	
-	$("<td/>")
-		.append(fullName)
-		.append(fullNameError)
-		.appendTo(fullNameRaw);
-	
-	var usernameRaw = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("loginFieldDescription")
-		.append("Username:")
-		.appendTo(usernameRaw);	
-	$("<td/>")
-		.append(username)
-		.append(usernameError)
-		.appendTo(usernameRaw);
-	
-	var passwordRaw = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("loginFieldDescription")
-		.append("Password:")
-		.appendTo(passwordRaw);	
-	$("<td/>")
-		.append(password)
-		.append(passwordError)
-		.appendTo(passwordRaw);
-	
-	var verifyPasswordRaw = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("loginFieldDescription")
-		.append("Verify Password:")
-		.appendTo(verifyPasswordRaw);	
-	$("<td/>")
-		.append(verifyPassword)
-		.append(verifyPasswordError)
-		.appendTo(verifyPasswordRaw);
-	
-	var signUpErrorRow = $("<tr/>").appendTo(base);
-	$("<td/>").addClass("loginFieldDescription")
-		.appendTo(signUpErrorRow);	
-	$("<td/>")
-		.append(signUpError)
-		.appendTo(signUpErrorRow);
-	
-	signup.appendAtBottomPart(base);
-	
-	function handleSignUp(data, textStatus, postData) {
-		eWolf.getUserInformation();
-	}
-	
-	function errorHandler(data, textStatus, postData) {
-		signUpError.html(data.errorMessage);
-		self.clearAll();
-	}
-	
-	function badRequestHandler(data, textStatus, postData) {
-		signUpError.html("Server Error. Could not sign up.");
-		self.clearAll();
-	}
-	
-	var formValidator = new FormValidator()
-			.registerField(self.SIGNUP_FULL_NAME_ID, fullName, fullNameError)
-			.registerField(self.SIGNUP_USERNAME_ID, username, usernameError)
-			.registerField(self.SIGNUP_PASSWORD_ID, password, passwordError)
-			.registerField(self.SIGNUP_VERIFY_PASSWORD_ID, verifyPassword, verifyPasswordError)
-			.attachOnSend(function() {
-				var handler = new ResponseHandler("createAccount",[])
-					.success(handleSignUp)
-					.error(errorHandler)
-					.badResponseHandler(badRequestHandler);
-				
-				eWolf.serverRequest.request(id,{
-						createAccount : {
-							name : fullName.val(),
-							username : username.val(),
-							password : password.val()
-						}
-					}, handler.getHandler());
-				})
-			.addValidator(self.SIGNUP_FULL_NAME_ID, VALIDATOR_IS_NOT_EMPTY,
-					"* Must specify a name.")
-			.addValidator(self.SIGNUP_USERNAME_ID, VALIDATOR_IS_NOT_EMPTY,
-					"* Must specify a user name.")
-			.addValidator(self.SIGNUP_PASSWORD_ID, VALIDATOR_IS_NOT_EMPTY,
-					"* Must specify a password.")
-			.addValidator(self.SIGNUP_VERIFY_PASSWORD_ID, VALIDATOR_IS_NOT_EMPTY,
-					"* Must verify the password.")
-			.addValidator(self.SIGNUP_VERIFY_PASSWORD_ID, function(field) {
-				return password.val() == field.val();
-			},"* Password do not mach.");
-			
-	signup.addFunction("Sign Up",formValidator.sendForm);
-	
-	this.clearAll = function() {
-		formValidator.clearAllFields();
-		return self;
-	};
-
-	this.appendTo = function (someFrame) {
-		signup.appendTo(someFrame);
-		return self;
-	};
-	
-	return this;
-};var Logout = function(text,container) {
-	var self = this;	
-	var LOGOUT = "logout";
-	this.frame =$("<div/>").attr({
-		"class": "logoutLink aLink"
-	})	.text(text)
-		.appendTo(container)
-		.click(function() {
-			$(window).unbind('hashchange');
-			window.location.hash = "";
-			
-			self.commitLogout();			
-		});
-	
-	function onLogout(appID) {
-		document.location.reload(true);
-	}
-	
-	this.commitLogout = function () {
-		eWolf.serverRequest.request(LOGOUT,{
-				logout : {}
-			}, null, onLogout);
-	};
-	
-	this.destroy = function() {
-		if(self.frame != null) {
-			self.frame.remove();
-			self.frame = null;
-			delete self;
+	eWolf.bind("refresh",function(event,eventID) {
+		if(id == eventID) {
+			self.clearAll();
 		}
-	};
+	});
+	
 	
 	return this;
-};
-
-NEWMAIL_CONSTANTS = {
+};NEWMAIL_CONSTANTS = {
 	NEWMAIL_APP_ID_PREFIX : "mailto:",
 	NEW_MAIL_DAFAULTS : {
 			TITLE : "New Mail",
@@ -3826,16 +3883,16 @@ NEWMAIL_CONSTANTS = {
 var NewMail = function(callerID,applicationFrame,options,		
 		createRequestObj,handleResponseCategory,
 		allowAttachment,sendTo,sendToQuery) {
+	Application.call(this, id ,applicationFrame, settings.TITLE);
+	
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
-	$.extend(this,NEWMAIL_CONSTANTS);
-	
-	var id = self.NEWMAIL_APP_ID_PREFIX+callerID;
-	
-	Application.call(this,id,applicationFrame);
+	$.extend(this,NEWMAIL_CONSTANTS);	
+	var id = self.NEWMAIL_APP_ID_PREFIX+callerID;	
 	
 	var settings = $.extend({}, self.NEW_MAIL_DAFAULTS, options);
-		
-	var titleArea = new TitleArea(settings.TITLE).appendTo(this.frame);
 	
 	var base = $("<table/>")
 		.addClass("newMainTable")
@@ -3968,10 +4025,10 @@ var NewMail = function(callerID,applicationFrame,options,
 	
 	this.updateSend = function() {
 		if(sendToQuery.tagList.tagCount({markedError:false,markedOK:false}) > 0) {
-			titleArea.hideAll();
+			self.title.hideAll();
 			operations.hideAll();
 		} else if(sendToQuery.tagList.tagCount({markedError:true})) {
-			titleArea.showAll();
+			self.title.showAll();
 			operations.showAll();
 		} else {			
 			eWolf.trigger("needRefresh."+callerID.replace("+","\\+"),[callerID]);
@@ -3980,7 +4037,7 @@ var NewMail = function(callerID,applicationFrame,options,
 	};
 	
 	this.send = function (event,resend) {
-		if(sendToQuery.isMissingField(true)) {
+		if(sendToQuery.isMissingField(true, " * Please select a destination(s).")) {
 			return false;
 		}
 
@@ -4013,7 +4070,7 @@ var NewMail = function(callerID,applicationFrame,options,
 						self.sendTo(destId,JSON.stringify(mailObject));
 					} else {
 						errorMessage.html("Some of the files failed to upload...<br>Message did not sent.");
-						titleArea.showAll();
+						self.title.showAll();
 						operations.showAll();
 					}
 				});			
@@ -4047,7 +4104,7 @@ var NewMail = function(callerID,applicationFrame,options,
 		eWolf.selectApp(callerID);
 	};
 	
-	titleArea
+	self.title
 		.addFunction("Send", this.send)
 		.addFunction("Cancel",this.cancel);
 	operations
@@ -4100,7 +4157,7 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	var profileRequestName = id + "__ProfileRequest__",
 			wolfpacksRequestName = id + "__WolfpakcsRequest__";
 	
-	Application.call(this,id,applicationFrame);
+	Application.call(this, id, applicationFrame, "Searching profile...");
 	
 	var waitingForName = [];
 	
@@ -4126,23 +4183,21 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	
 	eWolf.serverRequest.bindRequest(profileRequestName,id);
 	eWolf.serverRequest.bindRequest(wolfpacksRequestName,id);
-
-	var topTitle = new TitleArea("Searching profile...").appendTo(this.frame);
 	
 	var wolfpacksContainer = new CommaSeperatedList("Wolfpakcs");
-	topTitle.appendAtBottomPart(wolfpacksContainer.getList());	
+	this.title.appendAtBottomPart(wolfpacksContainer.getList());	
 	
 	if(userID) {
-		topTitle.addFunction("Send message...", function (event) {
+		this.title.addFunction("Send message...", function (event) {
 			new NewMessage(id,applicationFrame,userID).select();
 		}, true);
 		
-		topTitle.addFunction("Add to wolfpack...", function () {
+		this.title.addFunction("Add to wolfpack...", function () {
 			new AddToWolfpack(id, userID,self.frame, this, wolfpacksContainer.getItemNames());
 			return false;
 		}, true);
 	} else {
-		topTitle.addFunction("Post", function() {
+		this.title.addFunction("Post", function() {
 			new NewPost(id,applicationFrame).select();
 		}, true);
 	}
@@ -4150,10 +4205,10 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	var newsFeed = null;
 	
 	function onProfileFound() {		
-		topTitle.setTitle(CreateUserBox(userID,userName,true));
+		self.title.setTitle(CreateUserBox(userID,userName,true));
 		eWolf.members.addKnownUsers(userID,userName);
 		
-		topTitle.showAll();
+		self.title.showAll();
 		
 		if(newsFeed == null) {			
 			newsFeed = new ProfileNewsFeedList(id,userID)
@@ -4166,9 +4221,9 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	}
 	
 	function onProfileNotFound() {
-		topTitle.setTitle("Profile not found");
+		self.title.setTitle("Profile not found");
 		
-		topTitle.hideAll();
+		self.title.hideAll();
 		
 		if(newsFeed != null) {			
 			newsFeed.destroy();
@@ -4218,181 +4273,162 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	
 	return this;
 };
-SEARCHAPP_CONSTANTS = {
-	SEARCH_PROFILE_PREFIX : "profile:",
-	SEARCH_MENU_ITEM_ID : "__seach_menu_id__"
+SIGNUP_CONSTANTS = {
+	SIGNUP_FULL_NAME_ID : "signup full name",
+	SIGNUP_USERNAME_ID : "signup username",
+	SIGNUP_PASSWORD_ID : "signup password",
+	SIGNUP_VERIFY_PASSWORD_ID : "signup verify password"
 };
 
-var SearchApp = function(menu,applicationFrame,container) {
+var Signup = function(id) {
+	Application.call(this, id, applicationFrame, "Sign Up");
 	var self = this;
-	$.extend(this,SEARCHAPP_CONSTANTS);
+	$.extend(this,SIGNUP_CONSTANTS);
 	
-	//var menuList = menu.createNewMenuList(this.SEARCH_MENU_ITEM_ID,"Search");
-	var apps = new Object();
-	var lastSearch = null;
-	
-	this.frame = $("<div/>")
-		.addClass("title-bar")
-		.appendTo(container);
-	
-	var query = $("<input/>").attr({
+	var fullName = $("<input/>").attr({
 		"type" : "text",
-		"placeholder" : "Search",
-		"autocomplete" : "off",
-		"spellcheck" : "false"
-	}).css({
-		"width" : "400px"
-	}).autocomplete({
-		source: eWolf.members.knownUsersFullDescriptionArray,
-		select: onSelectAutocomplete
-	}).appendTo(this.frame);
-	
-	eWolf.bind("foundNewUser",function(event,id,name,fullDescription) {
-		query.autocomplete("destroy").autocomplete({
-			source: eWolf.members.knownUsersFullDescriptionArray,
-			select: onSelectAutocomplete
-		});
+		"placeholder" : "Full Name"
 	});
 	
-	function onSelectAutocomplete(event,ui) {
-		self.search(ui.item.label);
-		return false;
+	var fullNameError = $("<span/>").addClass("errorArea");
+	
+	var username = $("<input/>").attr({
+		"type" : "text",
+		"placeholder" : "Username"
+	});
+	
+	var usernameError = $("<span/>").addClass("errorArea");
+	
+	var password = $("<input/>").attr({
+		"type" : "password",
+		"placeholder" : "Password"
+	});
+	
+	var passwordError = $("<span/>").addClass("errorArea");
+	
+	var verifyPassword = $("<input/>").attr({
+		"type" : "password",
+		"placeholder" : "Verify Password"
+	});
+	
+	var verifyPasswordError = $("<span/>").addClass("errorArea");
+	
+	var signUpError = $("<span/>").addClass("errorArea");
+	
+	var base = $("<table/>");
+	
+	var fullNameRaw = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("loginFieldDescription")
+		.append("Full Name:")
+		.appendTo(fullNameRaw);	
+	$("<td/>")
+		.append(fullName)
+		.append(fullNameError)
+		.appendTo(fullNameRaw);
+	
+	var usernameRaw = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("loginFieldDescription")
+		.append("Username:")
+		.appendTo(usernameRaw);	
+	$("<td/>")
+		.append(username)
+		.append(usernameError)
+		.appendTo(usernameRaw);
+	
+	var passwordRaw = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("loginFieldDescription")
+		.append("Password:")
+		.appendTo(passwordRaw);	
+	$("<td/>")
+		.append(password)
+		.append(passwordError)
+		.appendTo(passwordRaw);
+	
+	var verifyPasswordRaw = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("loginFieldDescription")
+		.append("Verify Password:")
+		.appendTo(verifyPasswordRaw);	
+	$("<td/>")
+		.append(verifyPassword)
+		.append(verifyPasswordError)
+		.appendTo(verifyPasswordRaw);
+	
+	var signUpErrorRow = $("<tr/>").appendTo(base);
+	$("<td/>").addClass("loginFieldDescription")
+		.appendTo(signUpErrorRow);	
+	$("<td/>")
+		.append(signUpError)
+		.appendTo(signUpErrorRow);
+	
+	this.title.appendAtBottomPart(base);
+	
+	function handleSignUp(data, textStatus, postData) {
+		eWolf.getUserInformation();
 	}
-
-	var searchBtn = $("<input/>").attr({
-		"type" : "button",
-		"value" : "Search"
-	}).appendTo(this.frame).hide();
 	
-	function addSearchMenuItem(id,name) {
-//		var tempName;
-//		if(name == null) {
-//			tempName = "Search: " + id;
-//		} else {
-//			tempName = name;
-//		}
-//		
-		var searchAppKey = self.SEARCH_PROFILE_PREFIX + id;
-		//menuList.addMenuItem(searchAppKey,tempName);
-		apps[searchAppKey] = new Profile(searchAppKey,applicationFrame,id,name)
-			.onReceiveName(function(newName) {
-				//menuList.renameMenuItem(searchAppKey,newName);
-			});	
-		
-		eWolf.selectApp(searchAppKey);
-	};
-	
-	function removeSearchMenuItem(searchKey) {
-		var searchAppKey = self.SEARCH_PROFILE_PREFIX + searchKey;
-		
-		if(apps[searchAppKey] != null) {
-			apps[searchAppKey].destroy();
-			delete apps[searchAppKey];
-			apps[searchAppKey] = null;
-			//menuList.removeMenuItem(searchAppKey);
-		}
+	function errorHandler(data, textStatus, postData) {
+		signUpError.html(data.errorMessage);
+		self.clearAll();
 	}
 	
-	function removeLastSearch() {
-		if(lastSearch != null) {
-			removeSearchMenuItem(lastSearch);
-			lastSearch = null;
-		}
+	function badRequestHandler(data, textStatus, postData) {
+		signUpError.html("Server Error. Could not sign up.");
+		self.clearAll();
 	}
 	
-	this.search = function (key,name) {
-		if(key == null) {
-			key = query.val();
-		}
-		
-		if(name == "") {
-			name == null;
-		}
-		
-		if(key != null && key != "") {				
-			if(!name) {
-				name = eWolf.members.getUserName(key);
-			}
-
-			if(!name) {
-				var fullDescID = eWolf.members.getUserFromFullDescription(key);
+	var formValidator = new FormValidator()
+			.registerField(self.SIGNUP_FULL_NAME_ID, fullName, fullNameError)
+			.registerField(self.SIGNUP_USERNAME_ID, username, usernameError)
+			.registerField(self.SIGNUP_PASSWORD_ID, password, passwordError)
+			.registerField(self.SIGNUP_VERIFY_PASSWORD_ID, verifyPassword, verifyPasswordError)
+			.attachOnSend(function() {
+				var handler = new ResponseHandler("createAccount",[])
+					.success(handleSignUp)
+					.error(errorHandler)
+					.badResponseHandler(badRequestHandler);
 				
-				if(fullDescID) {
-					key = fullDescID;
-					name = eWolf.members.getUserName(fullDescID);
-				}
-			}
+				eWolf.serverRequest.request(id,{
+						createAccount : {
+							name : fullName.val(),
+							username : username.val(),
+							password : password.val()
+						}
+					}, handler.getHandler());
+				})
+			.addValidator(self.SIGNUP_FULL_NAME_ID, VALIDATOR_IS_NOT_EMPTY,
+					"* Must specify a name.")
+			.addValidator(self.SIGNUP_USERNAME_ID, VALIDATOR_IS_NOT_EMPTY,
+					"* Must specify a user name.")
+			.addValidator(self.SIGNUP_PASSWORD_ID, VALIDATOR_IS_NOT_EMPTY,
+					"* Must specify a password.")
+			.addValidator(self.SIGNUP_VERIFY_PASSWORD_ID, VALIDATOR_IS_NOT_EMPTY,
+					"* Must verify the password.")
+			.addValidator(self.SIGNUP_VERIFY_PASSWORD_ID, function(field) {
+				return password.val() == field.val();
+			},"* Password do not mach.");
 			
-			var searchAppKey = self.SEARCH_PROFILE_PREFIX + key;
-			
-			if(key == eWolf.profile.getID()) {
-				eWolf.selectApp(eWolf.MYPROFILE_APP_ID);
-			} else if(apps[searchAppKey] != null) {
-				console.log("not deleted");
-			} else {
-				removeLastSearch();
-				lastSearch = key;
-				addSearchMenuItem(key,name);
-			}			
-		}
-		
+	this.title.addFunction("Sign Up",formValidator.sendForm);
+	
+	this.clearAll = function() {
+		formValidator.clearAllFields();
 		return self;
 	};
 	
-	searchBtn.click(function() {
-		self.search(query.val());	
-	});
-	
-	eWolf.bind("select",function(event,eventId) {
-		var lastSearchAppKey = self.SEARCH_PROFILE_PREFIX + lastSearch;
-		var lastSearchNewMailAppKey = NEWMAIL_CONSTANTS.NEWMAIL_APP_ID_PREFIX
-			+ lastSearchAppKey;
-		if(eventId != lastSearchAppKey && eventId != lastSearchNewMailAppKey) {
-			removeLastSearch();
+	eWolf.bind("refresh",function(event,eventID) {
+		if(id == eventID) {
+			self.clearAll();
 		}
 	});
 	
-	query.bind('input propertychange',function() {
-		 if(query.val() == "") {
-	    	searchBtn.hide(200);
-	    } else {
-	    	searchBtn.show(200);
-	    }
-	});
-	
-	query.keyup(function(event){
-	    if(event.keyCode == 13 && query.val() != ""){
-//	    	if(event.shiftKey) {
-//	    		addBtn.click();
-//	    	} else {
-//	    		searchBtn.click();
-//	    	}
-	    	
-	    	searchBtn.click();
-	    }   
-	});
-		
-	
-	eWolf.bind("search",function(event,key,name) {
-		self.search(key,name);
-	});
-	
 	return this;
-};var WolfpackPage = function (id,wolfpackName,applicationFrame) {
-	var self = this;
-	
-	Application.call(this,id,applicationFrame);
+};var WolfpackPage = function (id,wolfpackName,applicationFrame) {	
+	Application.call(this, id, applicationFrame, 
+			wolfpackName == null ? "News Feed" : CreateWolfpackBox(wolfpackName));
 			
-	var topTitle = new TitleArea().appendTo(this.frame)
-		.addFunction("Post", function() {
+	var self = this;
+	this.title.addFunction("Post", function() {
 			new NewPost(id,applicationFrame,wolfpackName).select();
-		});		
-	
-	if(wolfpackName != null) {
-		topTitle.setTitle(CreateWolfpackBox(wolfpackName));
-	} else {
-		topTitle.setTitle("News Feed");
-	}
+		});
 	
 	new WolfpackNewsFeedList(id,wolfpackName)
 		.appendTo(this.frame);
@@ -4401,17 +4437,17 @@ var SearchApp = function(menu,applicationFrame,container) {
 		var addMembers = null;
 
 		var members = new CommaSeperatedList("Members");
-		topTitle.appendAtBottomPart(members.getList());
+		this.title.appendAtBottomPart(members.getList());
 		
 		this.showAddMembers = function () {
 			members.hide(200);
-			topTitle.hideFunction("Add members...");
+			self.title.hideFunction("Add members...");
 			if(addMembers != null) {
 				addMembers.remove();
 			}
 			
 			addMembers = $("<span/>");
-			topTitle.appendAtBottomPart(addMembers);
+			self.title.appendAtBottomPart(addMembers);
 			
 			new AddMembersToWolfpack(id,wolfpackName,members.getItemNames(),
 					self.removeAddMemebers).frame.appendTo(addMembers);
@@ -4425,7 +4461,7 @@ var SearchApp = function(menu,applicationFrame,container) {
 				});			
 			}
 			
-			topTitle.showFunction("Add members...");
+			self.title.showFunction("Add members...");
 			members.show(200);
 		};
 
@@ -4486,8 +4522,8 @@ var SearchApp = function(menu,applicationFrame,container) {
 					id);
 					
 		
-		topTitle.addFunction("Add members...", this.showAddMembers);		
-//		topTitle.addFunction("Delete wolfpack", this.deleteWolfpack);
+		self.title.addFunction("Add members...", this.showAddMembers);		
+//		self.title.addFunction("Delete wolfpack", this.deleteWolfpack);
 		
 		eWolf.bind("select",function(event,eventId) {
 			self.removeAddMemebers();
