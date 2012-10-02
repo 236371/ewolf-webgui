@@ -15,6 +15,7 @@ EWOLF_CONSTANTS = {
 	INBOX_APP_ID : "inbox",
 	LOGIN_APP_ID : "login",
 	SIGNUP_APP_ID : "signup",
+	LOGOUT_APP_ID : "logout",
 	
 	FIRST_EWOLF_LOGIN_REQUEST_ID : "eWolfLogin",
 	
@@ -120,7 +121,7 @@ var eWolf = new function() {
 		self.mainAppsCreated = true;
 		
 		self.welcome.hideMenu();
-		self.logout = new Logout("Logout",eWolf.topBarFrame);
+		self.logout = new Logout(self.LOGOUT_APP_ID,"Logout",eWolf.topBarFrame);
 		
 		self.mainApps.addMenuItem(self.MYPROFILE_APP_ID,"My Profile");
 				
@@ -453,6 +454,14 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 	
 	eWolf.bind("refresh",function(event,eventId) {
 		self.requestAll(eventId,true);
+	});
+	
+	eWolf.bind("needRefresh",function(event,eventId) {
+		if(eventId && appsRequests[eventId]) {
+			$.each(appsRequests[eventId], function(i, req) {
+				req.lastUpdate = 0;
+			});
+		}
 	});
 	
 	this.setRequestAllOnSelect = function (enable) {
@@ -1098,7 +1107,7 @@ var PopUp = function(frame, activator) {
 			console.log("No usersResult in response");
 		} else {
 			$.each(data.usersResult, function(i, result) {
-				var itemID = postData.userID[i];
+				var itemID = postData.userIDs[i];
 				var item = addMembersQuery.tagList.match({id:itemID});
 				
 				if(result == "success") {
@@ -1856,9 +1865,9 @@ $.fn.spin = function(opts) {
 		}
 	});
 	return this;
-};var Logout = function(text,container) {
+};var Logout = function(id,text,container) {
 	var self = this;	
-	var LOGOUT = "logout";
+
 	this.frame =$("<div/>").attr({
 		"class": "logoutLink aLink"
 	})	.text(text)
@@ -1875,7 +1884,7 @@ $.fn.spin = function(opts) {
 	}
 	
 	this.commitLogout = function () {
-		eWolf.serverRequest.request(LOGOUT,{
+		eWolf.serverRequest.request(id,{
 				logout : {}
 			}, null, onLogout);
 	};
@@ -3656,7 +3665,7 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	eWolf.serverRequest.bindRequest(newsFeedRequestName,appID);
 	
 	var showMore = new ShowMore(this.frame,function() {
-		eWolf.serverRequest.request(self.updateFromServer (true),
+		eWolf.serverRequest.request(appID,self.updateFromServer (true),
 				responseHandler.getHandler());
 	}).draw();
 	
@@ -4060,7 +4069,7 @@ var NewMail = function(callerID,applicationFrame,options,
 			self.title.showAll();
 			operations.showAll();
 		} else {			
-			eWolf.trigger("needRefresh."+callerID.replace("+","\\+"),[callerID]);
+			eWolf.trigger("needRefresh",[callerID]);
 			self.cancel();
 		}		
 	};
@@ -4091,42 +4100,89 @@ var NewMail = function(callerID,applicationFrame,options,
 				text: msg
 		};
 		
-		sendToQuery.tagList.foreachTag({markedOK:false},function(destId) {
-			if(allowAttachment && files) {
-				files.uploadAllFiles(destId, function(success, uploadedFiles) {
-					if(success) {
-						mailObject.attachment = uploadedFiles;
-						self.sendTo(destId,JSON.stringify(mailObject));
-					} else {
-						errorMessage.html("Some of the files failed to upload...<br>Message did not sent.");
-						self.title.showAll();
-						operations.showAll();
-					}
-				});			
-			} else {
-				self.sendTo(destId,JSON.stringify(mailObject));
-			}			
-		});	
+		// TODO: should remove true to apply new Interface
+		if(true || allowAttachment && files) {
+			sendToQuery.tagList.foreachTag({markedOK:false},function(destId) {
+				self.uploadFilesThenSendTo(destId, mailObject);
+			});
+		} else {
+			var destVector = [];
+			
+			sendToQuery.tagList.foreachTag({markedOK:false},function(destId) {
+				destVector.push(destId);
+			});
+			
+			self.sendTo(destVector, mailObject);
+		}			
 	};
 	
-	this.sendTo = function(destId,data) {
+	this.uploadFilesThenSendTo = function (dest, mailObject) {
+		if(allowAttachment && files) {
+			files.uploadAllFiles(dest, function(success, uploadedFiles) {
+				if(success) {
+					mailObject.attachment = uploadedFiles;
+					self.sendTo(dest,mailObject);
+				} else {
+					errorMessage.html("Some of the files failed to upload...<br>Message did not sent.");
+					self.title.showAll();
+					operations.showAll();
+				}
+			});			
+		} else {
+			self.sendTo(dest, mailObject);
+		}	
+	};
+	
+	this.sendTo = function(destId,dataObj) {
+		var data = JSON.stringify(dataObj);
+		
 		var responseHandler = new ResponseHandler(handleResponseCategory,[],null);
 		
 		responseHandler.success(function(data, textStatus, postData) {
-			sendToQuery.tagList.markTagOK(destId);				
+			if($.isArray(destId)) {
+				$.each(destId, function(i, id) {
+					sendToQuery.tagList.markTagOK(id);
+				});
+			} else {
+				sendToQuery.tagList.markTagOK(destId);
+			}
+			
 			self.updateSend();
 		}).error(function(data, textStatus, postData) {
-			var errorMsg = "Failed to arrive at destination: " +
-			destId + " with error: " + data.result;
-			errorMessage.append(errorMsg+"<br>");
+			if($.isArray(destId)) {
+				if(data.userIDsResult) {
+					$.each(data.userIDsResult, function(i, result) {
+						var itemID = postData.userIDs[i];
+						var item = sendToQuery.tagList.match({id:itemID});
+						
+						if(result == "success") {							
+							item.markOK();
+						} else {
+							self.appendFailErrorMessage(itemID, result);
+						}		
+					});
+				} else {
+					self.appendFailErrorMessage("everyone", data.result);
+				}
+			} else {
+				self.appendFailErrorMessage(destId, data.result);
+			}
 			
-			sendToQuery.tagList.markTagError(destId,errorMsg);
 			self.updateSend();
 		});
 		
 		eWolf.serverRequest.request(id,
 				createRequestObj(destId,data),
 				responseHandler.getHandler());
+	};
+	
+	this.appendFailErrorMessage = function (id, result) {
+		var errorMsg = "Failed to arrive at destination: " +
+										id + " with error: " + result;
+		errorMessage.append(errorMsg+"<br>");
+		
+		//sendToQuery.tagList.markTagError(id,errorMsg);
+		sendToQuery.tagList.match(id == "everyone" ? {markedOK:false} : {id:id}).markError(errorMsg);
 	};
 	
 	this.cancel = function() {
