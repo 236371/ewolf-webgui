@@ -16,7 +16,8 @@ EWOLF_CONSTANTS = {
 	LOGIN_APP_ID : "login",
 	SIGNUP_APP_ID : "signup",
 	
-	LOGIN_REQUEST_NAME : "eWolfLogin",
+	FIRST_EWOLF_LOGIN_REQUEST_ID : "eWolfLogin",
+	
 	PROFILE_REQUEST_NAME : "__main_profile_request__",
 	WOLFPACKS_REQUEST_NAME : "__main_wolfpacks_request",
 	MEMBERS_REQUEST_NAME : "__main_members_request__"
@@ -31,6 +32,8 @@ var eWolf = new function() {
 	this.selectedApp = null;
 	
 	this.serverRequest = null;
+	
+	this.mainAppsCreated = false;
 	
 	this.init = function() {
 		self.serverRequest = new PostRequestHandler("/json",self.REFRESH_INTERVAL_SEC);
@@ -67,7 +70,7 @@ var eWolf = new function() {
 					return { wolfpacks : {}	};
 				});
 		
-		self.serverRequest.bindRequest(self.PROFILE_REQUEST_NAME,self.LOGIN_REQUEST_NAME);
+		self.serverRequest.bindRequest(self.PROFILE_REQUEST_NAME, self.FIRST_EWOLF_LOGIN_REQUEST_ID);
 		self.serverRequest.bindRequest(self.WOLFPACKS_REQUEST_NAME);
 		
 		self.members = new Members();		
@@ -78,7 +81,23 @@ var eWolf = new function() {
 				new ResponseHandler("profile",["id","name"],
 						function (data, textStatus, postData) {
 					document.title = "eWolf - " + data.name;
+					self.userID = data.id;
+					self.userName = data.name;
 				}).getHandler());
+		
+		self.serverRequest.complete(null,function(appID, response, status) {
+			if(self.mainAppsCreated) {
+				if(response.status != 200 || self.userID == null) {
+					document.location.reload(true);
+				}				
+			} else if(response.status == 200 && self.userID != null) {
+				self.serverRequest.restartRefreshInterval();
+				self.createMainApps();
+			} else if(response.status != 200 || self.userID == null) {
+				self.serverRequest.stopRefreshInterval();
+				self.presentLoginScreen();
+			}
+		});
 		
 		self.getUserInformation();
 	};
@@ -94,22 +113,12 @@ var eWolf = new function() {
 			self.signupApp = null;
 		}
 		
-		self.serverRequest.complete(null,function() {
-			self.serverRequest.complete(null,null);
-
-			if(self.profile.getID()) {
-				self.serverRequest.restartRefreshInterval();
-				self.createMainApps();
-			} else {
-				self.serverRequest.stopRefreshInterval();
-				self.presentLoginScreen();
-			}
-		});
-		
-		self.serverRequest.requestAll(self.LOGIN_REQUEST_NAME);
+		self.serverRequest.requestAll(self.FIRST_EWOLF_LOGIN_REQUEST_ID, true);
 	};
 	
 	this.createMainApps = function () {
+		self.mainAppsCreated = true;
+		
 		self.welcome.hideMenu();
 		self.logout = new Logout("Logout",eWolf.topBarFrame);
 		
@@ -227,12 +236,12 @@ var Members = function() {
 	eWolf.serverRequest.registerRequest(eWolf.MEMBERS_REQUEST_NAME,
 			function() {
 				return { wolfpackMembers : {}	};
-			});	
+			});
 	
 	eWolf.serverRequest.registerHandler(eWolf.MEMBERS_REQUEST_NAME,
 			membersResponseHandler.getHandler());
 	
-	eWolf.serverRequest.bindRequest(eWolf.MEMBERS_REQUEST_NAME,eWolf.LOGIN_REQUEST_NAME);
+	eWolf.serverRequest.bindRequest(eWolf.MEMBERS_REQUEST_NAME,eWolf.FIRST_EWOLF_LOGIN_REQUEST_ID);
 	
 	function handleMembers(data, textStatus, postData) {
 		$.each(data.membersList, function(i,userObj){
@@ -393,6 +402,7 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 			generalRequests = [];
 
 	var onCompleteAll = null;
+	var onGeneralError = null;
 	var timer = null;
 	var requestAllOnSelect = false;
 	
@@ -411,7 +421,7 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 		eWolf.trigger("loading",[appID]);
 	}
 	
-	function onRequestComplete (appID) {
+	function onRequestComplete (appID, response, status) {
 		eWolf.trigger("loadingEnd",[appID]);		
 	}
 	
@@ -419,15 +429,15 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 		self.stopRefreshInterval();
 	}
 	
-	function onRequestAllComplete(appID) {
+	function onRequestAllComplete(appID, response, status) {
 		self.restartRefreshInterval();
 		
 		if(appID && appsRequests[appID] && appsRequests[appID].onComplete) {
-			appsRequests[appID].onComplete();
+			appsRequests[appID].onComplete(appID, response, status);
 		}
 		
 		if(onCompleteAll) {
-			onCompleteAll();
+			onCompleteAll(appID, response, status);
 		}		
 	}
 		
@@ -484,6 +494,16 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 		return self;
 	};
 	
+	this.bindAppToAnotherApp = function(newAppID, existsAppID) {
+		if(existsAppID && appsRequests[existsAppID]) {
+			if(newAppID) {
+				appsRequests[newAppID] = appsRequests[existsAppID];
+			}
+		}
+		
+		return self;
+	};
+	
 	this.unregisterApp = function(appID) {
 		if(appID && appsRequests[appID]) {
 			delete appsRequests[appID];
@@ -509,12 +529,16 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 				if(handleDataFunction != null) {
 					handleDataFunction(receivedData,textStatus,data);
 				}				
-			}).complete(function() {
-				onRequestComplete(appID);
+			}).complete(function(response, status) {
+				onRequestComplete(appID, response, status);
 
 				if(handleOnComplete != null) {
-					handleOnComplete(appID);
+					handleOnComplete(appID, response, status);
 				}				
+			}).error(function(response, status, xhr){ 
+				if(onGeneralError) {
+					onGeneralError(response, status, xhr);
+				}
 			});
 		
 		return self;
@@ -585,6 +609,14 @@ var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 			appsRequests[appID].onComplete = newOnComplete;
 		} else {
 			onCompleteAll = newOnComplete;
+		}		
+		
+		return self;
+	};
+	
+	this.error = function(newOnGeneralError) {
+		if(newOnGeneralError) {
+			onGeneralError = newOnGeneralError;
 		}		
 		
 		return self;
@@ -3836,11 +3868,6 @@ var Login = function(id,applicationFrame) {
 		self.clearAll();
 	}
 	
-	this.showErrors = function() {
-		checkForError(username, usernameError, "* Must specify a user name.");
-		checkForError(password, passwordError, "* Must specify a password.");		
-	};
-	
 	var formValidator = new FormValidator()
 			.registerField(self.LOGIN_USERNAME_ID, username, usernameError)
 			.registerField(self.LOGIN_PASSWORD_ID, password, passwordError)
@@ -3873,7 +3900,9 @@ var Login = function(id,applicationFrame) {
 		if(id == eventID) {
 			self.clearAll();
 		}
-	});	
+	});
+	
+	eWolf.serverRequest.bindAppToAnotherApp(id, eWolf.FIRST_EWOLF_LOGIN_REQUEST_ID);
 	
 	return this;
 };NEWMAIL_CONSTANTS = {
@@ -4444,6 +4473,8 @@ var Signup = function(id) {
 			self.clearAll();
 		}
 	});
+	
+	eWolf.serverRequest.bindAppToAnotherApp(id, eWolf.FIRST_EWOLF_LOGIN_REQUEST_ID);
 	
 	return this;
 };var WolfpackPage = function (id,wolfpackName,applicationFrame) {	
