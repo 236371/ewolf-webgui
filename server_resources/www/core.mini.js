@@ -385,31 +385,7 @@ var Wolfpacks = function (menuList,applicationFrame) {
 
 
 
-var ApplicationUI = function(container,titleText) {
-	UI.call(this);
-	
-	/****************************************************************************
-	 * User Interface
-	  ***************************************************************************/
-	this.frame = $("<div/>")
-			.addClass("applicationContainer")
-			.append(this.context)
-			.appendTo(container)
-			.hide();
-	
-	this.title = new TitleArea(titleText).appendTo(this.frame);
-	
-	return this;
-};var UI = function() {
-	/****************************************************************************
-	 * User Interface
-	  ***************************************************************************/
-	if(!this.frame) {
-		this.context = $("<span/>");
-	}
-	
-	return this;
-};var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
+var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 	var self = this;
 	
 	var requestsMap = {},
@@ -724,13 +700,25 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	
 	return this;
 };var Application = function(id,container,titleText) {
-	ApplicationUI.call(this, applicationFrame, titleText);
-	
 	/****************************************************************************
 	 * Members
 	  ***************************************************************************/
 	var self = this;
 	var selected = false;
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	if(!this.frame) {
+		this.frame = $("<div/>")
+		.addClass("applicationContainer")
+		.appendTo(container)
+		.hide();
+	}
+
+	if(!this.title) {
+		this.title = new TitleArea(titleText).appendTo(this.frame);
+	}
 	
 	/****************************************************************************
 	 * Event Listeners
@@ -3733,7 +3721,15 @@ var InboxList = function (appID,serverSettings) {
 		return thisObj;
 	};
 };var Inbox = function (id,applicationFrame) {
+	/****************************************************************************
+	 * Base class
+	  ***************************************************************************/	
 	Application.call(this, id, applicationFrame, "Inbox");
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	this.inbox = new InboxList(id,{}).appendTo(this.frame);
 	
 	/****************************************************************************
 	 * Functionality
@@ -3741,8 +3737,6 @@ var InboxList = function (appID,serverSettings) {
 	this.title.addFunction("New Message...", function() {
 			new NewMessage(id,applicationFrame).select();
 		});
-	
-	this.inbox = new InboxList(id,{}).appendTo(this.frame);
 	
 	return this;
 };
@@ -3752,19 +3746,25 @@ LOGIN_CONSTANTS = {
 };
 
 var Login = function(id,applicationFrame) {
-	Application.call(this, id, applicationFrame, "Welcome to eWolf");
+	/****************************************************************************
+	 * Base class
+	  ***************************************************************************/	
+	Application.call(this, id, applicationFrame, "Welcome to eWolf");	
 	
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
+	var self = this;
+	$.extend(this,LOGIN_CONSTANTS);
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	var itro = $("<div/>").css({
 		"font-size" : "12px"
 	}).append("If it is your first time using eWolf, please take the time to signup first.");
 	
 	this.title.appendAtBottomPart(itro);
-	this.title.addFunction("Signup",function() {
-		eWolf.selectApp(eWolf.SIGNUP_APP_ID);
-	});
-	
-	var self = this;
-	$.extend(this,LOGIN_CONSTANTS);
 	
 	this.frame.append("<br>");
 	
@@ -3815,6 +3815,13 @@ var Login = function(id,applicationFrame) {
 	
 	login.appendAtBottomPart(base);
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
+	this.title.addFunction("Signup",function() {
+		eWolf.selectApp(eWolf.SIGNUP_APP_ID);
+	});	
+	
 	function handleLogin(data, textStatus, postData) {
 		eWolf.getUserInformation();
 	}
@@ -3853,7 +3860,7 @@ var Login = function(id,applicationFrame) {
 			.addValidator(self.LOGIN_USERNAME_ID, VALIDATOR_IS_NOT_EMPTY,
 					"* Must specify a user name.")
 			.addValidator(self.LOGIN_PASSWORD_ID, VALIDATOR_IS_NOT_EMPTY,
-					"* Must specify a password.");
+					"* Must specify a password.");	
 	
 	login.addFunction("Login",formValidator.sendForm);
 	
@@ -3866,8 +3873,7 @@ var Login = function(id,applicationFrame) {
 		if(id == eventID) {
 			self.clearAll();
 		}
-	});
-	
+	});	
 	
 	return this;
 };NEWMAIL_CONSTANTS = {
@@ -3883,17 +3889,25 @@ var Login = function(id,applicationFrame) {
 var NewMail = function(callerID,applicationFrame,options,		
 		createRequestObj,handleResponseCategory,
 		allowAttachment,sendTo,sendToQuery) {
-	Application.call(this, id ,applicationFrame, settings.TITLE);
-	
 	/****************************************************************************
 	 * Members
 	  ***************************************************************************/
 	var self = this;
 	$.extend(this,NEWMAIL_CONSTANTS);	
-	var id = self.NEWMAIL_APP_ID_PREFIX+callerID;	
+	var id = self.NEWMAIL_APP_ID_PREFIX + callerID;	
 	
 	var settings = $.extend({}, self.NEW_MAIL_DAFAULTS, options);
 	
+	var files = null;
+	
+	/****************************************************************************
+	 * Base class
+	  ***************************************************************************/	
+	Application.call(this, id ,applicationFrame, settings.TITLE);	
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	var base = $("<table/>")
 		.addClass("newMainTable")
 		.appendTo(this.frame);
@@ -3925,7 +3939,6 @@ var NewMail = function(callerID,applicationFrame,options,
 	var messageText = $("<div/>")
 		.addClass("textarea-div")
 		.attr({
-//		"placeholder": "What is on your mind...",
 		"style" : "min-height:"+height+"px;",
 		"contentEditable" : "true"
 	});
@@ -3933,7 +3946,6 @@ var NewMail = function(callerID,applicationFrame,options,
 	$("<td/>").append(messageText)
 		.appendTo(msgRaw);
 	
-	var files = null;
 	if(allowAttachment) {
 		var attacheRaw = $("<tr/>").appendTo(base);
 		$("<td/>")
@@ -3961,26 +3973,14 @@ var NewMail = function(callerID,applicationFrame,options,
 		"class": "errorArea"
 	}).appendTo(errorBox);
 	
-	// TODO: on show (not refresh)
-	eWolf.bind("refresh."+id,function(event,eventID) {
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/		
+	eWolf.bind("select",function(event,eventID) {
 		if(eventID == id) {
 			window.setTimeout(function () {
 				messageText.focus();
 			}, 0);
-
-///////////////////////////////////////////////////////////////////////////////			
-//	Changed due to Issue #3 (Focus on the content in new mail)
-///////////////////////////////////////////////////////////////////////////////
-//			if(sendTo != null) {				
-//				window.setTimeout(function () {
-//					messageText.focus();
-//				}, 0);				
-//			} else {
-//				window.setTimeout(function () {
-//					sendToQuery.focus();
-//				}, 0);
-//			}
-///////////////////////////////////////////////////////////////////////////////
 		}
 	});
 	
@@ -4032,7 +4032,7 @@ var NewMail = function(callerID,applicationFrame,options,
 			operations.showAll();
 		} else {			
 			eWolf.trigger("needRefresh."+callerID.replace("+","\\+"),[callerID]);
-			this.cancel();
+			self.cancel();
 		}		
 	};
 	
@@ -4152,15 +4152,32 @@ var NewPost = function(id,applicationFrame,wolfpack) {
 	return this;
 };
 var Profile = function (id,applicationFrame,userID,userName) {
+	/****************************************************************************
+	 * Base class
+	  ***************************************************************************/	
+	Application.call(this, id, applicationFrame, "Searching profile...");
+	
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	
 	var profileRequestName = id + "__ProfileRequest__",
 			wolfpacksRequestName = id + "__WolfpakcsRequest__";
 	
-	Application.call(this, id, applicationFrame, "Searching profile...");
-	
 	var waitingForName = [];
 	
+	var newsFeed = null;
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	var wolfpacksContainer = new CommaSeperatedList("Wolfpakcs");
+	this.title.appendAtBottomPart(wolfpacksContainer.getList());
+	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	var handleProfileResonse = new ResponseHandler("profile",
 			["id","name"],handleProfileData);
 	
@@ -4184,9 +4201,6 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	eWolf.serverRequest.bindRequest(profileRequestName,id);
 	eWolf.serverRequest.bindRequest(wolfpacksRequestName,id);
 	
-	var wolfpacksContainer = new CommaSeperatedList("Wolfpakcs");
-	this.title.appendAtBottomPart(wolfpacksContainer.getList());	
-	
 	if(userID) {
 		this.title.addFunction("Send message...", function (event) {
 			new NewMessage(id,applicationFrame,userID).select();
@@ -4201,8 +4215,6 @@ var Profile = function (id,applicationFrame,userID,userName) {
 			new NewPost(id,applicationFrame).select();
 		}, true);
 	}
-	
-	var newsFeed = null;
 	
 	function onProfileFound() {		
 		self.title.setTitle(CreateUserBox(userID,userName,true));
@@ -4281,10 +4293,20 @@ SIGNUP_CONSTANTS = {
 };
 
 var Signup = function(id) {
+	/****************************************************************************
+	 * Base class
+	  ***************************************************************************/	
 	Application.call(this, id, applicationFrame, "Sign Up");
+	
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	$.extend(this,SIGNUP_CONSTANTS);
 	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	var fullName = $("<input/>").attr({
 		"type" : "text",
 		"placeholder" : "Full Name"
@@ -4362,6 +4384,9 @@ var Signup = function(id) {
 	
 	this.title.appendAtBottomPart(base);
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
 	function handleSignUp(data, textStatus, postData) {
 		eWolf.getUserInformation();
 	}
@@ -4422,17 +4447,30 @@ var Signup = function(id) {
 	
 	return this;
 };var WolfpackPage = function (id,wolfpackName,applicationFrame) {	
+	/****************************************************************************
+	 * Base class
+	  ***************************************************************************/	
 	Application.call(this, id, applicationFrame, 
 			wolfpackName == null ? "News Feed" : CreateWolfpackBox(wolfpackName));
 			
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	this.feed = new WolfpackNewsFeedList(id,wolfpackName)
+			.appendTo(this.frame);
+	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	this.title.addFunction("Post", function() {
-			new NewPost(id,applicationFrame,wolfpackName).select();
-		});
-	
-	new WolfpackNewsFeedList(id,wolfpackName)
-		.appendTo(this.frame);
-	
+		new NewPost(id,applicationFrame,wolfpackName).select();
+	});
+
 	if(wolfpackName != null) {
 		var addMembers = null;
 
@@ -4464,32 +4502,6 @@ var Signup = function(id) {
 			self.title.showFunction("Add members...");
 			members.show(200);
 		};
-
-//		this.deleteWolfpack = function() {
-//			var diag = $("<div/>").attr({
-//				"id" : "dialog-confirm",
-//				"title" : "Delete wolfpack?"
-//			});
-//			
-//			var p = $("<p/>").appendTo(diag);
-//		
-//			p.append("The wolfpack will be permanently deleted and cannot be recovered. Are you sure?");
-//			
-//			diag.dialog({
-//				resizable: true,
-//				modal: true,
-//				buttons: {
-//					"Delete wolfpack": function() {
-//						// TODO: delete wolfpack
-//						$( this ).dialog( "close" );
-//						alert("Option unavailible");
-//					},
-//					Cancel: function() {
-//						$( this ).dialog( "close" );
-//					}
-//				}
-//			});
-//		};
 		
 		function getWolfpacksMembersData() {
 			return {
@@ -4522,8 +4534,7 @@ var Signup = function(id) {
 					id);
 					
 		
-		self.title.addFunction("Add members...", this.showAddMembers);		
-//		self.title.addFunction("Delete wolfpack", this.deleteWolfpack);
+		self.title.addFunction("Add members...", this.showAddMembers);
 		
 		eWolf.bind("select",function(event,eventId) {
 			self.removeAddMemebers();
