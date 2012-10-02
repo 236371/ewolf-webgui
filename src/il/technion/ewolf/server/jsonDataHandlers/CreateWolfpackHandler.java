@@ -28,8 +28,12 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 		List<EWolfResponse> wolfpacksResult;
 		public CreateWolfpackResponse(String result) {
 			super(result);
-			wolfpacksResult = null;
 		}
+
+		public CreateWolfpackResponse(String result, String errorMessage) {
+			super(result, errorMessage);
+		}
+
 		public CreateWolfpackResponse(String result, List<EWolfResponse> wolfpacksResult) {
 			super(result);
 			this.wolfpacksResult = wolfpacksResult;
@@ -51,13 +55,13 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 		}
 
 		if (jsonReqParams.wolfpackNames == null || jsonReqParams.wolfpackNames.isEmpty()) {
-			return new CreateWolfpackResponse(RES_BAD_REQUEST + ": must specify wolfpack name/s.");
+			return new CreateWolfpackResponse(RES_BAD_REQUEST, "Must specify wolfpack name/s.");
 		}
 
 		List<EWolfResponse> wolfpacksResult = new ArrayList<EWolfResponse>();
 		for (String wolfpackName : jsonReqParams.wolfpackNames) {
 			if (socialGroupsManager.findSocialGroup(wolfpackName) != null) {
-				wolfpacksResult.add(new EWolfResponse(RES_BAD_REQUEST + ": wolfpack already exists"));
+				wolfpacksResult.add(new EWolfResponse(RES_BAD_REQUEST, "Wolfpack already exists"));
 				continue;
 			}
 			try {
