@@ -81,8 +81,6 @@ public class JsonHandler implements HttpRequestHandler {
 					res.setHeader("Set-Cookie", "session=;Expires=" +
 							dateFormat.format(new Date()));
 				}
-				res.setStatusCode(HttpStatus.SC_SEE_OTHER);
-				res.setHeader("Location", "/");
 				return;
 			}
 			JsonDataHandler handler = handlers.get(key);
