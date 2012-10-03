@@ -1,38 +1,41 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
 
+import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import il.technion.ewolf.msg.ContentMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.ICache;
+import il.technion.ewolf.server.SimpleCache;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
-
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-import static il.technion.ewolf.server.EWolfResponse.*;
-
 public class InboxFetcher implements JsonDataHandler {
 	private static final String SENDER_NOT_FOUND_MESSAGE = "Not found";
 	private final SocialMail smail;
+	private SimpleCache<List<SocialMessage>> inboxCache;
 
-	private List<SocialMessage> messages;
-	private Date lastModified;
-	private static final long cachedTime = 60000; // 60000ms = 1min
+	private static final int cachedTimeSec = 60;
 
 	@Inject
 	public InboxFetcher(SocialMail smail) {
 		this.smail = smail;
-		messages = smail.readInbox();
-		lastModified = new Date();
+		this.inboxCache = new SimpleCache<List<SocialMessage>>(new ICache<List<SocialMessage>>() {
+			@Override
+			public List<SocialMessage> get() {
+				return InboxFetcher.this.smail.readInbox();
+			}
+
+		}, cachedTimeSec);
 	}
 
 	private static class JsonReqInboxParams {
@@ -93,11 +96,7 @@ public class InboxFetcher implements JsonDataHandler {
 		}
 		List<InboxMessage> lst = new ArrayList<InboxMessage>();			
 
-		Long curTime = new Date().getTime();
-		if (curTime - lastModified.getTime() > cachedTime) {
-			messages = smail.readInbox();
-			lastModified = new Date();
-		}
+		List<SocialMessage> messages = inboxCache.get();
 
 		for (SocialMessage m : messages) {
 			if (m.getClass() != ContentMessage.class) {
