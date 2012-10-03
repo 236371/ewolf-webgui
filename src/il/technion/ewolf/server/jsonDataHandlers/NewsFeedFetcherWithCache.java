@@ -9,6 +9,8 @@ import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
 import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.ICache;
+import il.technion.ewolf.server.SelfUpdatingCache;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
@@ -29,14 +31,14 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class NewsFeedFetcherWithCache implements JsonDataHandler, Runnable {
+public class NewsFeedFetcherWithCache implements JsonDataHandler {
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
 	private final UserIDFactory userIDFactory;
 	private final SocialNetwork snet;
 
-	private  static final long cachedTime = 60000; // 60000ms = 1min
-	private Map<Profile, List<Post>> newsFeed;
+	private  static final int cachedTimeSec = 60;
+	private SelfUpdatingCache<Map<Profile, List<Post>>> newsFeedCache;
 
 	@Inject
 	public NewsFeedFetcherWithCache(SocialFS socialFS, WolfPackLeader socialGroupsManager, UserIDFactory userIDFactory, SocialNetwork snet) {
@@ -45,7 +47,13 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler, Runnable {
 		this.userIDFactory = userIDFactory;
 		this.snet = snet;
 
-		new Thread(this, "FetchAllPostsThread").start();
+		this.newsFeedCache = new SelfUpdatingCache<Map<Profile,List<Post>>>(
+				new ICache<Map<Profile,List<Post>>>() {
+					@Override
+					public Map<Profile,List<Post>> get() {
+						return NewsFeedFetcherWithCache.this.fetchAllPosts();
+					}
+				}, cachedTimeSec);
 	}
 
 	private static final String POST_OWNER_NOT_FOUND_MESSAGE = "Not found";
@@ -235,7 +243,7 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler, Runnable {
 
 	private List<Post> fetchPostsForWolfpack(String socialGroupName) {
 		List<Post> posts = new ArrayList<Post>();
-		Map<Profile, List<Post>> allPosts = getNewsFeed();
+		Map<Profile, List<Post>> allPosts = newsFeedCache.get();
 
 		if (socialGroupName == null) {
 			for (Map.Entry<Profile, List<Post>> entry : allPosts.entrySet()) {
@@ -257,7 +265,7 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler, Runnable {
 	}
 
 	private List<Post> fetchPostsForUser(String strUid) throws ProfileNotFoundException {
-		Map<Profile, List<Post>> allPosts = getNewsFeed();
+		Map<Profile, List<Post>> allPosts = newsFeedCache.get();
 		Profile profile;
 		if (strUid==null) {
 			profile = socialFS.getCredentials().getProfile();
@@ -266,26 +274,5 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler, Runnable {
 			profile = socialFS.findProfile(uid);
 		}
 		return allPosts.get(profile);
-	}
-
-	@Override
-	public void run() {
-		try {
-			while (true) {
-				setNewsFeed(fetchAllPosts());
-				Thread.sleep(cachedTime);
-			}
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			//TODO what can I do here?
-		}
-	}
-
-	public synchronized void setNewsFeed(Map<Profile, List<Post>> allPosts) {
-		newsFeed = allPosts;
-	}
-
-	public synchronized Map<Profile, List<Post>> getNewsFeed() {
-		return newsFeed;
 	}
 }
