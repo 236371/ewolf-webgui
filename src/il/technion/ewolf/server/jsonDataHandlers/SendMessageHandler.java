@@ -1,5 +1,8 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import il.technion.ewolf.msg.ContentMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.server.EWolfResponse;
@@ -28,12 +31,13 @@ public class SendMessageHandler implements JsonDataHandler {
 	}
 
 	private static class JsonReqSendMessageParams {
-		String userID;
+		List<String> userIDs;
 		//message text
 		String message;
 	}
 
 	static class SendMessageResponse extends EWolfResponse {
+		List<EWolfResponse> userIDsResult;
 		public SendMessageResponse(String result) {
 			super(result);
 		}
@@ -43,6 +47,11 @@ public class SendMessageHandler implements JsonDataHandler {
 		}
 
 		public SendMessageResponse(){
+		}
+
+		public SendMessageResponse(String result, List<EWolfResponse> userIDsResult) {
+			super(result);
+			this.userIDsResult = userIDsResult;
 		}
 	}
 
@@ -60,25 +69,39 @@ public class SendMessageHandler implements JsonDataHandler {
 			return new SendMessageResponse(RES_BAD_REQUEST);
 		}
 
-		if (jsonReqParams.message == null || jsonReqParams.userID == null) {
+		if (jsonReqParams.message == null || jsonReqParams.userIDs == null
+				|| jsonReqParams.userIDs.isEmpty()) {
 			return new SendMessageResponse(RES_BAD_REQUEST,
-					"Must specify both user ID and message body.");
+					"Must specify both user IDs and message body.");
 		}
 
-		Profile profile;
-		try {
-			UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
-			profile = socialFS.findProfile(uid);
-		} catch (ProfileNotFoundException e) {
-			e.printStackTrace();
-			return new SendMessageResponse(RES_NOT_FOUND, "User with given ID wasn't found.");
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-			return new SendMessageResponse(RES_BAD_REQUEST, "Illegal user ID.");
+		List<EWolfResponse> userIDsResult = new ArrayList<EWolfResponse>();
+
+		for (String userID : jsonReqParams.userIDs) {
+			Profile profile;
+			try {
+				UserID uid = userIDFactory.getFromBase64(userID);
+				profile = socialFS.findProfile(uid);
+			} catch (ProfileNotFoundException e) {
+				e.printStackTrace();
+				userIDsResult.add(new EWolfResponse(RES_NOT_FOUND,
+						"User with given ID wasn't found."));
+				continue;
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+				userIDsResult.add(new EWolfResponse(RES_BAD_REQUEST, "Illegal user ID."));
+				continue;
+			}
+			ContentMessage msg = smail.createContentMessage().setMessage(jsonReqParams.message);
+			smail.send(msg, profile);
+			userIDsResult.add(new EWolfResponse());
 		}
 
-		ContentMessage msg = smail.createContentMessage().setMessage(jsonReqParams.message);
-		smail.send(msg, profile);
+		for (EWolfResponse res : userIDsResult) {
+			if (res.getResult() != RES_SUCCESS) {
+				return new SendMessageResponse(RES_GENERIC_ERROR, userIDsResult);
+			}
+		}
 		return new SendMessageResponse();
 	}
 
