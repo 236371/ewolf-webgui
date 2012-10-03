@@ -3926,7 +3926,7 @@ var Login = function(id,applicationFrame) {
 
 var NewMail = function(callerID,applicationFrame,options,		
 		createRequestObj,handleResponseCategory,
-		allowAttachment,sendTo,sendToQuery) {
+		allowAttachment,sendTo,sendToQuery, sendToMultipleInOneMessage) {
 	/****************************************************************************
 	 * Members
 	  ***************************************************************************/
@@ -4100,19 +4100,18 @@ var NewMail = function(callerID,applicationFrame,options,
 				text: msg
 		};
 		
-		// TODO: should remove true to apply new Interface
-		if(true || allowAttachment && files) {
-			sendToQuery.tagList.foreachTag({markedOK:false},function(destId) {
-				self.uploadFilesThenSendTo(destId, mailObject);
-			});
-		} else {
+		if(sendToMultipleInOneMessage) {
 			var destVector = [];
 			
 			sendToQuery.tagList.foreachTag({markedOK:false},function(destId) {
 				destVector.push(destId);
 			});
 			
-			self.sendTo(destVector, mailObject);
+			self.sendTo(destVector, mailObject);			
+		} else {
+			sendToQuery.tagList.foreachTag({markedOK:false},function(destId) {
+				self.uploadFilesThenSendTo(destId, mailObject);
+			});
 		}			
 	};
 	
@@ -4203,7 +4202,7 @@ var NewMessage = function(id,applicationFrame,sendToID) {
 	function createNewMessageRequestObj(to,msg) {
 		return {
 			sendMessage: {
-				userID: to,
+				userIDs: to,
 				message: msg
 			}
 		  };
@@ -4212,7 +4211,7 @@ var NewMessage = function(id,applicationFrame,sendToID) {
 	NewMail.call(this,id,applicationFrame,{
 			TITLE : "New Message"
 		},createNewMessageRequestObj,"sendMessage",false,
-		sendToID,new FriendsQueryTagList(300));
+		sendToID,new FriendsQueryTagList(300), true);
 	
 	return this;
 };
@@ -4232,7 +4231,7 @@ var NewPost = function(id,applicationFrame,wolfpack) {
 			TO : "Post to",
 			CONTENT: "Post"
 		},createNewPostRequestObj,"post",true,
-			wolfpack,new WolfpackQueryTagList(300));
+			wolfpack,new WolfpackQueryTagList(300), false);
 	
 	return this;
 };
