@@ -152,8 +152,11 @@ public class EwolfServer {
 		jsonHandler
 			.addHandler("inbox", ewolfInjector.getInstance(InboxFetcher.class))
 			.addHandler("wolfpacks", ewolfInjector.getInstance(WolfpacksFetcher.class))
+			.addHandler("wolfpacksAll", ewolfInjector.getInstance(WolfpacksFetcher.class))
 			.addHandler("profile", ewolfInjector.getInstance(ProfileFetcher.class))
 			.addHandler("wolfpackMembers", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
+			.addHandler("wolfpackMembersAll", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
+			.addHandler("wolpackMembersNotAllowed", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
 //			.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcher.class))
 			.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcherWithCache.class))
 			.addHandler("createWolfpack", ewolfInjector.getInstance(CreateWolfpackHandler.class))
