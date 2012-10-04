@@ -200,7 +200,8 @@ public class EwolfServer {
 
 				new EwolfAccountCreatorModule(),
 
-				new EwolfModule()
+				new EwolfModule(),
+				new ServerModule()
 		);
 	}
 }
