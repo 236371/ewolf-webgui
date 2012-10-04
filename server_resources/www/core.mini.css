@@ -430,10 +430,10 @@ h1, h2
 #btnShowMenu, #btnHideMenu {
 	border:none;
 	min-height:0!important;
-	background-color:rgba(0,0,0,0.9);
+/* 	background-color:rgba(0,0,0,0.9); */
 	color:white;
 	
-	margin-right:2px;
+	margin-right:1px;
 	margin-top:2px;
 	
 	padding-right:2px;
@@ -441,7 +441,14 @@ h1, h2
 	
 	position:relative;
 	width:20px;
-	height:20px;	
+	height:20px;
+	
+	align:middle;
+}
+
+#btnUnPin, #btnPin {
+	margin-right:1px;
+	align:middle;
 }
 
 .refreshButton {
