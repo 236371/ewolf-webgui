@@ -21,9 +21,46 @@ EWOLF_CONSTANTS = {
 	
 	PROFILE_REQUEST_NAME : "__main_profile_request__",
 	WOLFPACKS_REQUEST_NAME : "__main_wolfpacks_request",
-	MEMBERS_REQUEST_NAME : "__main_members_request__"
+	MEMBERS_REQUEST_NAME : "__main_members_request__",
+	
+	INBOX_MAX_OLDER_MESSAGES_FETCH : 2,
+	NEWSFEED_MAX_OLDER_MESSAGES_FETCH : 2
 };
 
+WOLFPACK_CONSTANTS = {
+	WOLFPACK_APP_PREFIX : "wolfpack:"
+};
+
+CREATE_NEW_WOLFPACK_LINK_CONSTANTS = {
+	QUERY_ID : "query"	
+};
+
+SEARCHBAR_CONSTANTS = {
+	SEARCH_PROFILE_PREFIX : "profile:",
+	SEARCH_MENU_ITEM_ID : "__seach_menu_id__"
+};
+
+SIGNUP_CONSTANTS = {
+	SIGNUP_FULL_NAME_ID : "signup full name",
+	SIGNUP_USERNAME_ID : "signup username",
+	SIGNUP_PASSWORD_ID : "signup password",
+	SIGNUP_VERIFY_PASSWORD_ID : "signup verify password"
+};
+
+LOGIN_CONSTANTS = {
+	LOGIN_USERNAME_ID : "login username",
+	LOGIN_PASSWORD_ID : "login password"
+};
+
+NEWMAIL_CONSTANTS = {
+	NEWMAIL_APP_ID_PREFIX : "mailto:",
+	NEW_MAIL_DAFAULTS : {
+			TITLE : "New Mail",
+			TO : "To",
+			CONTENT : "Content",
+			ATTACHMENT : "Attachment"
+		}
+};
 var eWolf = new function() {
 	var self = this;
 	$.extend(this,EWOLF_CONSTANTS);
@@ -251,7 +288,7 @@ var Members = function() {
 	}
 	
 	this.addKnownUsers = function(userID,userName) {
-		if(knownUsersMapByID[userID] == null) {
+		if(!knownUsersMapByID[userID]) {
 			knownUsersMapByID[userID] = userName;
 			var fullDesc = userName+" ("+userID+")";
 			self.knownUsersFullDescriptionArray.push(fullDesc);
@@ -291,11 +328,7 @@ var Members = function() {
 	};
 	
 	return this;
-};WOLFPACK_CONSTANTS = {
-	WOLFPACK_APP_PREFIX : "wolfpack:"
-};
-
-var Wolfpacks = function (menuList,applicationFrame) {
+};var Wolfpacks = function (menuList,applicationFrame) {
 	var self = this;
 	$.extend(this,WOLFPACK_CONSTANTS);
 	
@@ -395,7 +428,59 @@ var Wolfpacks = function (menuList,applicationFrame) {
 
 
 
-var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
+var RESPONSE_RESULT = {
+		SUCCESS :				"SUCCESS",
+			//	if everything went well.
+		BAD_REQUEST :			"BAD_REQUEST",
+			//	Missing an obligatory parameter.
+			//	Wrong type or format parameter.
+		INTERNAL_SERVER_ERROR :	"INTERNAL_SERVER_ERROR", 
+			//for any internal server error.
+		ITEM_NOT_FOUND :		"ITEM_NOT_FOUND",
+			//	if the requested item did not found (for any reason).
+		GENERAL_ERROR :			"GENERAL_ERROR",
+			// for errors from unknown reason (no one of above)
+		UNAVAILBLE_REQUEST :	"UNAVAILBLE_REQUEST",
+			// if the request category is unavailable or not exists.
+};
+
+var GenericResponse = function (obj) {
+	var self = this;	
+	$.extend(this,obj);
+	
+	var UNDEFINED_RESULT = "undifined result";
+	
+	this.isSuccess = function() {
+		if(self.result) {
+			return self.result == RESPONSE_RESULT.SUCCESS;
+		} else {
+			return false;
+		}		
+	};
+	
+	this.isGeneralError = function() {
+		if(self.result) {
+			return self.result == RESPONSE_RESULT.GENERAL_ERROR;
+		} else {
+			return false;
+		}		
+	};
+	
+	this.toString = function() {
+		if((!self.result) && (!self.errorMessage)) {
+			return UNDEFINED_RESULT;
+		} else if(!self.result) {
+			return self.errorMessage;
+		} else if(!self.errorMessage) {
+			return self.result;
+		} else {
+			return self.result + " : " + self.errorMessage;
+		}
+	};
+	
+	
+	return this;
+};var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
 	var self = this;
 	
 	var requestsMap = {},
@@ -654,20 +739,9 @@ var PostRequestHandler = function(requestAddress,refreshIntervalSec) {
 	return this;
 };*/
 
-var RESPONSE_RESULT = {
-		SUCCESS :				"SUCCESS",
-			//	if everything went well.
-		BAD_REQUEST :			"BAD_REQUEST",
-			//	Missing an obligatory parameter.
-			//	Wrong type or format parameter.
-		INTERNAL_SERVER_ERROR :	"INTERNAL_SERVER_ERROR", 
-			//for any internal server error.
-		ITEM_NOT_FOUND :		"ITEM_NOT_FOUND",
-			//	if the requested item did not found (for any reason).
-		GENERAL_ERROR :			"GENERAL_ERROR",
-			// for errors from unknown reason (no one of above)
-		UNAVAILBLE_REQUEST :	"UNAVAILBLE_REQUEST",
-			// if the request category is unavailable or not exists.
+RESPONSE_ARRAY_CONDITION_GENRAL_ERROR = 
+	function(response, textStatus, postData) {
+	return response.isGeneralError();
 };
 
 var ResponseHandler = function(category, requiredFields, handler) {
@@ -676,30 +750,58 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	var errorHandler = null;
 	var completeHandler = null;
 	var badResponseHandler = null;
+	var responseArray = [];
 	
 	function theHandler(data, textStatus, postData) {
-		if (data[category] != null) {
-			if (data[category].result == RESPONSE_RESULT.SUCCESS) {
-				var valid = true;
+		if (data[category]) {
+			var response = new GenericResponse(data[category]);
+			var valid = true;
+			
+			$.each(responseArray, function(i, resObj) {
+				if(resObj.condition && resObj.key &&
+						resObj.condition(response, textStatus, postData[category])) {
+					if(response[resObj.key]) {
+						$.each(response[resObj.key], function(pos, item) {
+							var subResponse = new GenericResponse(item);
+							
+							if(subResponse.isSuccess()) {
+								if(resObj.success) {
+									resObj.success(pos, subResponse, textStatus, postData[category]);
+								}								
+							} else {
+								if(resObj.error) {
+									resObj.error(pos, subResponse, textStatus, postData[category]);
+								}								
+							}
+						});
+					} else {
+						console.log("No " + resObj.key + " in response");
+					}
+				}
+			});
+			
+			if (response.isSuccess()) {				
 				$.each(requiredFields, function(i, field) {
-					if (field == null) {
+					if (field && !response[field]) {
 						console.log("No field: \"" + field + "\" in response");
 						valid = false;
-						return false;
 					}
 				});
-
-				if (valid && handler) {
-					handler(data[category], textStatus, postData[category]);
-				}
 			} else {
-				console.log(data[category].result + " : " +
-						data[category].errorMessage);
+				valid = false;
+			}
+			
+			if (valid) {
+				if(handler) {
+					handler(response, textStatus, postData[category]);
+				}				
+			} else {
+				console.log(response.toString());
+				
 				if(errorHandler) {
-					errorHandler(data[category], textStatus, postData[category]);
+					errorHandler(response, textStatus, postData[category]);
 				}
 			}
-
 		} else {
 			var errorMsg = "No category: \"" + category + "\" in response";
 			console.log(errorMsg);
@@ -712,8 +814,18 @@ var ResponseHandler = function(category, requiredFields, handler) {
 		if(completeHandler) {
 			completeHandler(textStatus, postData[category]);
 		}		
-	};
+	};	
 	
+	this.addResponseArray = function(key, conditionFunc, success, error) {
+		responseArray.push({
+			key : key,
+			condition : conditionFunc,
+			success : success,
+			error : error
+		});
+		
+		return thisObj;
+	};
 
 	this.getHandler = function() {
 		return theHandler;
@@ -1026,8 +1138,8 @@ var PopUp = function(frame, activator) {
 	this.frame.show(200);
 	
 	return this;
-};var AddMembersToWolfpack = function(fatherID,wolfpack, existingMemebers,
-		onFinish) {
+};var AddMembersToWolfpack = function(fatherID,wolfpack, 
+		existingMemebers,	onFinish) {
 	var self = this;
 	this.frame = $("<span/>");
 	
@@ -1093,39 +1205,33 @@ var PopUp = function(frame, activator) {
 		self.cancel();
 	};
 	
-	this.error = function(data, textStatus, postData) {
-		var errorMsg = null;
+	this.wolfpackError = function(pos, response, textStatus, postData) {
+		errorMessage.append(response.toString()+"<br>");
+	};
+	
+	this.userSuccess = function(pos, response, textStatus, postData) {
+		var itemID = postData.userIDs[pos];
+		var item = addMembersQuery.tagList.match({id:itemID});
 		
-		if(data.wolfpacksResult == null) {
-			console.log("No wolfpacksResult in response");
-		} else if(data.wolfpacksResult[0] != "success") {
-			errorMsg = "Error: " + data.wolfpacksResult[0];
-			errorMessage.append(errorMsg+"<br>");
-		}
+		madeChanges = true;
+		item.unremovable().markOK();			
+	};
+	
+	this.userError = function(pos, response, textStatus, postData) {
+		var itemID = postData.userIDs[pos];
+		var item = addMembersQuery.tagList.match({id:itemID});
 		
-		if(data.usersResult == null) {
-			console.log("No usersResult in response");
-		} else {
-			$.each(data.usersResult, function(i, result) {
-				var itemID = postData.userIDs[i];
-				var item = addMembersQuery.tagList.match({id:itemID});
-				
-				if(result == "success") {
-					madeChanges = true;
-					item.unremovable().markOK();
-				} else {
-					var errorMsg = "Failed to add: " + itemID +
-							" with error: " + result;
-					errorMessage.append(errorMsg+"<br>");
-					
-					item.markError(errorMsg);
-				}					
-			});
-		}
-		
-		if(errorMsg == null) {
+		var errorMsg = "Failed to add: " + itemID +
+					" with error: " + response.toString();
+		errorMessage.append(errorMsg+"<br>");
+			
+		item.markError(errorMsg);
+	};
+	
+	this.error = function(response, textStatus, postData) {		
+		if(!response.isSuccess() && !response.isGeneralError()) {
 			errorMessage.append("Unknown error...<br>");
-		}			
+		}
 	};
 	
 	this.complete = function (textStatus, postData) {
@@ -1144,7 +1250,13 @@ var PopUp = function(frame, activator) {
 	responseHandler
 		.success(this.success)	
 		.error(this.error)	
-		.complete(this.complete);
+		.complete(this.complete)
+		.addResponseArray("wolfpacksResult",
+				RESPONSE_ARRAY_CONDITION_GENRAL_ERROR,
+				null,this.wolfpackError)
+		.addResponseArray("usersResult",
+				RESPONSE_ARRAY_CONDITION_GENRAL_ERROR,
+				this.userSuccess, this.userError);
 	
 	return this;
 };var AddToWolfpack = function(id, userID, frame, activator, packsAlreadyIn) {
@@ -1409,11 +1521,7 @@ var PopUp = function(frame, activator) {
 	}
 	
 	return box;
-}CREATE_NEW_WOLFPACK_LINK_CONSTANTS = {
-	QUERY_ID : "query"	
-};
-
-var CreateNewWolfpackLink = function() {
+}var CreateNewWolfpackLink = function() {
 	var self = this;
 	$.extend(this,CREATE_NEW_WOLFPACK_LINK_CONSTANTS);
 	
@@ -1494,7 +1602,7 @@ function CreateTimestampBox(timestamp) {
 	function fillInformation() {
 		nameBox.attr({
 			"title": id
-		}).text(name);
+		}).text(name ? name : id);
 		
 		if(idBox) {
 			idBox.html(id);
@@ -1508,10 +1616,11 @@ function CreateTimestampBox(timestamp) {
 			id = fullDescID;
 		}
 		
-		name = eWolf.members.getUserName(id,function(receivedName) {
-			name = receivedName;
-			fillInformation();	
-		});
+		name = eWolf.members.getUserName(id);
+
+		if(name) {
+			fillInformation();
+		}
 	}
 	
 	fillInformation();	
@@ -2026,16 +2135,17 @@ var QueryTagList = function(minWidth,queryPlaceHolder,availableQueries,
 var FriendsQueryTagList = function (minWidth) {
 	function sendToFuncReplace(query) {
 		var id = eWolf.members.getUserFromFullDescription(query);
+		var name = null;
+		
 		if(id) {
-			query = eWolf.members.getUserName(id);
+			name = eWolf.members.getUserName(id);
 		} else {
 			id = query;
-			query = null;
 		}
 		
 		return {
 			term: id,
-			display: CreateUserBox(id,query)
+			display: CreateUserBox(id,name)
 		};
 	}
 	
@@ -2058,12 +2168,7 @@ var WolfpackQueryTagList = function (minWidth) {
 	
 	return new QueryTagList(minWidth,"Type wolfpack name...",
 			eWolf.wolfpacks.wolfpacksArray,false,sendToFuncReplace);
-};SEARCHBAR_CONSTANTS = {
-	SEARCH_PROFILE_PREFIX : "profile:",
-	SEARCH_MENU_ITEM_ID : "__seach_menu_id__"
-};
-
-var SearchBar = function(menu,applicationFrame,container) {
+};var SearchBar = function(menu,applicationFrame,container) {
 	var self = this;
 	$.extend(this,SEARCHBAR_CONSTANTS);
 	
@@ -3595,7 +3700,8 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	};
 	
 	return this;
-};var GenericMailList = function(mailType,appID,serverSettings,
+};var GenericMailList = function(mailType,appID,
+		extraDataToSend, maxOlderMessagesFetch,
 		listClass,msgBoxClass,preMessageTitle,allowShrink) {
 	var self = this;
 	
@@ -3614,13 +3720,17 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	
 	this.updateFromServer = function (getOlder) {
 		var data = {};
-		$.extend(data,serverSettings);
+		$.extend(data,extraDataToSend);
 		
 		if(getOlder && newestDate != null && oldestDate != null) {
 			data.olderThan = oldestDate-1;
 		} else if(newestDate != null) {
 			data.newerThan = newestDate+1;
-		}		
+		}
+		
+		if(!data.newerThan) {
+			data.maxMessages = maxOlderMessagesFetch;			
+		}
 		
 		var postData = {};
 		postData[mailType] = data;
@@ -3664,10 +3774,10 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	eWolf.serverRequest.registerHandler(newsFeedRequestName,responseHandler.getHandler());
 	eWolf.serverRequest.bindRequest(newsFeedRequestName,appID);
 	
-	var showMore = new ShowMore(this.frame,function() {
+	var showMore = new ShowMore(function() {
 		eWolf.serverRequest.request(appID,self.updateFromServer (true),
 				responseHandler.getHandler());
-	}).draw();
+	}).appendTo(this.frame);
 	
 	function handleNewData(data, textStatus, postData) {
 		$.each(data.mailList, function(j, mailItem) {
@@ -3675,9 +3785,12 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 					mailItem.timestamp, mailItem.mail);
 		});
 		
-		if (postData.newerThan == null &&
+		if ( (!postData.newerThan) &&
 				data.mailList.length < postData.maxMessages) {
-			showMore.remove();
+			showMore.hide();
+		} else if( (!postData.newerThan) && (!postData.olderThan)
+				&& data.mailList.length >= postData.maxMessages) {
+			showMore.show();
 		}
 	}
 	
@@ -3695,10 +3808,9 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 };
 
 var NewsFeedList = function (appID,serverSettings) {
-	$.extend(serverSettings,{maxMessages:2});
-
 	var pow = "<img src='wolf-paw.svg' height='18px' style='padding-right:5px;'></img>";
 	GenericMailList.call(this,"newsFeed",appID,serverSettings,
+			eWolf.NEWSFEED_MAX_OLDER_MESSAGES_FETCH,
 			"postListItem","postBox",pow,false);
 	
 	return this;
@@ -3732,35 +3844,61 @@ var ProfileNewsFeedList = function (appID,profileID) {
 	return this;
 };
 
-var InboxList = function (appID,serverSettings) {	
-	$.extend(serverSettings,{maxMessages:2});
+var InboxList = function (appID) {	
 	
-	GenericMailList.call(this,"inbox",appID,serverSettings,
+	GenericMailList.call(this,"inbox",appID,{},
+			eWolf.INBOX_MAX_OLDER_MESSAGES_FETCH,
 			"messageListItem","messageBox", ">> ",true);
 	
 	return this;
-};var ShowMore = function (frame,onClick) {
-	var thisObj = this;
+};var ShowMore = function (onClick) {
+	var self = this;
 	var element = null;
+	
+	this.draw = function () {
+		element = $("<div/>").addClass("showMoreClass")
+			.append("Show More...")
+			.click(onClick);
+		
+		return self;
+	};
 	
 	this.remove = function() {
 		if(element != null) {
 			element.remove();
+			element = null;
 		}
 		
-		return thisObj;
+		return self;
 	};
 	
-	this.draw = function() {
-		thisObj.remove();
+	this.show = function () {
+		if(element) {
+			element.show(200);
+		}
 		
-		element = $("<div/>").addClass("showMoreClass")
-			.append("Show More...")
-			.click(onClick)
-			.appendTo(frame);
-		
-		return thisObj;
+		return self;
 	};
+	
+	this.hide = function () {
+		if(element) {
+			element.hide(200);
+		}
+		
+		return self;
+	};
+	
+	this.appendTo = function (something) {
+		if(element) {
+			element.appendTo(something);
+		}
+		
+		return self;
+	};
+	
+	self.draw();
+	
+	return this;
 };var Inbox = function (id,applicationFrame) {
 	/****************************************************************************
 	 * Base class
@@ -3770,7 +3908,7 @@ var InboxList = function (appID,serverSettings) {
 	/****************************************************************************
 	 * User Interface
 	  ***************************************************************************/
-	this.inbox = new InboxList(id,{}).appendTo(this.frame);
+	this.inbox = new InboxList(id).appendTo(this.frame);
 	
 	/****************************************************************************
 	 * Functionality
@@ -3781,11 +3919,6 @@ var InboxList = function (appID,serverSettings) {
 	
 	return this;
 };
-LOGIN_CONSTANTS = {
-	LOGIN_USERNAME_ID : "login username",
-	LOGIN_PASSWORD_ID : "login password"
-};
-
 var Login = function(id,applicationFrame) {
 	/****************************************************************************
 	 * Base class
@@ -3914,17 +4047,7 @@ var Login = function(id,applicationFrame) {
 	eWolf.serverRequest.bindAppToAnotherApp(id, eWolf.FIRST_EWOLF_LOGIN_REQUEST_ID);
 	
 	return this;
-};NEWMAIL_CONSTANTS = {
-	NEWMAIL_APP_ID_PREFIX : "mailto:",
-	NEW_MAIL_DAFAULTS : {
-			TITLE : "New Mail",
-			TO : "To",
-			CONTENT : "Content",
-			ATTACHMENT : "Attachment"
-		}
-};
-
-var NewMail = function(callerID,applicationFrame,options,		
+};var NewMail = function(callerID,applicationFrame,options,		
 		createRequestObj,handleResponseCategory,
 		allowAttachment,sendTo,sendToQuery, sendToMultipleInOneMessage) {
 	/****************************************************************************
@@ -4078,12 +4201,17 @@ var NewMail = function(callerID,applicationFrame,options,
 		if(sendToQuery.isMissingField(true, " * Please select a destination(s).")) {
 			return false;
 		}
-
+		
 		if(!resend) {
 			if(sendToQuery.tagList.match({markedOK:true}).count() > 0) {
 				showDeleteSuccessfulDialog(event);
 				return false;
 			}
+		}
+		
+		if(sendToQuery.tagList.match({markedOK:false}).count() <= 0) {
+			self.updateSend();
+			return false;
 		}
 			
 		sendToQuery.tagList.unmarkTags({markedError:true});		
@@ -4145,30 +4273,31 @@ var NewMail = function(callerID,applicationFrame,options,
 			} else {
 				sendToQuery.tagList.markTagOK(destId);
 			}
-			
-			self.updateSend();
-		}).error(function(data, textStatus, postData) {
-			if($.isArray(destId)) {
-				if(data.userIDsResult) {
-					$.each(data.userIDsResult, function(i, result) {
-						var itemID = postData.userIDs[i];
-						var item = sendToQuery.tagList.match({id:itemID});
-						
-						if(result == "success") {							
-							item.markOK();
-						} else {
-							self.appendFailErrorMessage(itemID, result);
-						}		
-					});
-				} else {
-					self.appendFailErrorMessage("everyone", data.result);
-				}
-			} else {
-				self.appendFailErrorMessage(destId, data.result);
+		}).error(function(response, textStatus, postData) {
+			if( ! $.isArray(destId)) {
+				self.appendFailErrorMessage(destId, response.toString());
 			}
-			
-			self.updateSend();
-		});
+		}).addResponseArray("userIDsResult",
+				// Condition
+				function(response, textStatus, postData) {
+					return $.isArray(destId) && response.isGeneralError();
+				},
+				// Success
+				function(pos, response, textStatus, postData) {
+					var itemID = postData.userIDs[pos];
+					var item = sendToQuery.tagList.match({id:itemID});
+					
+					item.markOK();
+				},
+				// Error
+				function(pos, response, textStatus, postData) {
+					var itemID = postData.userIDs[pos];
+					
+					self.appendFailErrorMessage(itemID, 
+							response.toString());		
+				}).complete(function() {
+					self.updateSend();
+				});
 		
 		eWolf.serverRequest.request(id,
 				createRequestObj(destId,data),
@@ -4369,13 +4498,6 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	
 	return this;
 };
-SIGNUP_CONSTANTS = {
-	SIGNUP_FULL_NAME_ID : "signup full name",
-	SIGNUP_USERNAME_ID : "signup username",
-	SIGNUP_PASSWORD_ID : "signup password",
-	SIGNUP_VERIFY_PASSWORD_ID : "signup verify password"
-};
-
 var Signup = function(id) {
 	/****************************************************************************
 	 * Base class
