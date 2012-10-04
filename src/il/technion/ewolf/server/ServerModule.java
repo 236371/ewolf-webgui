@@ -29,6 +29,7 @@ public class ServerModule extends AbstractModule {
 		Properties defaultProps = new Properties();
 
 		defaultProps.setProperty("server.cache.newsfeed.intervalSec", "30");
+		defaultProps.setProperty("server.cache.wolfpacks.intervalSec", "30");
 
 		return defaultProps;
 	}
@@ -45,6 +46,21 @@ public class ServerModule extends AbstractModule {
 	@Override
 	protected void configure() {
 		Names.bindProperties(binder(), properties);
+	}
+
+	@Provides
+	@Singleton
+	ICache<List<WolfPack>> provideWolfpacksCache(
+			@Named("server.cache.wolfpacks.intervalSec") int cachedTimeSec,
+			final WolfPackLeader socialGroupsManager) {
+		return new SimpleCache<List<WolfPack>>(
+				new ICache<List<WolfPack>>() {
+
+					@Override
+					public List<WolfPack> get() {
+						return socialGroupsManager.getAllSocialGroups();
+					}
+				}, cachedTimeSec);
 	}
 
 	@Provides

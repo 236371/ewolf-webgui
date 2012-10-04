@@ -31,7 +31,7 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 	private final UserIDFactory userIDFactory;
 
-	private ICache<Map<Profile, List<Post>>> newsFeedCache;
+	private final ICache<Map<Profile, List<Post>>> newsFeedCache;
 
 	@Inject
 	public NewsFeedFetcherWithCache(SocialFS socialFS, WolfPackLeader socialGroupsManager,
@@ -40,7 +40,7 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 		this.socialGroupsManager = socialGroupsManager;
 		this.userIDFactory = userIDFactory;
 
-		this.newsFeedCache = cache;
+		newsFeedCache = cache;
 	}
 
 	private static final String POST_OWNER_NOT_FOUND_MESSAGE = "Not found";
