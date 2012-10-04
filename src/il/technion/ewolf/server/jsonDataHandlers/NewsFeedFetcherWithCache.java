@@ -2,25 +2,20 @@ package il.technion.ewolf.server.jsonDataHandlers;
 
 import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
-import il.technion.ewolf.ewolf.SocialNetwork;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
-import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.ICache;
-import il.technion.ewolf.server.SelfUpdatingCache;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,25 +30,17 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
 	private final UserIDFactory userIDFactory;
-	private final SocialNetwork snet;
 
-	private  static final int cachedTimeSec = 60;
-	private SelfUpdatingCache<Map<Profile, List<Post>>> newsFeedCache;
+	private ICache<Map<Profile, List<Post>>> newsFeedCache;
 
 	@Inject
-	public NewsFeedFetcherWithCache(SocialFS socialFS, WolfPackLeader socialGroupsManager, UserIDFactory userIDFactory, SocialNetwork snet) {
+	public NewsFeedFetcherWithCache(SocialFS socialFS, WolfPackLeader socialGroupsManager,
+			UserIDFactory userIDFactory, ICache<Map<Profile,List<Post>>> cache) {
 		this.socialFS = socialFS;
 		this.socialGroupsManager = socialGroupsManager;
 		this.userIDFactory = userIDFactory;
-		this.snet = snet;
 
-		this.newsFeedCache = new SelfUpdatingCache<Map<Profile,List<Post>>>(
-				new ICache<Map<Profile,List<Post>>>() {
-					@Override
-					public Map<Profile,List<Post>> get() {
-						return NewsFeedFetcherWithCache.this.fetchAllPosts();
-					}
-				}, cachedTimeSec);
+		this.newsFeedCache = cache;
 	}
 
 	private static final String POST_OWNER_NOT_FOUND_MESSAGE = "Not found";
@@ -146,12 +133,12 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_BAD_REQUEST);
 		}
-		
+
 		if (jsonReqParams.newsOf == null) {
 			return new NewsFeedResponse(RES_BAD_REQUEST,
 					"Must specify whose news feed to fetch.");
 		}
-		
+
 		List<Post> posts;
 		try {
 			if (jsonReqParams.newsOf.equals("user")) {
@@ -174,40 +161,6 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 				(new NewsFeedResponse(filterPosts(posts, jsonReqParams.maxMessages,
 						jsonReqParams.newerThan, jsonReqParams.olderThan)))
 				: (new NewsFeedResponse(new HashSet<PostData>()));
-	}
-
-	private Map<Profile, List<Post>> fetchAllPosts() {
-		Map<Profile, List<Post>> allPosts = new HashMap<Profile, List<Post>>();
-
-		List<WolfPack> wolfpacks = socialGroupsManager.getAllSocialGroups();
-		Set<Profile> profiles = new HashSet<Profile>();
-
-		for (WolfPack w : wolfpacks) {
-			profiles.addAll(w.getMembers());
-		}
-		//add self profile
-		profiles.add(socialFS.getCredentials().getProfile());
-
-		for (Profile profile: profiles) {
-			try {
-				List<Post> posts = snet.getWall(profile).getAllPosts();
-				allPosts.put(profile, posts);
-			} catch (WallNotFound e) {
-				Profile user = socialFS.getCredentials().getProfile();
-				System.err.println("User " + user.getName() + ": " + user.getUserId() +
-						" isn't allowed to view posts of " +
-						profile.getName() + ": " + profile.getUserId() + ".");
-				//e.printStackTrace();
-			} catch (FileNotFoundException e) {
-				Profile user = socialFS.getCredentials().getProfile();
-				System.err.println("User " + user.getName() + ": " + user.getUserId() +
-						" isn't allowed to view posts of " +
-						profile.getName() + ": " + profile.getUserId() + ".");
-				//e.printStackTrace();
-			}
-		}
-
-		return allPosts;
 	}
 	
 	private Set<PostData> filterPosts(List<Post> posts, Integer filterNumOfPosts,
@@ -257,6 +210,7 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 			List<Profile> profiles = wp.getMembers();
 
 			for (Profile p : profiles) {
+				//TODO prevent null
 				posts.addAll(allPosts.get(p));
 			}
 		}
