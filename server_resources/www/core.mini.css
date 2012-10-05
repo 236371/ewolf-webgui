@@ -460,12 +460,11 @@ h1, h2
 	cursor:pointer;
 }
 
-.refreshButtonArea {
+.menuItemExtraInfoArea {
 	/*display:none;*/
 	width:20px !important;
 	height:20px !important;
 	float:right;
-	padding-top:5px;
 	padding-right:5px;
 }
 
@@ -508,7 +507,32 @@ h1, h2
 	text-align:right;
 	padding-top:6px;
 	width:1%;
-}.postBox {
+}.notification {
+	display: inline-block;
+	width: 18px;
+	height: 18px;
+	background: #c10015;
+	color: white;
+	border-radius: 9px;
+	font-weight: bold;
+	font-size: 11px;
+	vertical-align: middle;
+	text-align: center;
+	font-family: "trebuchet MS", veranda, arial;
+	line-height: 18px;
+}
+
+.onItemNotification {
+	display:block;
+	position:absolute;
+}.pendingNotificationImage {
+	margin-right:15px;
+	margin-top:3px;
+	opacity:0.2;
+	align:top;
+	cursor:pointer;
+}
+.postBox {
 	font-family:Georgia, Times, serif;
 	padding-left:15px;
 	padding-right:10px;

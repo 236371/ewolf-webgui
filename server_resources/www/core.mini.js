@@ -22,9 +22,29 @@ EWOLF_CONSTANTS = {
 	PROFILE_REQUEST_NAME : "__main_profile_request__",
 	WOLFPACKS_REQUEST_NAME : "__main_wolfpacks_request",
 	MEMBERS_REQUEST_NAME : "__main_members_request__",
+	APPROVED_MEMBERS_REQUEST_NAME : "__pending_requests_approved_request__",
+	
+	APPROVED_WOLFPACK_NAME : "wall-readers",
+	APPROVED_ME_WOLFPACK_NAME : "followers",
 	
 	INBOX_MAX_OLDER_MESSAGES_FETCH : 2,
-	NEWSFEED_MAX_OLDER_MESSAGES_FETCH : 2
+	NEWSFEED_MAX_OLDER_MESSAGES_FETCH : 2,
+	
+	REQUEST_CATEGORY_INBOX : "inbox",
+	REQUEST_CATEGORY_WOLFPACKS : "wolfpacks",
+	REQUEST_CATEGORY_WOLFPACKS_ALIAS1 : "wolfpacksAll",
+	REQUEST_CATEGORY_PROFILE : "profile",
+	REQUEST_CATEGORY_WOLFPACK_MEMBERS : "wolfpackMembers",
+	REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS1 : "wolfpackMembersAll",
+	REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS2 : "wolfpackMembersNotAllowed",
+	REQUEST_CATEGORY_NEWS_FEED : "newsFeed",
+	REQUEST_CATEGORY_CREATE_WOLFPACK : "createWolfpack",
+	REQUEST_CATEGORY_ADD_WOLFPACK_MEMBER : "addWolfpackMember",
+	REQUEST_CATEGORY_POST : "post",
+	REQUEST_CATEGORY_SEND_MESSAGE : "sendMessage",
+	REQUEST_CATEGORY_CREATE_ACCOUNT : "createAccount",
+	REQUEST_CATEGORY_LOGIN : "login",
+	REQUEST_CATEGORY_LOGOUT : "logout",
 };
 
 WOLFPACK_CONSTANTS = {
@@ -87,7 +107,7 @@ var eWolf = new function() {
 		new Loading(self.loadingFrame);		
 		
 		self.sideMenu = new SideMenu(self.menuFrame,
-				self.mainFrame,self.topBarFrame);
+				self.mainFrame);
 		
 		self.welcome = self.sideMenu.createNewMenuList(
 				self.WELCOME_MENU_ID,"Welcome");
@@ -105,7 +125,7 @@ var eWolf = new function() {
 		
 		self.serverRequest.registerRequest(self.WOLFPACKS_REQUEST_NAME,
 				function() {
-					return { wolfpacks : {}	};
+					return { wolfpacksAll : {}	};
 				});
 		
 		self.serverRequest.bindRequest(self.PROFILE_REQUEST_NAME, self.FIRST_EWOLF_LOGIN_REQUEST_ID);
@@ -123,7 +143,7 @@ var eWolf = new function() {
 					self.userName = data.name;
 				}).getHandler());
 		
-		self.serverRequest.complete(null,function(appID, response, status) {
+		self.serverRequest.addOnComplete(null,function(appID, response, status) {
 			if(self.mainAppsCreated) {
 				if(response.status != 200 || self.userID == null) {
 					document.location.reload(true);
@@ -168,8 +188,10 @@ var eWolf = new function() {
 		self.mainApps.addMenuItem(self.INBOX_APP_ID,"Messages");
 		self.inboxApp = new Inbox(self.INBOX_APP_ID,self.applicationFrame);
 		
+		self.pendingRequests = new PendingRequests(self.topBarFrame);
+		
 		self.searchBar = new SearchBar(self.sideMenu,
-				self.applicationFrame,$("#"+self.TOPBAR_FRAME));
+				self.applicationFrame,self.topBarFrame);
 		
 		self.serverRequest.setRequestAllOnSelect(true);
 		self.onHashChange();
@@ -279,7 +301,8 @@ var Members = function() {
 	eWolf.serverRequest.registerHandler(eWolf.MEMBERS_REQUEST_NAME,
 			membersResponseHandler.getHandler());
 	
-	eWolf.serverRequest.bindRequest(eWolf.MEMBERS_REQUEST_NAME,eWolf.FIRST_EWOLF_LOGIN_REQUEST_ID);
+	eWolf.serverRequest.bindRequest(eWolf.MEMBERS_REQUEST_NAME,
+			eWolf.FIRST_EWOLF_LOGIN_REQUEST_ID);
 	
 	function handleMembers(data, textStatus, postData) {
 		$.each(data.membersList, function(i,userObj){
@@ -339,7 +362,7 @@ var Members = function() {
 	
 	menuList.addExtraItem(CreateNewWolfpackLink());
 	
-	var wolfpacksResponseHandler = new ResponseHandler("wolfpacks",
+	var wolfpacksResponseHandler = new ResponseHandler("wolfpacksAll",
 			["wolfpacksList"],handleWolfpacks);
 	
 	eWolf.serverRequest.registerHandler(eWolf.WOLFPACKS_REQUEST_NAME,
@@ -487,7 +510,7 @@ var GenericResponse = function (obj) {
 			appsRequests = {},
 			generalRequests = [];
 
-	var onCompleteAll = null;
+	var onCompleteAll = [];
 	var onGeneralError = null;
 	var timer = null;
 	var requestAllOnSelect = false;
@@ -523,7 +546,9 @@ var GenericResponse = function (obj) {
 		}
 		
 		if(onCompleteAll) {
-			onCompleteAll(appID, response, status);
+			$.each(onCompleteAll, function(i, onCompleteFunc) {
+				onCompleteFunc(appID, response, status);
+			});			
 		}		
 	}
 		
@@ -698,11 +723,11 @@ var GenericResponse = function (obj) {
 		return needRefresh;
 	};
 	
-	this.complete = function(appID,newOnComplete) {
+	this.addOnComplete = function(appID,newOnComplete) {
 		if(appID && appsRequests[appID]) {
 			appsRequests[appID].onComplete = newOnComplete;
 		} else {
-			onCompleteAll = newOnComplete;
+			onCompleteAll.push(newOnComplete);
 		}		
 		
 		return self;
@@ -1098,44 +1123,51 @@ var FormValidator = function() {
 	
 	return this;
 };
-var PopUp = function(frame, activator) {
+var PopUp = function(frame, activator, leftOffset, bottomOffset, width) {
 	var self = this;
 	
 	var pos = $(activator).position();
 
 	// .outerWidth() takes into account border and padding.
-	var width = $(activator).outerWidth() - 26;
+	if(!width) {
+		width = $(activator).outerWidth() - 26;
+	}	
 	var height = $(activator).outerHeight();
 	
 	var leftMargin = parseInt($(activator).css("margin-left"));
 
 	//show the menu directly over the placeholder
 	this.frame = $("<div/>").css({
-		position : "absolute",
-		top : (pos.top + height + 1) + "px",
-		left : (pos.left + 13 + leftMargin) + "px",
+		position : "fixed",
+		top : (pos.top + $(frame).offset().top + height + bottomOffset) + "px",
+		left : (pos.left + $(frame).offset().left + leftOffset + leftMargin) + "px",
 		width : width,
 		"border": "1px solid #999",
-		"background-color" : "white"
-	}).appendTo(frame).hide();
+		"background-color" : "white",
+		"z-index" : "1000"
+	}).appendTo(document.body).hide();
 	
 	function clickFunc() {
 		if(! self.frame.is(":hover")) {
 			self.destroy();
-		}		
-	};
-	
-	$(document).bind("click",clickFunc);
+		}
+	};	
 	
 	this.destroy = function () {
-		self.frame.hide(200,function() {
+		self.frame.hide(500,function() {
 			self.frame.remove();
 		});
 		 $(document).unbind("click",clickFunc);
 		 delete self;
 	};
 	
-	this.frame.show(200);
+	this.start = function() {
+		self.frame.show(500, function() {
+			$(document).bind("click",clickFunc);
+		});
+		
+		return self;
+	};
 	
 	return this;
 };var AddMembersToWolfpack = function(fatherID,wolfpack, 
@@ -1259,9 +1291,10 @@ var PopUp = function(frame, activator) {
 				this.userSuccess, this.userError);
 	
 	return this;
-};var AddToWolfpack = function(id, userID, frame, activator, packsAlreadyIn) {
+};var AddToWolfpack = function(id, userID, frame, activator, 
+		packsAlreadyIn, leftOffset, bottomOffset, width) {
 	var self = this;
-	PopUp.call(this,frame,activator);
+	PopUp.call(this,frame,activator, leftOffset, bottomOffset, width);
 	
 	var packList = $("<ul/>").attr({
 		"class": "packListSelect"
@@ -1412,6 +1445,8 @@ var PopUp = function(frame, activator) {
 	};
 	
 	applyBtn.click(this.apply);
+	
+	this.start();
 		
 	return this;
 };var CommaSeperatedList = function(title) {
@@ -2009,7 +2044,279 @@ $.fn.spin = function(opts) {
 	return this;
 };
 
-var QueryTagList = function(minWidth,queryPlaceHolder,availableQueries,
+var Notification = function(context, onItem, aboveItem, rightToItem) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
+	var self = this;
+	var currentNumber = 0;
+		
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	this.notification = $("<span/>")
+											.addClass("notification")
+											.appendTo(context);
+	
+	if(onItem) {
+		var pos = $(onItem).position(),
+				width = $(onItem).outerWidth(),
+				leftMargin = parseInt($(onItem).css("margin-left")),
+				topMargin = parseInt($(onItem).css("margin-top"));
+		
+		self.notification.addClass("onItemNotification")
+			.css({
+		    top : (pos.top + topMargin - aboveItem) + "px",
+		    left : (pos.left + width + leftMargin - 18 + rightToItem) + "px",
+		});
+	}
+	
+	this.notification.hide();
+	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
+	this.setCounter = function (number) {
+		if(self.notification) {
+			if(number > 0) {
+				self.notification.html(number);
+				
+				if(currentNumber <= 0) {
+					self.notification.show(300);
+				}
+			} else {
+				if(currentNumber > 0) {
+					self.notification.hide(300);
+				}				
+			}
+		}
+		
+		currentNumber = number;
+		
+		return self;
+	};
+	
+	this.getCounter = function() {
+		return currentNumber;
+	};
+	
+	return this;
+};
+var PendingApprovalList = function(frame,activator, users, 
+		leftOffset, bottomOffset, width) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
+	var self = this;
+	
+	/****************************************************************************
+	 * Base Class
+	  ***************************************************************************/
+	PopUp.call(this,frame,activator, leftOffset, bottomOffset, width);
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	this.context = $("<div/>").css({
+		"padding" : "5px",
+	}).appendTo(this.frame);
+	
+	//this.
+	
+	$.each(users, function(i, id) {
+		self.context.append(CreateUserBox(id));
+	});
+		
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
+	this.start();
+	
+	return this;
+};var PendingRequests = function (insideContext) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
+	var self = this;
+	
+	var approved = [],
+			approveMe = [],
+			pendingApproval = [],
+			requestApproval = [];
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	this.context = $("<div/>")
+				.addClass("title-bar")
+				.appendTo(insideContext);
+	
+	var pendingRequestImage = $("<img/>").attr({
+		"src": "user-add.png",
+	})	.css({
+		"width" : "28px",
+		"height" : "28px"
+	})	.addClass("pendingNotificationImage")
+			.appendTo(this.context);
+	
+	var blockedImage = $("<img/>").attr({
+		"src": "user-blocking.png",
+	})	.css({
+		"width" : "32px",
+		"height" : "28px"
+	})	.addClass("pendingNotificationImage")
+			.appendTo(this.context);
+	
+	var pendingCount = new Notification(this.context, pendingRequestImage, 6, 1)
+					.setCounter(0);
+	
+	var blockingCount = new Notification(this.context, blockedImage, 6, 6)
+					.setCounter(0);
+	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
+	this.handleApproved = function(response, textStatus, postData) {
+		approved = [];
+		$.each(response.membersList, function(i,userObj){
+			eWolf.members.addKnownUsers(userObj.id,userObj.name);
+			approved.push(userObj.id);
+		});
+	};
+	
+	this.handleApprovedMe = function(response, textStatus, postData) {
+		approveMe = [];
+		$.each(response.membersList, function(i,userObj){
+			eWolf.members.addKnownUsers(userObj.id,userObj.name);
+			approveMe.push(userObj.id);
+		});
+	};
+	
+	this.updateNotifications = function () {
+		var res = compareMissingInArrays(approved, approveMe);
+		
+		pendingApproval = res.missingIn1;
+		requestApproval = res.missingIn2;
+		
+		var pendingApprovalCount = pendingApproval.length,
+				requestApprovalCount = requestApproval.length;
+		
+		if(pendingApprovalCount > 0 && pendingCount.getCounter() <= 0) {
+			pendingRequestImage.animate({
+				opacity : 0.7
+			}, 300);
+		} else if(pendingApprovalCount <= 0 && pendingCount.getCounter() > 0){
+			pendingRequestImage.animate({
+				opacity : 0.2
+			}, 300);
+		}
+		
+		if(requestApprovalCount > 0 && blockingCount.getCounter() <= 0) {
+			blockedImage.animate({
+				opacity : 0.7
+			}, 300);
+		} else if(requestApprovalCount <= 0 && blockingCount.getCounter() > 0){
+			blockedImage.animate({
+				opacity : 0.2
+			}, 300);
+		}
+
+		pendingCount.setCounter(pendingApprovalCount);
+		blockingCount.setCounter(requestApprovalCount);
+	};
+	
+	this.appendTo = function(somthing) {
+		if(self.context) {
+			self.context.appendTo(somthing);
+		}
+	};
+	
+	eWolf.serverRequest.registerRequest(eWolf.APPROVED_MEMBERS_REQUEST_NAME,
+			function() {
+				var result = {};
+				result[eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS1] = {
+						wolfpackName : eWolf.APPROVED_WOLFPACK_NAME
+				};
+				
+				result[eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS2] = {
+						wolfpackName : eWolf.APPROVED_ME_WOLFPACK_NAME
+				};
+				
+				return result;
+			});
+	
+	eWolf.serverRequest.bindRequest(eWolf.APPROVED_MEMBERS_REQUEST_NAME);
+	
+	eWolf.serverRequest.registerHandler(eWolf.APPROVED_MEMBERS_REQUEST_NAME,
+			new ResponseHandler(
+					eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS1,
+					["membersList"],
+				this.handleApproved).getHandler());
+	
+	eWolf.serverRequest.registerHandler(eWolf.APPROVED_MEMBERS_REQUEST_NAME,
+			new ResponseHandler(
+					eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS2,
+					["membersList"],
+				this.handleApprovedMe).getHandler());
+	
+	eWolf.serverRequest.addOnComplete(null,function(appID, response, status) {
+		self.updateNotifications();
+	});
+	
+	pendingRequestImage.click(function() {
+		if(pendingApproval.length > 0) {
+			new PendingApprovalList(document.body, pendingRequestImage,
+					 pendingApproval, -7, 8, 200);
+		}		
+	});
+	
+	blockedImage.click(function() {
+		if(requestApproval.length > 0) {
+			new PendingApprovalList(document.body, blockedImage,
+					 requestApproval, -7, 8, 200);
+		}		
+	});
+	
+	return this;
+};
+
+function compareMissingInArrays (arr1, arr2) {
+	arr1.sort();
+	arr2.sort();
+	
+	var len1 = arr1.length,
+			len2 = arr2.length,
+			i = 0,
+			j = 0,
+			missingIn1 = [],
+			missingIn2 = [];
+	
+	while(i < len1 && j < len2) {
+		if(arr1[i] == arr2[j]) {
+			i++;
+			j++;
+		} else if(arr1[i] < arr2[j]) {
+			missingIn2.push(arr1[i]);
+			i++;
+		} else {
+			missingIn1.push(arr2[j]);
+			j++;
+		}
+	}
+	
+	if(i < len1) {
+		missingIn2 = missingIn2.concat(arr1.slice(i,len1));
+	}
+	
+	if(j < len2) {
+		missingIn1 = missingIn1.concat(arr2.slice(j,len2));
+	}
+	
+	return {
+		missingIn1 : missingIn1,
+		missingIn2 : missingIn2
+	};
+}var QueryTagList = function(minWidth,queryPlaceHolder,availableQueries,
 		allowMultipleDestinations,commitQuery) {
 	var self = this;
 	
@@ -2682,6 +2989,9 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 
 	reader.readAsDataURL(file);
 };var TitleArea = function (title) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	
 	/****************************************************************************
@@ -3225,7 +3535,7 @@ return((r[1].length===0)?r[0]:null);};};Date.parseExact=function(s,fx){return Da
 		}
 	};
 })(jQuery);
-var MenuItem = function(id,title,topbarFrame) {
+var MenuItem = function(id,title) {
 	var thisObj = this;
 	var isLoading = false;
 	var selected = false;	
@@ -3238,19 +3548,27 @@ var MenuItem = function(id,title,topbarFrame) {
 		"style": "width:1%;"
 	}).appendTo(aObj);
 	
-	var refreshContainer = $("<div/>").attr({
-		"class": "refreshButtonArea"
-	})	.appendTo(aObj).hide();
+	var refreshContainer = $("<div/>")
+				.addClass("menuItemExtraInfoArea")
+				.css("padding-top","5px")
+				.appendTo(aObj).hide();
 	
-	var loadingContainer = $("<div/>").attr({
-		"class": "refreshButtonArea",
-		"id": id,
-	})	.appendTo(aObj).hide();
+	var loadingContainer = $("<div/>")
+				.addClass("menuItemExtraInfoArea")
+				.css("padding-top","5px")
+				.appendTo(aObj).hide();
+	
+	var notificationsContainer = $("<div/>")
+				.addClass("menuItemExtraInfoArea")
+				.appendTo(aObj).hide();
 	
 	var refresh = $("<img/>").attr({
 		"src": "refresh.svg",
 		"class": "refreshButton"
 	})	.appendTo(refreshContainer);
+	
+	var notification = new Notification(notificationsContainer)
+							.setCounter(0);
 	
 	listItem.click(function() {
 		if(selected == false) {
@@ -3271,6 +3589,12 @@ var MenuItem = function(id,title,topbarFrame) {
 			w = w - 20;
 		} else {
 			refreshContainer.hide();
+		}
+		
+		if(selected || isLoading) {
+			notificationsContainer.hide();
+		} else {
+			notificationsContainer.show();
 		}
 		
 		if(isLoading) {
@@ -3295,7 +3619,7 @@ var MenuItem = function(id,title,topbarFrame) {
 		updateView();
 	}
 	
-	eWolf.bind("select."+id,function(event,eventId) {
+	eWolf.bind("select",function(event,eventId) {
 		if(id == eventId) {
 			select();
 		} else {
@@ -3303,7 +3627,7 @@ var MenuItem = function(id,title,topbarFrame) {
 		}			
 	});
 	
-	eWolf.bind("loading."+id,function(event,eventId) {
+	eWolf.bind("loading",function(event,eventId) {
 		if(id == eventId) {
 			isLoading = true;
 			updateView();
@@ -3311,7 +3635,7 @@ var MenuItem = function(id,title,topbarFrame) {
 		}	
 	});
 	
-	eWolf.bind("loadingEnd."+id,function(event,eventId) {
+	eWolf.bind("loadingEnd",function(event,eventId) {
 		if(id == eventId) {
 			isLoading = false;
 			updateView();
@@ -3332,6 +3656,18 @@ var MenuItem = function(id,title,topbarFrame) {
 	this.renameTitle = function(newTitle) {
 		title = newTitle;
 		updateView();
+		return thisObj;
+	};
+	
+	this.setNotificationCounter = function(number) {
+		if(number < 0) {
+			number = 0;
+		}
+		
+		if(notification) {
+			notification.setCounter(number);
+		}
+		
 		return thisObj;
 	};
 	
@@ -3358,7 +3694,7 @@ var menuItemSpinnerOpts = {
 		  zIndex: 2e9, // The z-index (defaults to 2000000000)
 		  top: 0, // Top position relative to parent in px
 		  left: 0 // Left position relative to parent in px
-		};var MenuList = function(id,title,topbarFrame) {
+		};var MenuList = function(id,title) {
 	var self = this;
 	
 	var items = [];
@@ -3375,7 +3711,7 @@ var menuItemSpinnerOpts = {
 	
 	this.addMenuItem = function(id,title) {
 		if(items[id] == null) {
-			var menuItem = new MenuItem(id,title,topbarFrame)
+			var menuItem = new MenuItem(id,title)
 					.appendTo(menuItemList);
 			
 			items[id] = menuItem;
@@ -3436,7 +3772,7 @@ var menuItemSpinnerOpts = {
 	};
 	
 	return this;
-};var SideMenu = function(menu, mainFrame,topbarFrame) {
+};var SideMenu = function(menu, mainFrame) {
 	var thisObj = this;
 	
 	var itemSpace = menu.children("#menuItemsSpace");
@@ -3547,7 +3883,7 @@ var menuItemSpinnerOpts = {
 	};
 	
 	this.createNewMenuList = function(id, title) {
-		var menuLst = new MenuList(id,title,topbarFrame)
+		var menuLst = new MenuList(id,title)
 			.appendTo(itemSpace);
 		menuLists.push(menuLst);
 		return menuLst;
@@ -4394,7 +4730,8 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	var handleProfileResonse = new ResponseHandler("profile",
 			["id","name"],handleProfileData);
 	
-	var handleWolfpacksResponse = new ResponseHandler("wolfpacks",
+	var handleWolfpacksResponse = new ResponseHandler(
+			userID ? "wolfpacks" : "wolfpacksAll",
 			["wolfpacksList"],handleWolfpacksData);
 	
 	if(userID) {
@@ -4420,8 +4757,8 @@ var Profile = function (id,applicationFrame,userID,userName) {
 		}, true);
 		
 		this.title.addFunction("Add to wolfpack...", function () {
-			new AddToWolfpack(id, userID,self.frame, this, wolfpacksContainer.getItemNames());
-			return false;
+			new AddToWolfpack(id, userID,self.frame, this, 
+					wolfpacksContainer.getItemNames(), 13, 1);
 		}, true);
 	} else {
 		this.title.addFunction("Post", function() {
@@ -4730,16 +5067,27 @@ var Signup = function(id) {
 		}
 		
 		var wolfpackMembersRequestName = id + "__wolfpack_members_request_name__";
+		var handlerCategory = eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS;
 		
-		eWolf.serverRequest
-			.registerRequest(wolfpackMembersRequestName,
-					getWolfpacksMembersData)
-			.registerHandler(wolfpackMembersRequestName,
-					new ResponseHandler("wolfpackMembers",
+		if(wolfpackName == eWolf.APPROVED_WOLFPACK_NAME ||
+				wolfpackName == eWolf.APPROVED_ME_WOLFPACK_NAME) {
+			wolfpackMembersRequestName = eWolf.APPROVED_MEMBERS_REQUEST_NAME;
+		} else {
+			eWolf.serverRequest.registerRequest(wolfpackMembersRequestName,
+					getWolfpacksMembersData);
+		}
+		
+		if(wolfpackName == eWolf.APPROVED_WOLFPACK_NAME) {
+			handlerCategory = eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS1;
+		} else if(wolfpackName == eWolf.APPROVED_ME_WOLFPACK_NAME) {
+			handlerCategory = eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS2;
+		}		
+		
+		eWolf.serverRequest.registerHandler(wolfpackMembersRequestName,
+					new ResponseHandler(handlerCategory,
 					["membersList"],
 					handleWolfpacksMembersData).getHandler())
-			.bindRequest(wolfpackMembersRequestName,
-					id);
+			.bindRequest(wolfpackMembersRequestName, id);
 					
 		
 		self.title.addFunction("Add members...", this.showAddMembers);
