@@ -128,6 +128,20 @@ var eWolf = new function() {
 					return { wolfpacksAll : {}	};
 				});
 		
+		self.serverRequest.registerRequest(eWolf.APPROVED_MEMBERS_REQUEST_NAME,
+				function() {
+					var result = {};
+					result[eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS1] = {
+							wolfpackName : eWolf.APPROVED_WOLFPACK_NAME
+					};
+					
+					result[eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS2] = {
+							wolfpackName : eWolf.APPROVED_ME_WOLFPACK_NAME
+					};
+					
+					return result;
+				});
+		
 		self.serverRequest.bindRequest(self.PROFILE_REQUEST_NAME, self.FIRST_EWOLF_LOGIN_REQUEST_ID);
 		self.serverRequest.bindRequest(self.WOLFPACKS_REQUEST_NAME);
 		
@@ -1123,30 +1137,71 @@ var FormValidator = function() {
 	
 	return this;
 };
-var PopUp = function(frame, activator, leftOffset, bottomOffset, width) {
+var Popup = function(frame, activator, align, width, offset) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	
-	var pos = $(activator).position();
-
-	// .outerWidth() takes into account border and padding.
-	if(!width) {
-		width = $(activator).outerWidth() - 26;
-	}	
-	var height = $(activator).outerHeight();
+	var left = null,
+			top = null;
 	
-	var leftMargin = parseInt($(activator).css("margin-left"));
-
-	//show the menu directly over the placeholder
+	var $obj = $(activator);
+	var objOffset = $obj.offset();
+	var outerHeight = $obj.outerHeight();
+	var outerWidth = $obj.outerWidth();
+	var leftMargin = parseInt($obj.css("margin-left"));
+	
+	if(objOffset) {
+		left = objOffset.left;
+		top = objOffset.top;
+	}
+	
+	if(offset) {
+		left += offset.left;
+		top += offset.top;
+	}
+	
+//	if(!width) {
+//		width = outerWidth;
+//	}
+	
+	if(align.indexOf("bottom") == 0 && outerHeight) {
+		top += outerHeight + leftMargin;
+	}
+	
+	if(align == "bottom-left") {		
+		
+	} else if(align == "bottom-right") {
+		left -= (width - outerWidth);
+	} else if(align == "top-left") {
+		left -= width;
+	} else /* align == "bottom-right */{
+		left += outerWidth;
+	}
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	this.frame = $("<div/>").css({
-		position : "fixed",
-		top : (pos.top + $(frame).offset().top + height + bottomOffset) + "px",
-		left : (pos.left + $(frame).offset().left + leftOffset + leftMargin) + "px",
-		width : width,
-		"border": "1px solid #999",
-		"background-color" : "white",
-		"z-index" : "1000"
-	}).appendTo(document.body).hide();
+			"position" : "absolute",
+			"border": "1px solid #999",
+			"background-color" : "white",
+			"z-index" : "1000",
+			"opacity" : "0.9"
+	});
 	
+	this.frame.css({
+		top : top + "px",
+		left : left + "px",
+		width : width + "px",
+	});
+	
+	this.frame.appendTo(document.body).hide();
+	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	function clickFunc() {
 		if(! self.frame.is(":hover")) {
 			self.destroy();
@@ -1154,18 +1209,24 @@ var PopUp = function(frame, activator, leftOffset, bottomOffset, width) {
 	};	
 	
 	this.destroy = function () {
-		self.frame.hide(500,function() {
+		self.frame.hide(200,function() {
 			self.frame.remove();
 		});
 		 $(document).unbind("click",clickFunc);
+		 eWolf.unbind("select",self.destroy);
 		 delete self;
 	};
 	
 	this.start = function() {
-		self.frame.show(500, function() {
+		self.frame.show(200, function() {
 			$(document).bind("click",clickFunc);
-		});
-		
+			eWolf.bind("select",self.destroy);
+		});		
+		return self;
+	};
+	
+	this.append = function (item) {
+		self.frame.append(item);
 		return self;
 	};
 	
@@ -1291,14 +1352,29 @@ var PopUp = function(frame, activator, leftOffset, bottomOffset, width) {
 				this.userSuccess, this.userError);
 	
 	return this;
-};var AddToWolfpack = function(id, userID, frame, activator, 
-		packsAlreadyIn, leftOffset, bottomOffset, width) {
+};var AddToWolfpack = function(id, userID, packsAlreadyIn) {
 	var self = this;
-	PopUp.call(this,frame,activator, leftOffset, bottomOffset, width);
 	
-	var packList = $("<ul/>").attr({
-		"class": "packListSelect"
-	}).appendTo(this.frame);	
+	this.context = $("<span/>");
+	
+	this.title = $("<span/>")
+				.css({
+					"padding" : "5px",
+					"font-size" : "12px"
+				})
+				.appendTo(this.context);
+	
+	$("<hr/>").css({
+		"margin":"0"
+	}).appendTo(this.context);
+	
+	this.title.append("Add ");
+	this.title.append(CreateUserBox(userID, null, false));
+	this.title.append(" to:");
+	
+	var packList = $("<ul/>")
+				.addClass("packListSelect")
+				.appendTo(this.context);	
 
 	$.each(eWolf.wolfpacks.wolfpacksArray,function(i,pack) {
 		var box = $("<input/>").attr({
@@ -1381,11 +1457,11 @@ var PopUp = function(frame, activator, leftOffset, bottomOffset, width) {
 	
 	$("<hr/>").css({
 		"margin":"0"
-	}).appendTo(this.frame);
+	}).appendTo(this.context);
 	
 	var applyBtn = $("<span/>").attr({
 		"class": "aLink applyLink"
-	}).append("Apply").appendTo(this.frame);
+	}).append("Apply").appendTo(this.context);
 	
 	this.getSelection = function () {
 		var result = {
@@ -1437,7 +1513,7 @@ var PopUp = function(frame, activator, leftOffset, bottomOffset, width) {
 	this.apply = function() {
 		result = self.getSelection();
 		
-		self.destroy();
+		eWolf.trigger("select",[id]);
 		
 		eWolf.wolfpacks.createWolfpacks(result.create, function () {
 			self.addToAllWolfpacks(result.add);
@@ -1445,8 +1521,6 @@ var PopUp = function(frame, activator, leftOffset, bottomOffset, width) {
 	};
 	
 	applyBtn.click(this.apply);
-	
-	this.start();
 		
 	return this;
 };var CommaSeperatedList = function(title) {
@@ -2102,38 +2176,7 @@ var Notification = function(context, onItem, aboveItem, rightToItem) {
 	
 	return this;
 };
-var PendingApprovalList = function(frame,activator, users, 
-		leftOffset, bottomOffset, width) {
-	/****************************************************************************
-	 * Members
-	  ***************************************************************************/
-	var self = this;
-	
-	/****************************************************************************
-	 * Base Class
-	  ***************************************************************************/
-	PopUp.call(this,frame,activator, leftOffset, bottomOffset, width);
-	
-	/****************************************************************************
-	 * User Interface
-	  ***************************************************************************/
-	this.context = $("<div/>").css({
-		"padding" : "5px",
-	}).appendTo(this.frame);
-	
-	//this.
-	
-	$.each(users, function(i, id) {
-		self.context.append(CreateUserBox(id));
-	});
-		
-	/****************************************************************************
-	 * Functionality
-	  ***************************************************************************/
-	this.start();
-	
-	return this;
-};var PendingRequests = function (insideContext) {
+var PendingRequests = function (insideContext) {
 	/****************************************************************************
 	 * Members
 	  ***************************************************************************/
@@ -2231,20 +2274,6 @@ var PendingApprovalList = function(frame,activator, users,
 		}
 	};
 	
-	eWolf.serverRequest.registerRequest(eWolf.APPROVED_MEMBERS_REQUEST_NAME,
-			function() {
-				var result = {};
-				result[eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS1] = {
-						wolfpackName : eWolf.APPROVED_WOLFPACK_NAME
-				};
-				
-				result[eWolf.REQUEST_CATEGORY_WOLFPACK_MEMBERS_ALIAS2] = {
-						wolfpackName : eWolf.APPROVED_ME_WOLFPACK_NAME
-				};
-				
-				return result;
-			});
-	
 	eWolf.serverRequest.bindRequest(eWolf.APPROVED_MEMBERS_REQUEST_NAME);
 	
 	eWolf.serverRequest.registerHandler(eWolf.APPROVED_MEMBERS_REQUEST_NAME,
@@ -2265,15 +2294,30 @@ var PendingApprovalList = function(frame,activator, users,
 	
 	pendingRequestImage.click(function() {
 		if(pendingApproval.length > 0) {
-			new PendingApprovalList(document.body, pendingRequestImage,
-					 pendingApproval, -7, 8, 200);
+			var widget = new UserList(pendingApproval, 400,	"add >>", 
+					function(userID) {
+						return new AddToWolfpack(null, userID, 
+								[eWolf.APPROVED_ME_WOLFPACK_NAME]).context;
+					}, 200);
+			new Popup(document.body, pendingRequestImage, "bottom-left", 
+					null, {left: 0, top: 3})
+						.append(widget.context)
+						.start();
 		}		
 	});
 	
 	blockedImage.click(function() {
 		if(requestApproval.length > 0) {
-			new PendingApprovalList(document.body, blockedImage,
-					 requestApproval, -7, 8, 200);
+			var widget = new UserList(requestApproval, 400,	"send a message", 
+					function(userID) {
+						new NewMessage(eWolf.selectedApp,
+								eWolf.applicationFrame,userID).select();
+						return null;
+					},0);
+			new Popup(document.body, blockedImage, "bottom-left", 
+					null, {left: 0, top: 3})
+						.append(widget.context)
+						.start();
 		}		
 	});
 	
@@ -3082,6 +3126,95 @@ var ThumbnailImageFromFile = function(file,altText,quality,maxWidth,maxHeight,on
 	};
 	
 	this.setTitle(title);
+	
+	return this;
+};var UserList = function(users, width, 
+		actionText, actionContextInflator, actionContextWidth) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
+	var self = this;
+	var inlated = false;
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	this.context = $("<div/>")
+				.css("width",width + "px");
+	
+	this.userListContext = $("<div/>")
+				.addClass("userListContextSide")
+				.css("width",width + "px")		
+				.appendTo(this.context);
+	
+	this.actionContext = $("<div/>")
+				.addClass("userListActionContextSide")
+				.css("width",actionContextWidth + "px")
+				.appendTo(this.context).hide();
+	
+	this.userList = $("<ul/>")
+				.addClass("userListClass")
+				.appendTo(this.userListContext);
+		
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
+	this.addUser = function(userID) {
+		var listItem = $("<li/>")
+					.appendTo(self.userList);
+		
+		var leftSide = $("<div/>")
+					.addClass("userListTextItem")					
+					.appendTo(listItem);
+		
+		$("<div/>")
+				.append(CreateUserBox(userID))
+				.appendTo(leftSide);
+		
+		$("<div/>")
+				.addClass("idBox")
+				.append(userID)
+				.appendTo(leftSide);
+		
+		$("<div/>")
+				.addClass("userListActionItem")
+				.addClass("aLink")
+				.appendTo(listItem)
+				.append(actionText)
+				.click(function () {
+					self.inflateContext(userID);
+				});
+	};
+	
+	this.inflateContext = function(userID) {
+		var inflator = actionContextInflator(userID);
+		
+		if(inflator) {
+			if(!inlated) {
+				inlated = true;
+				
+				self.context.animate({
+					width : width + actionContextWidth + 2
+				},300, function() {
+					self.actionContext.html(inflator).show().animate({
+						opacity : 1
+					},200);
+				});
+			} else {
+				self.actionContext.animate({
+					opacity : 0
+				},200, function() {
+					self.actionContext.html(inflator).animate({
+						opacity: 1
+					},200);
+				}); 
+			}
+		}
+	};
+	
+	$.each(users, function(i, id) {
+		self.addUser(id);
+	});
 	
 	return this;
 };/**
@@ -4757,8 +4890,11 @@ var Profile = function (id,applicationFrame,userID,userName) {
 		}, true);
 		
 		this.title.addFunction("Add to wolfpack...", function () {
-			new AddToWolfpack(id, userID,self.frame, this, 
-					wolfpacksContainer.getItemNames(), 13, 1);
+			var widget = new AddToWolfpack(id, userID, 
+					wolfpacksContainer.getItemNames());
+			new Popup(self.frame, this, "bottom-right",200)
+						.append(widget.context)
+						.start();
 		}, true);
 	} else {
 		this.title.addFunction("Post", function() {
@@ -4991,18 +5127,18 @@ var Signup = function(id) {
 	eWolf.serverRequest.bindAppToAnotherApp(id, eWolf.FIRST_EWOLF_LOGIN_REQUEST_ID);
 	
 	return this;
-};var WolfpackPage = function (id,wolfpackName,applicationFrame) {	
-	/****************************************************************************
-	 * Base class
-	  ***************************************************************************/	
-	Application.call(this, id, applicationFrame, 
-			wolfpackName == null ? "News Feed" : CreateWolfpackBox(wolfpackName));
-			
+};var WolfpackPage = function (id,wolfpackName,applicationFrame) {
 	/****************************************************************************
 	 * Members
 	  ***************************************************************************/
 	var self = this;
 	
+	/****************************************************************************
+	 * Base class
+	  ***************************************************************************/	
+	Application.call(this, id, applicationFrame, 
+			wolfpackName == null ? "News Feed" : CreateWolfpackBox(wolfpackName));
+		
 	/****************************************************************************
 	 * User Interface
 	  ***************************************************************************/
