@@ -1520,8 +1520,14 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 	
 	return this;
 };var AddToWolfpack = function(id, userID, packsAlreadyIn) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	this.context = $("<span/>");
 	
 	this.title = $("<span/>")
@@ -1529,15 +1535,12 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 					"padding" : "5px",
 					"font-size" : "12px"
 				})
-				.appendTo(this.context);
+				.appendTo(this.context)
+				.append("Add ")
+				.append(CreateUserBox(userID, null, false))
+				.append(" to:");
 	
-	$("<hr/>").css({
-		"margin":"0"
-	}).appendTo(this.context);
-	
-	this.title.append("Add ");
-	this.title.append(CreateUserBox(userID, null, false));
-	this.title.append(" to:");
+	$("<hr/>").css("margin", "0").appendTo(this.context);
 	
 	var packList = $("<ul/>")
 				.addClass("packListSelect")
@@ -1559,45 +1562,78 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 			box.data("isMember",false);
 		}
 
-		$("<li/>").attr({
-			"class": "packListSelectItem"
-		}).append(box).append(pack).appendTo(packList);
+		$("<li/>")
+					.addClass("packListSelectItem")
+					.append(box)
+					.append(pack)
+					.appendTo(packList);
 	});
 	
-	var createItem = $("<li/>").attr({
-		"class": "packListSelectItem"
-	}).css({
-		"margin-top": "5px"
-	}).appendTo(packList);
+	var createItem = $("<li/>")
+				.addClass("packListSelectItem")
+				.css("margin-top","5px")
+				.appendTo(packList);
 	
-	var createLink = $("<span/>").attr({
-		"class": "aLink createLink"
-	});
+	var createLink = $("<span/>")
+				.addClass("aLink")
+				.addClass("createLink")
+				.append("+ new wolfpack")
+				.appendTo(createItem);
 	
-	createLink.append("+ new wolfpack").appendTo(createItem).click(function() {
+	$("<hr/>").css("margin", "0").appendTo(this.context);
+	
+	var applyBtn = $("<span/>")
+				.addClass("aLink")
+				.addClass("applyLink")
+				.append("Apply")
+				.appendTo(this.context);
+	
+	var errorBox = $("<div/>")
+				.addClass("errorArea")
+				.appendTo(this.context);
+	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
+	function trimSpaces(s) {
+		s = s.replace(/(^\s*)|(\s*$)/gi,"");
+		s = s.replace(/[ ]{2,}/gi," ");
+		s = s.replace(/\n /,"\n");
+		return s;
+	}
+	
+	createLink.click(function() {
 		var newPackItem = $("<li/>").attr({
 			"class": "packListSelectItem"
 		});		
 
 		
-		var newPack = $("<input/>").attr({
-			"type":"text",
-			"class": "newWolfpackInput"
-		}).css({
-			"width" : (parseInt(createLink.css("width")) - 5) + "px"
-		});
+		var newPack = $("<input/>")
+					.addClass("newWolfpackInput")
+					.attr("type", "text")
+					.css("width", (parseInt(createLink.css("width")) - 5) + "px");
 		
-		var itsCheckbox = $("<input/>").attr({
-			"type": "checkbox",
-			"disabled" : true
-		}).data({
-			"isNew" : true,
-			"itsInput" : newPack
-		}).appendTo(newPackItem);
+		var itsCheckbox = $("<input/>")
+				.attr({
+					"type": "checkbox",
+					"disabled" : true
+				}).data({
+					"isNew" : true,
+					"itsInput" : newPack
+				}).appendTo(newPackItem);
 		
 		newPack.appendTo(newPackItem);
-		newPack.keyup(function(event) {
-		    if(newPack.val() != "") {
+		
+		var validator = new FormValidator()
+			.registerField("newPack", newPack, errorBox)
+			.addValidator("newPack", VALIDATOR_IS_NOT_EMPTY
+					, " * Please enter a wolfpack name")
+			.addValidator("newPack", function(field) {
+					return $.inArray(field.val(),eWolf.wolfpacks.wolfpacksArray) == -1;
+				}, " * Wolfpack with that name already exist");
+		
+		newPack.bind('input propertychange',function(event) {
+		    if(validator.isValid()) {
 		    	itsCheckbox.attr("checked",true);
 		    	itsCheckbox.removeAttr("disabled");
 		    } else {
@@ -1614,21 +1650,6 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 			newPack.focus();
 		}, 0);	
 	});
-	
-	function trimSpaces(s) {
-		s = s.replace(/(^\s*)|(\s*$)/gi,"");
-		s = s.replace(/[ ]{2,}/gi," ");
-		s = s.replace(/\n /,"\n");
-		return s;
-	}
-	
-	$("<hr/>").css({
-		"margin":"0"
-	}).appendTo(this.context);
-	
-	var applyBtn = $("<span/>").attr({
-		"class": "aLink applyLink"
-	}).append("Apply").appendTo(this.context);
 	
 	this.getSelection = function () {
 		var result = {
@@ -4560,16 +4581,16 @@ var InboxList = function (appID) {
 };
 var Login = function(id,applicationFrame) {
 	/****************************************************************************
-	 * Base class
-	  ***************************************************************************/	
-	Application.call(this, id, applicationFrame, "Welcome to eWolf");	
-	
-	/****************************************************************************
 	 * Members
 	  ***************************************************************************/
 	var self = this;
 	$.extend(this,LOGIN_CONSTANTS);
 	
+	/****************************************************************************
+	 * Base class
+	  ***************************************************************************/	
+	Application.call(this, id, applicationFrame, "Welcome to eWolf");	
+		
 	/****************************************************************************
 	 * User Interface
 	  ***************************************************************************/
@@ -5062,7 +5083,7 @@ var Profile = function (id,applicationFrame,userID,userName) {
 		this.title.addFunction("Add to wolfpack...", function () {
 			var widget = new AddToWolfpack(id, userID, 
 					wolfpacksContainer.getItemNames());
-			new Popup(self.frame, this, "bottom-right",200)
+			new Popup(self.frame, this, "bottom-right",250)
 						.append(widget.context)
 						.start();
 		}, true);
