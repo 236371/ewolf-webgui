@@ -380,12 +380,18 @@ $(document).ready(function () {
 	eWolf.init();	
 });
 var Members = function() {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	
 	this.knownUsersFullDescriptionArray = [];
 	this.knownUsersIDArray = [];
 	var knownUsersMapByID = {};
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
 	var membersResponseHandler = new ResponseHandler("wolfpackMembers",
 			["membersList"],handleMembers);
 	
@@ -448,15 +454,21 @@ var Members = function() {
 	
 	return this;
 };var Wolfpacks = function (menuList,applicationFrame) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	$.extend(this,WOLFPACK_CONSTANTS);
 	
 	var wolfpacksApps = {},
-		UID = 100;
+			UID = 100;
 	
 	this.wolfpacksArray = [];
 	
-	menuList.addExtraItem(CreateNewWolfpackLink());
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
+	menuList.addExtraItem(CreateNewWolfpackLink());	
 	
 	var wolfpacksResponseHandler = new ResponseHandler("wolfpacksAll",
 			["wolfpacksList"],handleWolfpacks);
@@ -1911,6 +1923,8 @@ function CreateTimestampBox(timestamp) {
 		return null;
 	}
 	
+	var idBox = null;
+	
 	var link = $("<a/>").attr({
 		"style": "width:1%;",
 		"class": "selectableBox selectableBoxHovered",
@@ -1919,8 +1933,6 @@ function CreateTimestampBox(timestamp) {
 	});
 	
 	var nameBox = $("<span/>").appendTo(link);
-	
-	var idBox = null;
 	
 	if(showID) {
 		idBox = $("<span/>")
@@ -1968,6 +1980,9 @@ function CreateTimestampBox(timestamp) {
 		eWolf.selectApp(packAppID);
 	});
 }var FilesBox = function(uploaderArea) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	
 	var fileselect;
@@ -1978,6 +1993,9 @@ function CreateTimestampBox(timestamp) {
 	// file unique ID
 	var UID = 0;
 	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	if (new XMLHttpRequest().upload) {
 		fileselect = $("<input/>").attr({
 			"type" : "file",
@@ -2005,6 +2023,9 @@ function CreateTimestampBox(timestamp) {
 			.appendTo(uploaderArea);
 	}
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	this.addFiles = function (files) {
 		if(!files) {
 			return;
@@ -2139,7 +2160,7 @@ function CreateTimestampBox(timestamp) {
 	this.uploadAllFiles = function(wolfpackName,onComplete) {
 		if(!filelist || filelist.match({markedOK:false}).isEmpty()) {
 			onComplete(true,[]);
-			return this;
+			return self;
 		}
 		
 		function onCompleteOneFile() {
@@ -2166,18 +2187,27 @@ function CreateTimestampBox(timestamp) {
 			},onCompleteOneFile);
 		});
 		
-		return this;
+		return self;
 	};
 	
 	return this;
 };
 var FunctionsArea = function () {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
-	
-	this.frame = $("<div/>");
 	
 	var functions = {};
 	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	this.frame = $("<div/>");
+
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	this.appendTo = function (container) {
 		self.frame.appendTo(container);
 		return self;
@@ -2588,9 +2618,15 @@ function compareMissingInArrays (arr1, arr2) {
 	};
 }var QueryTagList = function(minWidth,queryPlaceHolder,availableQueries,
 		allowMultipleDestinations,commitQuery) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	
-	this.frame = $("<div/>").attr("class","seachListClass");	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	this.frame = $("<div/>").addClass("seachListClass");	
 	var queryBox = $("<div/>").appendTo(this.frame);
 	
 	var query = $("<input/>").attr({
@@ -2608,7 +2644,12 @@ function compareMissingInArrays (arr1, arr2) {
 	}).appendTo(queryBox).hide();
 	
 	var errorBox = $("<div/>").addClass("errorArea").appendTo(queryBox).hide();
+
+	this.tagList = new TagList(false,updateQuery).appendTo(this.frame);
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
 	query.autocomplete({
 		source: availableQueries,
 		select: onSelectSendTo
@@ -2619,7 +2660,7 @@ function compareMissingInArrays (arr1, arr2) {
 	    	updateQuery();
 	    	}	    
 	});
-	
+
 	query.bind('input propertychange',function() {
 		if(query.val() == "") {
 			addBtn.hide(200);
@@ -2642,8 +2683,6 @@ function compareMissingInArrays (arr1, arr2) {
 			}
 		}
 	}
-	
-	this.tagList = new TagList(false,updateQuery).appendTo(this.frame);
 		
 	this.addTagByQuery = function(thisQuery,removable) {
 		var res = commitQuery(thisQuery);
@@ -2746,6 +2785,9 @@ var WolfpackQueryTagList = function (minWidth) {
 	return new QueryTagList(minWidth,"Type wolfpack name...",
 			eWolf.wolfpacks.wolfpacksArray,false,sendToFuncReplace);
 };var SearchBar = function(menu,applicationFrame,container) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	$.extend(this,SEARCHBAR_CONSTANTS);
 	
@@ -2753,6 +2795,9 @@ var WolfpackQueryTagList = function (minWidth) {
 	var apps = new Object();
 	var lastSearch = null;
 	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/	
 	this.frame = $("<div/>")
 		.addClass("title-bar")
 		.appendTo(container);
@@ -2769,6 +2814,9 @@ var WolfpackQueryTagList = function (minWidth) {
 		select: onSelectAutocomplete
 	}).appendTo(this.frame);
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
 	eWolf.bind("foundNewUser",function(event,id,name,fullDescription) {
 		query.autocomplete("destroy").autocomplete({
 			source: eWolf.members.knownUsersFullDescriptionArray,
@@ -2776,15 +2824,16 @@ var WolfpackQueryTagList = function (minWidth) {
 		});
 	});
 	
-	function onSelectAutocomplete(event,ui) {
-		self.search(ui.item.label);
-		return false;
-	}
-
 	var searchBtn = $("<input/>").attr({
 		"type" : "button",
 		"value" : "Search"
 	}).appendTo(this.frame).hide();
+	
+
+	function onSelectAutocomplete(event,ui) {
+		self.search(ui.item.label);
+		return false;
+	}
 	
 	function addSearchMenuItem(id,name) {
 //		var tempName;
@@ -2957,8 +3006,14 @@ var WolfpackQueryTagList = function (minWidth) {
 	
 	return box;
 };var TagList = function(multirow,onRemoveTag,withImages) {
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	this.div = $("<div/>");
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
 	this.appendTo = function(someFrame) {
 		this.div.appendTo(someFrame);
 		return this;
@@ -3205,9 +3260,15 @@ var WolfpackQueryTagList = function (minWidth) {
 	
 	return this;
 };var ThumbnailImage = function (src,altText,quality,maxWidth,maxHeight,onReady) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var image = new Image();
 	image.src = src;
 
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
 	image.onload = function() {
 		var imageWidth = image.width,
 			imageHeight = image.height;
