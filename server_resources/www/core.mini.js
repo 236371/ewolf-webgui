@@ -564,11 +564,17 @@ var RESPONSE_RESULT = {
 };
 
 var GenericResponse = function (obj) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;	
 	$.extend(this,obj);
 	
 	var UNDEFINED_RESULT = "undifined result";
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	this.isSuccess = function() {
 		if(self.result) {
 			return self.result == RESPONSE_RESULT.SUCCESS;
@@ -601,6 +607,9 @@ var GenericResponse = function (obj) {
 	return this;
 };var BasicRequestHandler = function(requestAddress,
 		refreshIntervalMillisec) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	
 	var requestsMap = {},
@@ -612,6 +621,9 @@ var GenericResponse = function (obj) {
 	var timer = null;
 	var requestAllOnSelect = false;
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	this.setRefreshInterval = function (newRefreshIntervalMillisec) {
 		refreshIntervalMillisec = newRefreshIntervalMillisec;
 	};
@@ -870,17 +882,23 @@ var PostRequestHandler = function(requestAddress,refreshIntervalMillisec) {
 
 RESPONSE_ARRAY_CONDITION_GENRAL_ERROR = 
 	function(response, textStatus, postData) {
-	return response.isGeneralError();
-};
+		return response.isGeneralError();
+	};
 
 var ResponseHandler = function(category, requiredFields, handler) {
-	var thisObj = this;
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
+	var self = this;
 	
 	var errorHandler = null;
 	var completeHandler = null;
 	var badResponseHandler = null;
 	var responseArray = [];
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
 	function theHandler(data, textStatus, postData) {
 		if (data[category]) {
 			var response = new GenericResponse(data[category]);
@@ -953,7 +971,7 @@ var ResponseHandler = function(category, requiredFields, handler) {
 			error : error
 		});
 		
-		return thisObj;
+		return self;
 	};
 
 	this.getHandler = function() {
@@ -962,22 +980,22 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	
 	this.error = function (newErrorHandler) {
 		errorHandler = newErrorHandler;
-		return thisObj;
+		return self;
 	};
 	
 	this.success = function (newSuccessHandler) {
 		handler = newSuccessHandler;
-		return thisObj;
+		return self;
 	};
 	
 	this.complete = function (newCompleteHandler) {
 		completeHandler = newCompleteHandler;
-		return thisObj;
+		return self;
 	};
 	
 	this.badResponseHandler = function (newBadResponseHandler) {
 		badResponseHandler = newBadResponseHandler;
-		return thisObj;
+		return self;
 	};
 	
 	return this;
@@ -1079,11 +1097,17 @@ var ResponseHandler = function(category, requiredFields, handler) {
 };
 
 var FormValidator = function() {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	
 	var fields = {};
 	var onSend = null;
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/		
 	this.attachOnSend = function(newOnSend) {
 		onSend = newOnSend;
 		return self;
@@ -1329,16 +1353,12 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 		top += offset.top;
 	}
 	
-//	if(!width) {
-//		width = outerWidth;
-//	}
-	
 	if(align.indexOf("bottom") == 0 && outerHeight) {
 		top += outerHeight + leftMargin;
 	}
 	
 	if(align == "bottom-left") {		
-		
+		// Nothing to do, this is the default.
 	} else if(align == "bottom-right") {
 		left -= (width - outerWidth);
 	} else if(align == "top-left") {
@@ -1350,19 +1370,13 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 	/****************************************************************************
 	 * User Interface
 	  ***************************************************************************/
-	this.frame = $("<div/>").css({
-			"position" : "absolute",
-			"border": "1px solid #999",
-			"background-color" : "white",
-			"z-index" : "1000",
-			"opacity" : "0.9"
-	});
-	
-	this.frame.css({
-		top : top + "px",
-		left : left + "px",
-		width : width + "px",
-	});
+	this.frame = $("<div/>")
+				.addClass("popupFrameClass")
+				.css({
+					top : top + "px",
+					left : left + "px",
+					width : width + "px",
+				});
 	
 	this.frame.appendTo(document.body).hide();
 	
@@ -1400,10 +1414,17 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 	return this;
 };var AddMembersToWolfpack = function(fatherID,wolfpack, 
 		existingMemebers,	onFinish) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
-	this.frame = $("<span/>");
 	
 	madeChanges = false;	
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	this.frame = $("<span/>");
 
 	addMembersQuery = new FriendsQueryTagList(400).appendTo(this.frame);
 	
@@ -1421,8 +1442,13 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 		"value": "Cancel"
 	}).appendTo(this.frame);
 	
-	errorMessage = $("<div/>").addClass("errorArea").appendTo(this.frame);
+	errorMessage = $("<div/>")
+			.addClass("errorArea")
+			.appendTo(this.frame);
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	responseHandler = new ResponseHandler("addWolfpackMember",[],null);
 	
 	this.apply = function() {
@@ -1712,14 +1738,23 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 		
 	return this;
 };var CommaSeperatedList = function(title) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
+	var items = null;
+	var itemsArray = [];
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	var list = $("<span/>")
 		.addClass("CommaSeperatedListItem")
 		.append(title+": ")
 		.hide();
 	
-	var items = null;
-	var itemsArray = [];
-	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
 	this.addItem = function (item,itemName) {
 		if(items == null) {
 			items = $("<span/>").appendTo(list);
@@ -1761,28 +1796,29 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 	
 	return this;
 };function CreateFileItemBox(name,type,size,file) {
-	var box =  $("<div/>").css({
-		"display": "inline-block"
-	});
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
+	var box =  $("<div/>")
+				.addClass("fileItemBox");
 	
 	var attachImage = $("<img/>").attr({
 		"src" : "/Paperclip.png",
 		"align" : "absmiddle",
 		"vertical-align" : "middle"
-	}).css({
-		"margin-right" : "3px"
-	}).appendTo(box);
+	})	.addClass("fileItemThunmnailImage")
+			.appendTo(box);
 	
-	$("<span/>").css({
-		"white-space" : "normal"
-	}).append(name).appendTo(box);
+	$("<span/>")
+			.addClass("fileItemFileNameBox")
+			.append(name)
+			.appendTo(box);
 	
 	if(type) {
-		$("<span/>").css({
-			"text-align" : "right",
-			"font-size" : "10px",
-			"margin-left" : "5px"
-		}).append("(" + type + ")").appendTo(box);
+		$("<span/>")
+					.addClass("fileItemExtraDataBox")
+					.append("(" + type + ")")
+					.appendTo(box);
 	}
 	
 	if(size) {
@@ -1797,22 +1833,21 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 		   fileSize =  "(" + fileSize + ")";
 	   }
 		
-		$("<span/>").css({
-			"text-align" : "right",
-			"font-size" : "10px",
-			"margin-left" : "5px"
-		}).append(fileSize).appendTo(box);
+		$("<span/>")
+				.addClass("fileItemExtraDataBox")
+				.append(fileSize)
+				.appendTo(box);
 	}
 	
 	if(file && file.type.substring(0,5) == "image") {
 		new ThumbnailImageFromFile(file,file.name,
 				0.7,100,50,function(img) {
 			attachImage.remove();
-			img.attr({
-				"align" : "absmiddle"
-			}).css({
-				"margin-right" : "3px"
-			});
+			img	.attr({
+						"align" : "absmiddle"
+					})
+					.addClass("fileItemThunmnailImage");
+			
 			box.prepend(img);
 		});
 	}
@@ -4273,7 +4308,6 @@ var menuItemSpinnerOpts = {
 			
 			$("<div/>")
 				.append(line)
-				//.append("Attachments:")
 				.append(attachList)
 				.appendTo(canvas);
 		}
@@ -4283,7 +4317,15 @@ var menuItemSpinnerOpts = {
 }
 var GenericItem = function(senderID,senderName,timestamp,mail,
 		listClass,msgBoxClass,preMessageTitle,allowShrink) {
-	var thisObj = this;
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
+	var self = this;
+	var isOnSender = false;
+	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	var itemSpan = $("<span/>");
 	
 	var listItem = $("<li/>").attr({
@@ -4293,25 +4335,27 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	var preMessageBox = $("<span/>").attr({
 		"style": "width:1%;",
 		"class": "preMessageBox"
-	}).append(preMessageTitle).appendTo(listItem);	
-	
-	var isOnSender = false;
+	}).append(preMessageTitle).appendTo(listItem);		
+
 	var senderBox = CreateUserBox(senderID,senderName)
-		.appendTo(listItem)
-		.hover(function() {
-			isOnSender = true;
-		}, function () {
-			isOnSender = false;
-		});
+				.appendTo(listItem)
+				.hover(function() {
+					isOnSender = true;
+				}, function () {
+					isOnSender = false;
+				});	
 	
-	
-	var timestampBox = CreateTimestampBox(timestamp).appendTo(listItem);
+	var timestampBox = CreateTimestampBox(timestamp)
+				.appendTo(listItem);
 		
-	var itsMessage = $("<li/>").attr({
-		 "class": msgBoxClass
-	 })	.append(CreateMailItemBox(JSON.parse(mail)))
-	 	.insertAfter(listItem);
+	var itsMessage = $("<li/>")
+				.addClass(msgBoxClass)
+				.append(CreateMailItemBox(JSON.parse(mail)))
+				.insertAfter(listItem);	
 	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
 	if(allowShrink) {
 		itsMessage.hide();
 		
@@ -4321,7 +4365,7 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 			}				
 		});
 	}	
-	
+
 	function updateView() {
 		var w = listItem.width()-timestampBox.width()-preMessageBox.width()-20;		
 		senderBox.text(senderName).shorten({width:w});
@@ -4334,19 +4378,19 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	this.appendTo = function(place) {
 		itemSpan.appendTo(place);
 		updateView();
-		return thisObj;
+		return self;
 	};
 	
 	this.prependTo = function(place) {
 		itemSpan.prependTo(place);
 		updateView();
-		return thisObj;
+		return self;
 	};
 	
 	this.insertAfter = function(place) {
 		itemSpan.insertAfter(place);
 		updateView();
-		return thisObj;
+		return self;
 	};
 	
 	this.getListItem = function() {
@@ -4356,13 +4400,16 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	this.destroy = function() {
 		message.destroy();
 		itemSpan.remove();
-		delete thisObj;
+		delete self;
 	};
 	
 	return this;
 };var GenericMailList = function(mailType,appID,
 		extraDataToSend, maxOlderMessagesFetch,
 		listClass,msgBoxClass,preMessageTitle,allowShrink) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	
 	var newsFeedRequestName = appID + "__newsfeed_request_name__";
@@ -4372,11 +4419,27 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 	
 	var lastItem = null;
 	
+	/****************************************************************************
+	 * User Interface
+	  ***************************************************************************/
 	this.frame = $("<span/>");
 	
-	var list = $("<ul/>").attr({
-		"class" : "messageList"
-	}).appendTo(this.frame);
+	var list = $("<ul/>")
+				.addClass("messageList")
+				.appendTo(this.frame);
+	
+	var showMore = new ShowMore().appendTo(this.frame);
+	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/	
+	var responseHandler = new ResponseHandler(mailType,
+			["mailList"],handleNewData);
+	
+	showMore.setOnClick(function() {
+		eWolf.serverRequest.request(appID,self.updateFromServer (true),
+				responseHandler.getHandler());
+	});
 	
 	this.updateFromServer = function (getOlder) {
 		var data = {};
@@ -4427,18 +4490,6 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 		return item;
 	};
 	
-	var responseHandler = new ResponseHandler(mailType,
-			["mailList"],handleNewData);
-	
-	eWolf.serverRequest.registerRequest(newsFeedRequestName,this.updateFromServer);
-	eWolf.serverRequest.registerHandler(newsFeedRequestName,responseHandler.getHandler());
-	eWolf.serverRequest.bindRequest(newsFeedRequestName,appID);
-	
-	var showMore = new ShowMore(function() {
-		eWolf.serverRequest.request(appID,self.updateFromServer (true),
-				responseHandler.getHandler());
-	}).appendTo(this.frame);
-	
 	function handleNewData(data, textStatus, postData) {
 		$.each(data.mailList, function(j, mailItem) {
 			self.addItem(mailItem.senderID,mailItem.senderName,
@@ -4463,6 +4514,10 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 		self.frame.remove();
 		delete self;
 	};
+	
+	eWolf.serverRequest.registerRequest(newsFeedRequestName,this.updateFromServer);
+	eWolf.serverRequest.registerHandler(newsFeedRequestName,responseHandler.getHandler());
+	eWolf.serverRequest.bindRequest(newsFeedRequestName,appID);
 	
 	return this;
 };
@@ -4511,25 +4566,24 @@ var InboxList = function (appID) {
 			"messageListItem","messageBox", ">> ",true);
 	
 	return this;
-};var ShowMore = function (onClick) {
+};var ShowMore = function () {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
-	var element = null;
+	var element = $("<div/>")
+			.addClass("showMoreClass")
+			.append("Show More...");
 	
-	this.draw = function () {
-		element = $("<div/>").addClass("showMoreClass")
-			.append("Show More...")
-			.click(onClick);
-		
-		return self;
-	};
-	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/		
 	this.remove = function() {
 		if(element != null) {
 			element.remove();
 			element = null;
+			delete self;
 		}
-		
-		return self;
 	};
 	
 	this.show = function () {
@@ -4548,6 +4602,12 @@ var InboxList = function (appID) {
 		return self;
 	};
 	
+	this.setOnClick = function(newOnClick) {
+		if(newOnClick && element) {
+			element.click(newOnClick);
+		}
+	};
+	
 	this.appendTo = function (something) {
 		if(element) {
 			element.appendTo(something);
@@ -4555,8 +4615,6 @@ var InboxList = function (appID) {
 		
 		return self;
 	};
-	
-	self.draw();
 	
 	return this;
 };var Inbox = function (id,applicationFrame) {
