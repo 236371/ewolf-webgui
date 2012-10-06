@@ -1,5 +1,8 @@
+ONE_MINUTE_IN_MILLISECOUNDS = 60000;
+
 EWOLF_CONSTANTS = {
-	REFRESH_INTERVAL_SEC : 60,
+	JSON_REQUEST : "/json",
+		
 	LOADING_FRAME : "loadingFrame",
 	APPLICATION_FRAME : "applicationFrame",
 	MAIN_FRAME : "mainFrame",
@@ -45,6 +48,20 @@ EWOLF_CONSTANTS = {
 	REQUEST_CATEGORY_CREATE_ACCOUNT : "createAccount",
 	REQUEST_CATEGORY_LOGIN : "login",
 	REQUEST_CATEGORY_LOGOUT : "logout",
+	
+	EVENT_ACTIVE : "state:active",
+	EVENT_AWAY : "state:away", 
+	EVENT_AWAY_FOR_LONG: "state:awayforlong",
+	EVENT_IDLE : "state:idle",
+	
+	TIMEOUT_AWAY_MINUTES 					: 5,
+	TIMEOUT_AWAY_FOR_LONG_MINUTES : 10,
+	TIMEOUT_IDLE_MINUTES 					: 15,
+	
+	REQUEST_INTERVAL_ACTIVE_MILLISECOUNDS 				: 1 * ONE_MINUTE_IN_MILLISECOUNDS,
+	REQUEST_INTERVAL_AWAY_MILLISECOUNDS 					: 2 * ONE_MINUTE_IN_MILLISECOUNDS ,
+	REQUEST_INTERVAL_AWAY_FOR_LONG_MILLISECOUNDS 	: 3 * ONE_MINUTE_IN_MILLISECOUNDS,
+	REQUEST_INTERVAL_IDLE_MILLISECOUNDS 					: 0
 };
 
 WOLFPACK_CONSTANTS = {
@@ -82,6 +99,9 @@ NEWMAIL_CONSTANTS = {
 		}
 };
 var eWolf = new function() {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
 	var self = this;
 	$.extend(this,EWOLF_CONSTANTS);
 	
@@ -93,8 +113,15 @@ var eWolf = new function() {
 	
 	this.mainAppsCreated = false;
 	
+	this.notificationCount = 0;
+	
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
 	this.init = function() {
-		self.serverRequest = new PostRequestHandler("/json",self.REFRESH_INTERVAL_SEC);
+		self.serverRequest = new PostRequestHandler(
+				self.JSON_REQUEST,
+				self.REQUEST_INTERVAL_ACTIVE_MILLISECOUNDS);
 		
 		$(window).bind('hashchange', self.onHashChange);
 		
@@ -152,9 +179,9 @@ var eWolf = new function() {
 		self.serverRequest.registerHandler(self.PROFILE_REQUEST_NAME,
 				new ResponseHandler("profile",["id","name"],
 						function (data, textStatus, postData) {
-					document.title = "eWolf - " + data.name;
 					self.userID = data.id;
 					self.userName = data.name;
+					self.updateTitle();
 				}).getHandler());
 		
 		self.serverRequest.addOnComplete(null,function(appID, response, status) {
@@ -174,6 +201,21 @@ var eWolf = new function() {
 		self.getUserInformation();
 	};
 	
+	this.updateTitle = function () {
+		var title = "eWolf";
+		if(self.userName) {
+			title += " - " + self.userName;
+		}
+		
+		if(self.notificationCount > 0) {
+			title += " (" + self.notificationCount + ")";
+		}
+		
+		document.title = title;
+		
+		return self;
+	};
+	
 	this.getUserInformation = function () {
 		if(self.loginApp) {
 			self.loginApp.destroy();
@@ -186,6 +228,8 @@ var eWolf = new function() {
 		}
 		
 		self.serverRequest.requestAll(self.FIRST_EWOLF_LOGIN_REQUEST_ID, true);
+		
+		return self;
 	};
 	
 	this.createMainApps = function () {
@@ -209,6 +253,40 @@ var eWolf = new function() {
 		
 		self.serverRequest.setRequestAllOnSelect(true);
 		self.onHashChange();
+		
+		self.monitor = new IdleMonitor(
+				self.TIMEOUT_AWAY_MINUTES,
+				self.TIMEOUT_AWAY_FOR_LONG_MINUTES,
+				self.TIMEOUT_IDLE_MINUTES);
+		
+		self.bind(self.EVENT_AWAY, function() {
+			//console.log(self.EVENT_AWAY);
+			self.serverRequest.setRefreshInterval(
+					eWolf.REQUEST_INTERVAL_AWAY_MILLISECOUNDS);
+		});
+		
+		self.bind(self.EVENT_AWAY_FOR_LONG, function() {
+			//console.log(self.EVENT_AWAY_FOR_LONG);
+			self.serverRequest.setRefreshInterval(
+					eWolf.REQUEST_INTERVAL_AWAY_FOR_LONG_MILLISECOUNDS);
+		});
+		
+		self.bind(self.EVENT_IDLE, function() {
+			//console.log(self.EVENT_IDLE);
+			self.serverRequest.setRefreshInterval(
+					eWolf.REQUEST_INTERVAL_IDLE_MILLISECOUNDS);
+		});
+		
+		self.bind(self.EVENT_ACTIVE, function() {
+			//console.log(self.EVENT_ACTIVE);
+			self.serverRequest.setRefreshInterval(
+					eWolf.REQUEST_INTERVAL_ACTIVE_MILLISECOUNDS);
+			self.serverRequest.requestAll(self.selectedApp,false);
+		});
+		
+		self.monitor.initialize();
+		
+		return self;
 	};
 	
 	this.presentLoginScreen = function() {
@@ -225,6 +303,8 @@ var eWolf = new function() {
 		if(!self.signupApp) {
 			self.signupApp = new Signup(self.SIGNUP_APP_ID,self.applicationFrame);
 		}
+		
+		return self;
 	};
 	
 	this.onHashChange = function() {
@@ -270,6 +350,8 @@ var eWolf = new function() {
 		} else {
 			self.onHashChange();
 		}
+		
+		return self;
 	};
 	
 	this.bind = function (arg0,arg1) {
@@ -517,7 +599,8 @@ var GenericResponse = function (obj) {
 	
 	
 	return this;
-};var BasicRequestHandler = function(requestAddress,refreshIntervalSec) {
+};var BasicRequestHandler = function(requestAddress,
+		refreshIntervalMillisec) {
 	var self = this;
 	
 	var requestsMap = {},
@@ -529,14 +612,19 @@ var GenericResponse = function (obj) {
 	var timer = null;
 	var requestAllOnSelect = false;
 	
+	this.setRefreshInterval = function (newRefreshIntervalMillisec) {
+		refreshIntervalMillisec = newRefreshIntervalMillisec;
+	};
+	
 	this.stopRefreshInterval = function () {
 		clearTimeout(timer);
 	};
 	
 	this.restartRefreshInterval = function () {
-		if(refreshIntervalSec > 0) {
-			clearTimeout(timer);
-			timer = setTimeout(timerTimeout,refreshIntervalSec*1000);
+		clearTimeout(timer);
+		
+		if(refreshIntervalMillisec > 0) {
+			timer = setTimeout(timerTimeout,refreshIntervalMillisec);
 		}
 	};
 	
@@ -548,13 +636,7 @@ var GenericResponse = function (obj) {
 		eWolf.trigger("loadingEnd",[appID]);		
 	}
 	
-	function omRequestAllBegin(appID) {
-		self.stopRefreshInterval();
-	}
-	
 	function onRequestAllComplete(appID, response, status) {
-		self.restartRefreshInterval();
-		
 		if(appID && appsRequests[appID] && appsRequests[appID].onComplete) {
 			appsRequests[appID].onComplete(appID, response, status);
 		}
@@ -702,7 +784,7 @@ var GenericResponse = function (obj) {
 	};
 	
 	this.requestAll = function(appID,forceUpdate) {
-		omRequestAllBegin(appID);
+		self.stopRefreshInterval();
 		
 		var requestsObj = generalRequests;
 		
@@ -716,17 +798,25 @@ var GenericResponse = function (obj) {
 			needRefresh = requestsObj;
 		} else {
 			needRefresh = self.filterByLastUpdate(requestsObj);
-		}	
+		}
+		
+		if(needRefresh.length == 0) {
+			self.restartRefreshInterval();
+			return self;
+		}
 		
 		return self.requestObjectArray(appID,needRefresh,
-				onRequestAllComplete);
+				function (appID, response, status) {
+			self.restartRefreshInterval();
+			onRequestAllComplete(appID, response, status);
+		});
 	};
 	
 	this.filterByLastUpdate = function(requestsObj) {
 		var needRefresh = [];
 		
 		var needRefreshTime = new Date().getTime() - 
-							(refreshIntervalSec * 1000);
+							(refreshIntervalMillisec);
 
 		$(requestsObj).each(function(i,reqObj) {
 			if(reqObj.lastUpdate < needRefreshTime) {
@@ -758,8 +848,8 @@ var GenericResponse = function (obj) {
 	return this;
 };
 
-var PostRequestHandler = function(requestAddress,refreshIntervalSec) {
-	BasicRequestHandler.call(this,requestAddress,refreshIntervalSec);
+var PostRequestHandler = function(requestAddress,refreshIntervalMillisec) {
+	BasicRequestHandler.call(this,requestAddress,refreshIntervalMillisec);
 	
 	this._makeRequest = function (address,data,success) {
 		return $.post(address,JSON.stringify(data),success,"json");
@@ -768,8 +858,8 @@ var PostRequestHandler = function(requestAddress,refreshIntervalSec) {
 	return this;
 };
 
-/*var JSONRequestHandler = function(id,requestAddress,refreshIntervalSec) {
-	BasicRequestHandler.call(this,id,requestAddress,refreshIntervalSec);
+/*var JSONRequestHandler = function(id,requestAddress,refreshIntervalMillisec) {
+	BasicRequestHandler.call(this,id,requestAddress,refreshIntervalMillisec);
 	
 	this._makeRequest = function (address,data,success) {		
 		return $.getJSON(address,data,success);
@@ -1137,7 +1227,84 @@ var FormValidator = function() {
 	
 	return this;
 };
-var Popup = function(frame, activator, align, width, offset) {
+var IdleMonitor = function(awayTime, awayForLongTime,
+		idleTime) {
+	/****************************************************************************
+	 * Members
+	  ***************************************************************************/
+	var self = this;
+	
+	this.checkInterval = ONE_MINUTE_IN_MILLISECOUNDS;
+	this.awayTime = awayTime;
+	this.awayForLongTime = awayForLongTime;
+  this.idleTime = idleTime;
+  
+  var ACTIVE 				= "active",
+  		AWAY 					= "away",
+  		AWAY_FOR_LONG = "awayforlong",
+  		IDLE					=	"idle";
+  
+  var event = {};
+  event[ACTIVE] 				= eWolf.EVENT_ACTIVE;
+  event[AWAY]					 	= eWolf.EVENT_AWAY;
+  event[AWAY_FOR_LONG]	= eWolf.EVENT_AWAY_FOR_LONG;
+  event[IDLE] 					= eWolf.EVENT_IDLE;
+  
+  this.state = ACTIVE;
+  
+  this.idleCount = 0;
+  
+	/****************************************************************************
+	 * Functionality
+	  ***************************************************************************/
+	this.initialize = function() {
+		$(document).mousemove(self.reinitIdle);
+		$(document).keypress(self.reinitIdle);
+		self.timer = setTimeout(self.increaseIdle, self.checkInterval);
+	};
+	
+	this.increaseIdle = function() {
+		self.idleCount++;
+		self.handleIdleCountChange();
+		self.timer = setTimeout(self.increaseIdle, self.checkInterval);
+	};
+	
+	this.reinitIdle = function () {
+		self.idleCount = 0;
+		self.sendSignal(ACTIVE);	
+	};
+	
+	this.handleIdleCountChange = function () {
+		if(self.idleCount >= self.idleTime) {			
+			self.sendSignal(IDLE);
+		} else if(self.idleCount >= self.awayForLongTime) {
+			self.sendSignal(AWAY_FOR_LONG);
+		} else if(self.idleCount >= self.awayTime) {
+			self.sendSignal(AWAY);
+		} else {
+			self.sendSignal(ACTIVE);
+		}
+	};
+	
+	this.sendSignal = function (newState) {
+		if(newState != self.state) {
+			self.state = newState;
+			
+			if(self.state == IDLE) {
+				clearTimeout(self.timer);
+			}
+			
+			if(self.state == ACTIVE) {
+				clearTimeout(self.timer);
+				self.timer = setTimeout(self.increaseIdle, self.checkInterval);
+			}
+			
+			eWolf.trigger(event[self.state]);
+		}		
+	};
+	
+	return this;
+};var Popup = function(frame, activator, align, width, offset) {
 	/****************************************************************************
 	 * Members
 	  ***************************************************************************/
@@ -2266,6 +2433,9 @@ var PendingRequests = function (insideContext) {
 
 		pendingCount.setCounter(pendingApprovalCount);
 		blockingCount.setCounter(requestApprovalCount);
+		
+		eWolf.notificationCount = pendingApprovalCount + requestApprovalCount;
+		eWolf.updateTitle();
 	};
 	
 	this.appendTo = function(somthing) {
