@@ -317,7 +317,7 @@ var eWolf = new function() {
 			
 			var found = false;
 			
-			$.each($(self).data("events").select, function(i,handler) {				
+			$.each($._data(self, "events").select, function(i,handler) {				
 				if(handler.type == "select" && handler.namespace == selected) {
 					found = true;
 					return false;
