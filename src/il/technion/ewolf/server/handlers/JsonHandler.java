@@ -62,6 +62,7 @@ public class JsonHandler implements HttpRequestHandler {
 		Gson gson = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
 
 		Set<Entry<String, JsonElement>> jsonReqAsSet = jsonReq.entrySet();
+		System.out.println("\t[JsonHandler] request:" + jsonReqAsSet.toString());
 		for (Entry<String, JsonElement> obj : jsonReqAsSet) {
 			String key = obj.getKey();
 			if (!authorized) {
