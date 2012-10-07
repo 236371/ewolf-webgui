@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URI;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.List;
 
 import org.apache.http.Consts;
@@ -19,6 +22,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpDateGenerator;
 import org.apache.http.protocol.HttpRequestHandler;
 
 public class SFSHandler implements HttpRequestHandler {
@@ -62,6 +66,11 @@ public class SFSHandler implements HttpRequestHandler {
 			String mimeType = ServerResources.getFileTypeMap().getContentType(fileName);
 			res.setHeader(HttpHeaders.CONTENT_TYPE, mimeType);
 			res.setHeader( "Content-Disposition", "attachment; filename=" + fileName );
+
+			DateFormat dateFormat = new SimpleDateFormat(HttpDateGenerator.PATTERN_RFC1123);
+			Calendar cal = Calendar.getInstance();
+			cal.add(Calendar.YEAR, 1);
+			res.setHeader(HttpHeaders.EXPIRES, dateFormat.format(cal.getTime()));
 			res.setEntity(new ByteArrayEntity((byte[]) fileData));
 		} catch (Exception e) {
 			e.printStackTrace();
