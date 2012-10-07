@@ -244,7 +244,7 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 	private List<Post> fetchPostsForWolfpack(String socialGroupName) {
 		List<Post> posts = new ArrayList<Post>();
 		Map<Profile, List<Post>> allPosts = newsFeedCache.get();
-
+		
 		if (socialGroupName == null) {
 			for (Map.Entry<Profile, List<Post>> entry : allPosts.entrySet()) {
 				posts.addAll(entry.getValue());
@@ -257,7 +257,16 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 			List<Profile> profiles = wp.getMembers();
 
 			for (Profile p : profiles) {
-				posts.addAll(allPosts.get(p));
+				List<Post> list = allPosts.get(p);
+				if(list != null) {
+					posts.addAll(list);
+				} else {
+					// TODO: Handle Profile not found in cash problem... how?!
+					// XXX Happen after a user added to wolfpack.
+					// 			After he added me to his wolfpacks this problem
+					//			sort it self.
+					System.out.println("[ERROR] Profile not found in cash");
+				}				
 			}
 		}
 
