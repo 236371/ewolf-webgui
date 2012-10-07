@@ -37,6 +37,8 @@ html,body {
 	margin:0px;
 	padding:0px;
 	background-color: /*#f6f4f5*/ #E6EBEA;
+	font-family:"Serif",serif;
+	font-size:16px;
 }
 
 body {
@@ -394,7 +396,6 @@ h1, h2
 	padding:5px 0 0 0;
 	font-size:20px;
 	color:black;
-	font-family:Arial;
 	
 	top:45px;right:0;left:-35px;z-index:999;
 	position:fixed;	
@@ -418,7 +419,7 @@ h1, h2
 
 #menu {
 	width:200px;
-	font-family:Georgia, Times, serif;
+/* 	font-family:"Times New Roman", Times, serif; */
 	font-size:15px;
 }
 
