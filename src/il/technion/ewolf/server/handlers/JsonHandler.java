@@ -7,6 +7,7 @@ import il.technion.ewolf.server.jsonDataHandlers.JsonDataHandler;
 
 import java.io.IOException;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +23,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpDateGenerator;
 import org.apache.http.protocol.HttpRequestHandler;
 import org.apache.http.util.EntityUtils;
 
@@ -70,7 +72,7 @@ public class JsonHandler implements HttpRequestHandler {
 			}
 
 			if (key.equals("logout")) {
-				DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.FULL, DateFormat.LONG);
+				DateFormat dateFormat = new SimpleDateFormat(HttpDateGenerator.PATTERN_RFC1123);
 				Header[] headers = req.getHeaders("Cookie");
 				for (Header h : headers) {
 					String cookie = h.getValue();
