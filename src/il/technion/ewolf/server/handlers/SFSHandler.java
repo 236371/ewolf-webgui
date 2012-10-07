@@ -37,7 +37,7 @@ public class SFSHandler implements HttpRequestHandler {
 	public void handle(HttpRequest req, HttpResponse res,
 			HttpContext context) {
 
-		if (req.containsHeader(HttpHeaders.IF_MODIFIED_SINCE)) {
+		if (req.containsHeader(HttpHeaders.IF_MODIFIED_SINCE) || req.containsHeader(HttpHeaders.CACHE_CONTROL)) {
 			res.setStatusCode(HttpStatus.SC_NOT_MODIFIED);
 			return;
 		}
@@ -71,6 +71,8 @@ public class SFSHandler implements HttpRequestHandler {
 			Calendar cal = Calendar.getInstance();
 			cal.add(Calendar.YEAR, 1);
 			res.setHeader(HttpHeaders.EXPIRES, dateFormat.format(cal.getTime()));
+			res.setHeader(HttpHeaders.LAST_MODIFIED,
+					dateFormat.format(ewolfServer.beforeStartTime));
 			res.setEntity(new ByteArrayEntity((byte[]) fileData));
 		} catch (Exception e) {
 			e.printStackTrace();

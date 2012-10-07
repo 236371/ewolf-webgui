@@ -57,6 +57,7 @@ public class EwolfServer {
 
 	public volatile boolean isReady = false;
 	private Date startTime;
+	public Date beforeStartTime;
 
 	public EwolfServer(String config) {
 		if (config == null) {
@@ -134,6 +135,7 @@ public class EwolfServer {
 		addEwolfHandlers();
 
 		startTime = new Date();
+		beforeStartTime = new Date(System.currentTimeMillis()-1);
 		isReady = true;
 		System.out.println("Server started.");
 	}
