@@ -67,7 +67,7 @@ public class JsonHandler implements HttpRequestHandler {
 			String key = obj.getKey();
 			if (!authorized) {
 				if (!key.equals("login") && !key.equals("createAccount")) {
-					res.setStatusCode(HttpStatus.SC_UNAUTHORIZED);
+					res.setStatusCode(HttpStatus.SC_FORBIDDEN);
 					return;
 				}
 			}

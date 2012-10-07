@@ -326,7 +326,7 @@ var eWolf = new function() {
 			
 			if(found) {
 				self.trigger("select",[selected]);
-			} else {
+			} else if(self.searchBar){
 				var selectedSubString = selected.substring(0,
 						self.searchBar.SEARCH_PROFILE_PREFIX.length);
 				
@@ -341,7 +341,7 @@ var eWolf = new function() {
 				} else {
 					self.selectApp(self.NEWSFEED_APP_ID);
 				}				
-			}			
+			}		
 		} else {
 			self.selectApp(self.NEWSFEED_APP_ID);
 		}
@@ -916,7 +916,7 @@ var ResponseHandler = function(category, requiredFields, handler) {
 	 * Functionality
 	  ***************************************************************************/
 	function theHandler(data, textStatus, postData) {
-		if (data[category]) {
+		if (data && data[category]) {
 			var response = new GenericResponse(data[category]);
 			var valid = true;
 			
@@ -2355,13 +2355,13 @@ $.fn.spin = function(opts) {
 		});
 	
 	function onLogout(appID) {
-		document.location.reload(true);
+		document.location.reload(false);
 	}
 	
 	this.commitLogout = function () {
 		eWolf.serverRequest.request(id,{
 				logout : {}
-			}, null, onLogout);
+			}, null , onLogout);
 	};
 	
 	this.destroy = function() {
