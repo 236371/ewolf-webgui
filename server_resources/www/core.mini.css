@@ -766,7 +766,10 @@ h1, h2
 	float:left;
 	padding:7px 0 8px 0;
 }
-.userListContextSide {
+
+#eWolfTitleLink {
+	cursor:pointer;
+}.userListContextSide {
 	float:left;
 	border-right-style:solid;
 	border-right-width:1px;

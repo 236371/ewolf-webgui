@@ -22,7 +22,6 @@ import il.technion.ewolf.server.jsonDataHandlers.CreateAccountHandler;
 import il.technion.ewolf.server.jsonDataHandlers.CreateWolfpackHandler;
 import il.technion.ewolf.server.jsonDataHandlers.InboxFetcher;
 import il.technion.ewolf.server.jsonDataHandlers.LoginHandler;
-import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher;
 import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcherWithCache;
 import il.technion.ewolf.server.jsonDataHandlers.PostToNewsFeedHandler;
 import il.technion.ewolf.server.jsonDataHandlers.ProfileFetcher;

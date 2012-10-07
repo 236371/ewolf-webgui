@@ -198,6 +198,10 @@ var eWolf = new function() {
 			}
 		});
 		
+		$("#eWolfTitleLink").click(function() {
+			self.trigger("refresh",[self.selectedApp]);
+		});
+		
 		self.getUserInformation();
 	};
 	
