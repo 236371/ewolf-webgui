@@ -4,6 +4,8 @@ import il.technion.ewolf.ewolf.SocialNetwork;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
+import il.technion.ewolf.msg.SocialMail;
+import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
@@ -30,6 +32,7 @@ public class ServerModule extends AbstractModule {
 
 		defaultProps.setProperty("server.cache.newsfeed.intervalSec", "30");
 		defaultProps.setProperty("server.cache.wolfpacks.intervalSec", "30");
+		defaultProps.setProperty("server.cache.inbox.intervalSec", "30");
 
 		return defaultProps;
 	}
@@ -47,6 +50,21 @@ public class ServerModule extends AbstractModule {
 	protected void configure() {
 		Names.bindProperties(binder(), properties);
 	}
+
+	@Provides
+	@Singleton
+	ICache<List<SocialMessage>> provideInboxCache(
+			@Named("server.cache.inbox.intervalSec") int cachedTimeSec,
+			final SocialMail smail) {
+		return new SimpleCache<List<SocialMessage>>(
+				new ICache<List<SocialMessage>>() {
+					@Override
+					public List<SocialMessage> get() {
+						return smail.readInbox();
+					}
+				}, cachedTimeSec);
+	}
+
 
 	@Provides
 	@Singleton

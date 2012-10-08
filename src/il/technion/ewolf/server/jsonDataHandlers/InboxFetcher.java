@@ -3,11 +3,9 @@ package il.technion.ewolf.server.jsonDataHandlers;
 
 import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import il.technion.ewolf.msg.ContentMessage;
-import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.ICache;
-import il.technion.ewolf.server.SimpleCache;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
@@ -21,21 +19,12 @@ import com.google.inject.Inject;
 
 public class InboxFetcher implements JsonDataHandler {
 	private static final String SENDER_NOT_FOUND_MESSAGE = "Not found";
-	private final SocialMail smail;
-	private SimpleCache<List<SocialMessage>> inboxCache;
 
-	private static final int cachedTimeSec = 60;
+	private final ICache<List<SocialMessage>> inboxCache;
 
 	@Inject
-	public InboxFetcher(SocialMail smail) {
-		this.smail = smail;
-		this.inboxCache = new SimpleCache<List<SocialMessage>>(new ICache<List<SocialMessage>>() {
-			@Override
-			public List<SocialMessage> get() {
-				return InboxFetcher.this.smail.readInbox();
-			}
-
-		}, cachedTimeSec);
+	public InboxFetcher(ICache<List<SocialMessage>> cache) {
+		this.inboxCache = cache;
 	}
 
 	private static class JsonReqInboxParams {
