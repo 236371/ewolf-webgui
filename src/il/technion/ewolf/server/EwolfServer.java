@@ -104,6 +104,9 @@ public class EwolfServer {
 		jsonHandler.addHandler("login", new LoginHandler(config));
 		serverConnector.start();
 
+		startTime = new Date();
+		beforeStartTime = new Date(System.currentTimeMillis()-1000);
+
 		while (configurations.username == null || configurations.password == null
 				|| configurations.name == null) {
 			System.out.println("Username and/or password and/or name weren't provided.");
@@ -134,8 +137,6 @@ public class EwolfServer {
 				"PokeMessagesAcceptorThread").start();
 		addEwolfHandlers();
 
-		startTime = new Date();
-		beforeStartTime = new Date(System.currentTimeMillis()-1000);
 		isReady = true;
 		System.out.println("Server started.");
 	}
