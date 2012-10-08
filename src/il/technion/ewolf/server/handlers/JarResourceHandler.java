@@ -5,8 +5,6 @@ import il.technion.ewolf.server.ServerResources;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.apache.commons.httpclient.util.DateParseException;
@@ -18,7 +16,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpDateGenerator;
 import org.apache.http.protocol.HttpRequestHandler;
 
 public class JarResourceHandler implements HttpRequestHandler {
@@ -81,9 +78,8 @@ public class JarResourceHandler implements HttpRequestHandler {
 		response.addHeader(HttpHeaders.CONTENT_TYPE,
 				ServerResources.getFileTypeMap().getContentType(path));
 
-		DateFormat dateFormat = new SimpleDateFormat(HttpDateGenerator.PATTERN_RFC1123);
 		response.setHeader(HttpHeaders.LAST_MODIFIED,
-				dateFormat.format(ewolfServer.beforeStartTime));
+				DateUtil.formatDate(ewolfServer.beforeStartTime));
 
 		response.setHeader(HttpHeaders.CACHE_CONTROL, "public, must-revalidate");
 	}
