@@ -36,7 +36,7 @@ public class JarResourceHandler implements HttpRequestHandler {
 			if (req.containsHeader(HttpHeaders.IF_MODIFIED_SINCE)) {
 				String dateString = req.getLastHeader(HttpHeaders.IF_MODIFIED_SINCE).getValue();
 				Date d = DateUtil.parseDate(dateString);
-				if (d.after(ewolfServer.startTime())) {
+				if (d.after(ewolfServer.beforeStartTime)) {
 					res.setStatusCode(HttpStatus.SC_NOT_MODIFIED);
 					return;
 				}
@@ -79,7 +79,7 @@ public class JarResourceHandler implements HttpRequestHandler {
 				ServerResources.getFileTypeMap().getContentType(path));
 
 		response.setHeader(HttpHeaders.LAST_MODIFIED,
-				DateUtil.formatDate(ewolfServer.beforeStartTime));
+				DateUtil.formatDate(ewolfServer.startTime()));
 
 		response.setHeader(HttpHeaders.CACHE_CONTROL, "public, must-revalidate");
 	}

@@ -135,7 +135,7 @@ public class EwolfServer {
 		addEwolfHandlers();
 
 		startTime = new Date();
-		beforeStartTime = new Date(System.currentTimeMillis()-1);
+		beforeStartTime = new Date(System.currentTimeMillis()-1000);
 		isReady = true;
 		System.out.println("Server started.");
 	}
