@@ -5,7 +5,7 @@ import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import il.technion.ewolf.msg.ContentMessage;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.server.EWolfResponse;
-import il.technion.ewolf.server.ICache;
+import il.technion.ewolf.server.cache.ICache;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 

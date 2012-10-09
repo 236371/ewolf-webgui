@@ -1,4 +1,5 @@
-package il.technion.ewolf.server;
+package il.technion.ewolf.server.cache;
+
 
 
 public class SimpleCache<T> implements ICache<T> {

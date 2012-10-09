@@ -1,4 +1,4 @@
-package il.technion.ewolf.server;
+package il.technion.ewolf.server.cache;
 
 import il.technion.ewolf.ewolf.SocialNetwork;
 import il.technion.ewolf.ewolf.WolfPack;
@@ -24,7 +24,7 @@ import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 
-public class ServerModule extends AbstractModule {
+public class CacheModule extends AbstractModule {
 	private final Properties properties;
 
 	private Properties getDefaultProperties() {
@@ -37,11 +37,11 @@ public class ServerModule extends AbstractModule {
 		return defaultProps;
 	}
 
-	public ServerModule() {
+	public CacheModule() {
 		this(new Properties());
 	}
 
-	public ServerModule(Properties properties) {
+	public CacheModule(Properties properties) {
 		this.properties = getDefaultProperties();
 		this.properties.putAll(properties);
 	}

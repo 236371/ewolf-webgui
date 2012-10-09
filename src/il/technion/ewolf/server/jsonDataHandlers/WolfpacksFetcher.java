@@ -5,7 +5,7 @@ import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.server.EWolfResponse;
-import il.technion.ewolf.server.ICache;
+import il.technion.ewolf.server.cache.ICache;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;

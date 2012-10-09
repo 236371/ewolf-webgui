@@ -1,4 +1,5 @@
-package il.technion.ewolf.server;
+package il.technion.ewolf.server.cache;
+
 
 public class SelfUpdatingCache<T> implements ICache<T> {
 	T data;
