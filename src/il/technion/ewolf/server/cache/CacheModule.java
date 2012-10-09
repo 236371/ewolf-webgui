@@ -36,7 +36,6 @@ public class CacheModule extends AbstractModule {
 		defaultProps.setProperty("server.cache.newsfeed.intervalSec", "30");
 		defaultProps.setProperty("server.cache.wolfpacks.intervalSec", "30");
 		defaultProps.setProperty("server.cache.inbox.intervalSec", "30");
-		defaultProps.setProperty("server.cache.profiles.intervalSec", "30");
 
 		return defaultProps;
 	}
@@ -57,11 +56,9 @@ public class CacheModule extends AbstractModule {
 
 	@Provides
 	@Singleton
-	ICacheWithParameter<Map<String,Profile>, String> provideProfilesCache(
-			@Named("server.cache.profiles.intervalSec") int cachedTimeSec,
+	ICacheWithParameter<Profile, String> provideProfilesCache(
 			final SocialFS socialFS, final UserIDFactory userIDFactory) {
-		return new SimpleCacheWithParameter<Map<String,Profile>, String>(
-				new ICacheWithParameter<Map<String,Profile>, String>() {
+		return new ICacheWithParameter<Profile, String>() {
 					Map<String,Profile> profilesCache = new HashMap<String, Profile>();
 
 					{
@@ -69,8 +66,12 @@ public class CacheModule extends AbstractModule {
 						profilesCache.put("-1", socialFS.getCredentials().getProfile());
 					}
 
+					/**
+					 * @param	strUid	user ID or "-1" for self ID
+					 * @return	
+					 */
 					@Override
-					public Map<String,Profile> get(String strUid) {
+					public Profile get(String strUid) {
 						if (!profilesCache.containsKey(strUid)) {
 							try {
 								UserID uid = userIDFactory.getFromBase64(strUid);
@@ -85,9 +86,9 @@ public class CacheModule extends AbstractModule {
 							}
 						}
 
-						return profilesCache;
+						return profilesCache.get(strUid);
 					}
-				}, cachedTimeSec);
+		};
 	}
 
 	@Provides
