@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -59,7 +60,7 @@ public class CacheModule extends AbstractModule {
 	ICacheWithParameter<Profile, String> provideProfilesCache(
 			final SocialFS socialFS, final UserIDFactory userIDFactory) {
 		return new ICacheWithParameter<Profile, String>() {
-					Map<String,Profile> profilesCache = new HashMap<String, Profile>();
+					Map<String,Profile> profilesCache = new ConcurrentHashMap<String, Profile>();
 
 					{
 						// add self profile to cache
@@ -68,7 +69,7 @@ public class CacheModule extends AbstractModule {
 
 					/**
 					 * @param	strUid	user ID or "-1" for self ID
-					 * @return	
+					 * @return	profile corresponding to userID or null if not found
 					 */
 					@Override
 					public Profile get(String strUid) {
