@@ -37,6 +37,7 @@ public class CacheModule extends AbstractModule {
 		defaultProps.setProperty("server.cache.newsfeed.intervalSec", "30");
 		defaultProps.setProperty("server.cache.wolfpacks.intervalSec", "30");
 		defaultProps.setProperty("server.cache.inbox.intervalSec", "30");
+		defaultProps.setProperty("server.cache.wolfpackMembers.intervalSec", "30");
 
 		return defaultProps;
 	}
@@ -134,11 +135,37 @@ public class CacheModule extends AbstractModule {
 
 	@Provides
 	@Singleton
+	ICache<Map<WolfPack,List<Profile>>> provideWolfpacksMembersCache(
+			@Named("server.cache.wolfpackMembers.intervalSec") int cachedTimeSec,
+			final ICache<List<WolfPack>> wolfpacksCache) {
+		return new SimpleCache<Map<WolfPack,List<Profile>>>(
+				new ICache<Map<WolfPack,List<Profile>>>() {
+
+					@Override
+					public Map<WolfPack, List<Profile>> get() {
+						Map<WolfPack, List<Profile>> membersMap = new HashMap<WolfPack, List<Profile>>();
+						List<WolfPack> wolfpacks = wolfpacksCache.get();
+						for (WolfPack w : wolfpacks) {
+							membersMap.put(w, w.getMembers());
+						}
+						return membersMap;
+					}
+
+					@Override
+					public void update() {
+						get();
+					}
+				}, cachedTimeSec);
+	}
+
+	@Provides
+	@Singleton
 	ICache<Map<Profile,List<Post>>> provideNewsFeedCache(
 			@Named("server.cache.newsfeed.intervalSec") int cachedTimeSec,
 			final SocialFS socialFS,
-			final WolfPackLeader socialGroupsManager,
-			final SocialNetwork snet){
+			final SocialNetwork snet,
+			final ICache<List<WolfPack>> wolfpacksCache,
+			final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache){
 		return new SelfUpdatingCache<Map<Profile,List<Post>>>(
 				new ICache<Map<Profile,List<Post>>>() {
 					@Override
@@ -149,12 +176,13 @@ public class CacheModule extends AbstractModule {
 					private Map<Profile, List<Post>> fetchAllPosts() {
 						Map<Profile, List<Post>> allPosts = new HashMap<Profile, List<Post>>();
 
-						List<WolfPack> wolfpacks = socialGroupsManager.getAllSocialGroups();
+						Map<WolfPack,List<Profile>> wolfpacksMembers = wolfpacksMembersCache.get();
 						Set<Profile> profiles = new HashSet<Profile>();
 
-						for (WolfPack w : wolfpacks) {
-							profiles.addAll(w.getMembers());
+						for (Map.Entry<WolfPack,List<Profile>> entry : wolfpacksMembers.entrySet()) {
+							profiles.addAll(entry.getValue());
 						}
+
 						//add self profile
 						profiles.add(socialFS.getCredentials().getProfile());
 
