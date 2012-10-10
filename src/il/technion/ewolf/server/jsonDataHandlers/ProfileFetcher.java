@@ -4,24 +4,20 @@ import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
 import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
 import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.cache.ICacheWithParameter;
 import il.technion.ewolf.socialfs.Profile;
-import il.technion.ewolf.socialfs.SocialFS;
-import il.technion.ewolf.socialfs.UserID;
-import il.technion.ewolf.socialfs.UserIDFactory;
-import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 public class ProfileFetcher implements JsonDataHandler {
-	private final SocialFS socialFS;
-	private final UserIDFactory userIDFactory;
+
+	private final ICacheWithParameter<Profile, String> profilesCache;
 
 	@Inject
-	public ProfileFetcher(SocialFS socialFS, UserIDFactory userIDFactory) {
-		this.socialFS = socialFS;
-		this.userIDFactory = userIDFactory;
+	public ProfileFetcher(ICacheWithParameter<Profile, String> profilesCache) {
+		this.profilesCache = profilesCache;
 	}
 
 	@SuppressWarnings("unused")
@@ -64,22 +60,12 @@ public class ProfileFetcher implements JsonDataHandler {
 			return new ProfileResponse(RES_BAD_REQUEST);
 		}
 
-		Profile profile;
-		if (jsonReqParams.userID==null) {
-			profile = socialFS.getCredentials().getProfile();
-			jsonReqParams.userID = profile.getUserId().toString();
-		} else {
-			try {
-				UserID uid = userIDFactory.getFromBase64(jsonReqParams.userID);
-				profile = socialFS.findProfile(uid);
-			} catch (ProfileNotFoundException e) {
-				e.printStackTrace();
-				return new ProfileResponse(RES_NOT_FOUND, "User with given ID wasn't found.");
-			}  catch (IllegalArgumentException e) {
-				e.printStackTrace();
-				return new ProfileResponse(RES_BAD_REQUEST, "Illegal user ID.");
-			}
+		String strUid = (jsonReqParams.userID==null) ? "-1" : jsonReqParams.userID;
+		Profile profile = profilesCache.get(strUid);
+		if (profile == null) {
+			return new ProfileResponse(RES_NOT_FOUND, "User with given ID wasn't found.");
 		}
-		return new ProfileResponse(profile.getName(), jsonReqParams.userID, RES_SUCCESS);
+
+		return new ProfileResponse(profile.getName(), profile.getUserId().toString(), RES_SUCCESS);
 	}
 }

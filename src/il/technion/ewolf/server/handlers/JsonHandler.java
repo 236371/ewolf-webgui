@@ -7,10 +7,10 @@ import il.technion.ewolf.server.jsonDataHandlers.JsonDataHandler;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.http.Header;
@@ -33,7 +33,7 @@ import com.google.gson.JsonParser;
 import com.google.inject.Inject;
 
 public class JsonHandler implements HttpRequestHandler {
-	private Map<String,JsonDataHandler> handlers = new HashMap<String,JsonDataHandler>();
+	private Map<String,JsonDataHandler> handlers = new ConcurrentHashMap<String,JsonDataHandler>();
 	HttpSessionStore sessionStore;
 
 	@Inject

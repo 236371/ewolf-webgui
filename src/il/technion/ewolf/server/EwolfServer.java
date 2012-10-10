@@ -11,6 +11,7 @@ import il.technion.ewolf.http.HttpConnectorModule;
 import il.technion.ewolf.kbr.KeybasedRouting;
 import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.server.ServerResources.EwolfConfigurations;
+import il.technion.ewolf.server.cache.CacheModule;
 import il.technion.ewolf.server.ewolfHandlers.DownloadFileFromSFS;
 import il.technion.ewolf.server.ewolfHandlers.UploadFileToSFS;
 import il.technion.ewolf.server.handlers.JarResourceHandler;
@@ -205,7 +206,8 @@ public class EwolfServer {
 
 				new EwolfAccountCreatorModule(),
 
-				new EwolfModule()
+				new EwolfModule(),
+				new CacheModule()
 		);
 	}
 }

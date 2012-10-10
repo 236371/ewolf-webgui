@@ -1,4 +1,5 @@
-package il.technion.ewolf.server;
+package il.technion.ewolf.server.cache;
+
 
 
 public class SimpleCache<T> implements ICache<T> {
@@ -21,6 +22,12 @@ public class SimpleCache<T> implements ICache<T> {
 			lastModifiedMillis = System.currentTimeMillis();
 		}
 		return data;
+	}
+
+	@Override
+	public void update() {
+		lastModifiedMillis = 0;
+		get();
 	}
 
 }

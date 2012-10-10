@@ -8,11 +8,8 @@ import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.cache.ICacheWithParameter;
 import il.technion.ewolf.socialfs.Profile;
-import il.technion.ewolf.socialfs.SocialFS;
-import il.technion.ewolf.socialfs.UserID;
-import il.technion.ewolf.socialfs.UserIDFactory;
-import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
 import java.util.ArrayList;
@@ -23,16 +20,15 @@ import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 public class AddWolfpackMemberHandler implements JsonDataHandler {
-	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
-	private final UserIDFactory userIDFactory;
 
+	private final ICacheWithParameter<Profile, String> profilesCache;
 
 	@Inject
-	public AddWolfpackMemberHandler(SocialFS socialFS, WolfPackLeader socialGroupsManager, UserIDFactory userIDFactory) {
-		this.socialFS = socialFS;
+	public AddWolfpackMemberHandler(WolfPackLeader socialGroupsManager,
+			ICacheWithParameter<Profile, String> profilesCache) {
 		this.socialGroupsManager = socialGroupsManager;
-		this.userIDFactory = userIDFactory;
+		this.profilesCache = profilesCache;
 	}
 
 	private static class JsonReqAddWolfpackMemberParams {
@@ -85,22 +81,18 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 
 		List<Profile> profiles = new ArrayList<Profile>();
 		for (String userID : jsonReqParams.userIDs) {
-			try {
-				UserID uid = userIDFactory.getFromBase64(userID);
-				profiles.add(socialFS.findProfile(uid));
-				usersResult.add(new EWolfResponse());
-			} catch (ProfileNotFoundException e) {
-				e.printStackTrace();
+			Profile p = profilesCache.get(userID);
+			if (p == null) {
 				usersResult.add(new EWolfResponse(RES_NOT_FOUND,
 						"User with the given ID wasn't found."));
 				continue;
-			} catch (IllegalArgumentException e) {
-				e.printStackTrace();
-				usersResult.add(new EWolfResponse(RES_NOT_FOUND, "Illegal user ID."));
-				continue;
+			} else {
+				profiles.add(p);
+				usersResult.add(new EWolfResponse());
 			}
 		}
 
+		WolfPack wallReaders = socialGroupsManager.findSocialGroup("wall-readers");
 		for (String wolfpackName : jsonReqParams.wolfpackNames) {
 			WolfPack socialGroup = socialGroupsManager.findSocialGroup(wolfpackName);
 			if (socialGroup == null) {
@@ -111,7 +103,7 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 			try {
 				for (Profile profile : profiles) {
 					socialGroup.addMember(profile);
-					socialGroupsManager.findSocialGroup("wall-readers").addMember(profile);
+					wallReaders.addMember(profile);
 				}
 				wolfpacksResult.add(new EWolfResponse());
 			} catch (GroupNotFoundException e) {
