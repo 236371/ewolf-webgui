@@ -11,12 +11,18 @@ public class SelfUpdatingCache<T> implements ICache<T> {
 		this.updateIntervalSeconds = updateIntervalSeconds;
 		new Thread(new Updater()).start();
 	}
-	
+
+
+	@Override
+	public void update() {
+		set(nextCache.get());
+	}
+
 	@Override
 	public synchronized T get() {
 		return data;
 	}
-	
+
 	synchronized void set(T data) {
 		this.data = data;
 	}

@@ -60,35 +60,35 @@ public class CacheModule extends AbstractModule {
 	ICacheWithParameter<Profile, String> provideProfilesCache(
 			final SocialFS socialFS, final UserIDFactory userIDFactory) {
 		return new ICacheWithParameter<Profile, String>() {
-					Map<String,Profile> profilesCache = new ConcurrentHashMap<String, Profile>();
+			Map<String,Profile> profilesCache = new ConcurrentHashMap<String, Profile>();
 
-					{
-						// add self profile to cache
-						profilesCache.put("-1", socialFS.getCredentials().getProfile());
+			{
+				// add self profile to cache mapped to "-1"
+				profilesCache.put("-1", socialFS.getCredentials().getProfile());
+			}
+
+			/**
+			 * @param	strUid	user ID or "-1" for self ID
+			 * @return	profile corresponding to userID or null if not found
+			 */
+			@Override
+			public Profile get(String strUid) {
+				if (!profilesCache.containsKey(strUid)) {
+					try {
+						UserID uid = userIDFactory.getFromBase64(strUid);
+						Profile profile = socialFS.findProfile(uid);
+						profilesCache.put(strUid, profile);
+					} catch (ProfileNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IllegalArgumentException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
+				}
 
-					/**
-					 * @param	strUid	user ID or "-1" for self ID
-					 * @return	profile corresponding to userID or null if not found
-					 */
-					@Override
-					public Profile get(String strUid) {
-						if (!profilesCache.containsKey(strUid)) {
-							try {
-								UserID uid = userIDFactory.getFromBase64(strUid);
-								Profile profile = socialFS.findProfile(uid);
-								profilesCache.put(strUid, profile);
-							} catch (ProfileNotFoundException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							} catch (IllegalArgumentException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-						}
-
-						return profilesCache.get(strUid);
-					}
+				return profilesCache.get(strUid);
+			}
 		};
 	}
 
@@ -102,6 +102,11 @@ public class CacheModule extends AbstractModule {
 					@Override
 					public List<SocialMessage> get() {
 						return smail.readInbox();
+					}
+
+					@Override
+					public void update() {
+						get();
 					}
 				}, cachedTimeSec);
 	}
@@ -118,6 +123,11 @@ public class CacheModule extends AbstractModule {
 					@Override
 					public List<WolfPack> get() {
 						return socialGroupsManager.getAllSocialGroups();
+					}
+
+					@Override
+					public void update() {
+						get();
 					}
 				}, cachedTimeSec);
 	}
@@ -167,6 +177,11 @@ public class CacheModule extends AbstractModule {
 							}
 						}
 						return allPosts;
+					}
+
+					@Override
+					public void update() {
+						get();
 					}
 				}, cachedTimeSec);
 	}

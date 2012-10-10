@@ -24,4 +24,10 @@ public class SimpleCache<T> implements ICache<T> {
 		return data;
 	}
 
+	@Override
+	public void update() {
+		lastModifiedMillis = 0;
+		get();
+	}
+
 }
