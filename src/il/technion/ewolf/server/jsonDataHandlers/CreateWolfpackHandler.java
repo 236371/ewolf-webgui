@@ -3,8 +3,10 @@ package il.technion.ewolf.server.jsonDataHandlers;
 import java.util.ArrayList;
 import java.util.List;
 
+import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.cache.ICache;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -14,10 +16,13 @@ import static il.technion.ewolf.server.EWolfResponse.*;
 
 public class CreateWolfpackHandler implements JsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
+	private final ICache<List<WolfPack>> wolfpacksCache;
 
 	@Inject
-	public CreateWolfpackHandler(WolfPackLeader socialGroupsManager) {
+	public CreateWolfpackHandler(WolfPackLeader socialGroupsManager,
+			ICache<List<WolfPack>> wolfpacksCache) {
 		this.socialGroupsManager = socialGroupsManager;
+		this.wolfpacksCache = wolfpacksCache;
 	}
 
 	private static class JsonReqCreateWolfpackParams {
@@ -59,8 +64,15 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 		}
 
 		List<EWolfResponse> wolfpacksResult = new ArrayList<EWolfResponse>();
+
+		List<WolfPack> wolfpacks = wolfpacksCache.get();
+		List<String> wolfpacksNames = new ArrayList<String>();
+		for (WolfPack w : wolfpacks) {
+			wolfpacksNames.add(w.getName());
+		}
+
 		for (String wolfpackName : jsonReqParams.wolfpackNames) {
-			if (socialGroupsManager.findSocialGroup(wolfpackName) != null) {
+			if (wolfpacksNames.contains(wolfpackName)) {
 				wolfpacksResult.add(new EWolfResponse(RES_BAD_REQUEST, "Wolfpack already exists"));
 				continue;
 			}
@@ -72,6 +84,14 @@ public class CreateWolfpackHandler implements JsonDataHandler {
 			}
 			wolfpacksResult.add(new EWolfResponse());
 		}
+
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				wolfpacksCache.update();
+			}
+		}).start();
+
 		for (EWolfResponse res : wolfpacksResult) {
 			if (res.getResult() != RES_SUCCESS) {
 				return new CreateWolfpackResponse(RES_GENERIC_ERROR, wolfpacksResult);
