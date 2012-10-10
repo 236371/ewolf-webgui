@@ -81,15 +81,17 @@ public class AddWolfpackMemberHandler implements JsonDataHandler {
 
 		List<Profile> profiles = new ArrayList<Profile>();
 		for (String userID : jsonReqParams.userIDs) {
+			if (userID == null) continue;
+
 			Profile p = profilesCache.get(userID);
 			if (p == null) {
 				usersResult.add(new EWolfResponse(RES_NOT_FOUND,
 						"User with the given ID wasn't found."));
 				continue;
-			} else {
-				profiles.add(p);
-				usersResult.add(new EWolfResponse());
 			}
+
+			profiles.add(p);
+			usersResult.add(new EWolfResponse());
 		}
 
 		WolfPack wallReaders = socialGroupsManager.findSocialGroup("wall-readers");
