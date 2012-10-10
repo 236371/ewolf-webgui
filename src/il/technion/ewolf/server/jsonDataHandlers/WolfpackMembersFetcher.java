@@ -1,27 +1,32 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
+import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
+import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
+import il.technion.ewolf.ewolf.WolfPack;
+import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.cache.ICache;
+import il.technion.ewolf.socialfs.Profile;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-import il.technion.ewolf.ewolf.WolfPack;
-import il.technion.ewolf.ewolf.WolfPackLeader;
-import il.technion.ewolf.server.EWolfResponse;
-import il.technion.ewolf.socialfs.Profile;
-
-import static il.technion.ewolf.server.EWolfResponse.*;
-
 public class WolfpackMembersFetcher implements JsonDataHandler {
-	private final WolfPackLeader socialGroupsManager;
+	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
+	private final ICache<List<WolfPack>> wolfpacksCache;
 
 	@Inject
-	public WolfpackMembersFetcher(WolfPackLeader socialGroupsManager) {
-		this.socialGroupsManager = socialGroupsManager;
+	public WolfpackMembersFetcher(
+			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache,
+			ICache<List<WolfPack>> wolfpacksCache) {
+		this.wolfpacksMembersCache = wolfpacksMembersCache;
+		this.wolfpacksCache = wolfpacksCache;
 	}
 
 	static class ProfileData {
@@ -66,24 +71,27 @@ public class WolfpackMembersFetcher implements JsonDataHandler {
 			return new WolfpackMembersResponse(RES_BAD_REQUEST);
 		}
 
-		List<ProfileData> resList = new ArrayList<ProfileData>();
-		List<WolfPack> wolfpacks = new ArrayList<WolfPack>();
-
+		Map<WolfPack,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
+		List<WolfPack> wolfpacks = wolfpacksCache.get();
+		Set<Profile> profiles = new HashSet<Profile>();
 		if (jsonReqParams.wolfpackName == null) {
-			wolfpacks = socialGroupsManager.getAllSocialGroups();
+			for (Map.Entry<WolfPack,List<Profile>> entry : wolfpacksMembersMap.entrySet()) {
+				profiles.addAll(entry.getValue());
+			}
 		} else {
-			WolfPack wp = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
-			if (wp == null) {
+			for (WolfPack w : wolfpacks) {
+				if (w.getName().equals(jsonReqParams.wolfpackName)) {
+					List<Profile> wMembers = wolfpacksMembersMap.get(w);
+					if (wMembers != null)
+						profiles.addAll(wMembers);
+				}
+			}
+			if (profiles.isEmpty()) {
 				return new WolfpackMembersResponse(RES_NOT_FOUND);
-			} else {
-				wolfpacks.add(wp);
 			}
 		}
 
-		Set<Profile> profiles = new HashSet<Profile>();
-		for (WolfPack w : wolfpacks) {
-			profiles.addAll(w.getMembers());
-		}
+		List<ProfileData> resList = new ArrayList<ProfileData>();
 
 		for (Profile profile: profiles) {
 			resList.add(new ProfileData(profile.getName(), profile.getUserId().toString()));

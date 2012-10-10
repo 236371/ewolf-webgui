@@ -156,7 +156,7 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 						jsonReqParams.newerThan, jsonReqParams.olderThan)))
 				: (new NewsFeedResponse(new HashSet<PostData>()));
 	}
-	
+
 	private Set<PostData> filterPosts(List<Post> posts, Integer filterNumOfPosts,
 			Long filterFromDate, Long filterToDate) {
 		List<PostData> lst = new ArrayList<PostData>();
@@ -191,7 +191,7 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 	private List<Post> fetchPostsForWolfpack(String socialGroupName) {
 		List<Post> posts = new ArrayList<Post>();
 		Map<Profile, List<Post>> allPosts = newsFeedCache.get();
-		
+
 		if (socialGroupName == null) {
 			for (Map.Entry<Profile, List<Post>> entry : allPosts.entrySet()) {
 				posts.addAll(entry.getValue());
