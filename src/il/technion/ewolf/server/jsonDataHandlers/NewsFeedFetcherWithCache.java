@@ -8,10 +8,8 @@ import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.cache.ICache;
+import il.technion.ewolf.server.cache.ICacheWithParameter;
 import il.technion.ewolf.socialfs.Profile;
-import il.technion.ewolf.socialfs.SocialFS;
-import il.technion.ewolf.socialfs.UserID;
-import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
 import java.util.ArrayList;
@@ -27,20 +25,19 @@ import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 public class NewsFeedFetcherWithCache implements JsonDataHandler {
-	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
-	private final UserIDFactory userIDFactory;
 
 	private final ICache<Map<Profile, List<Post>>> newsFeedCache;
+	private final ICacheWithParameter<Profile, String> profilesCache;
 
 	@Inject
-	public NewsFeedFetcherWithCache(SocialFS socialFS, WolfPackLeader socialGroupsManager,
-			UserIDFactory userIDFactory, ICache<Map<Profile,List<Post>>> cache) {
-		this.socialFS = socialFS;
+	public NewsFeedFetcherWithCache(WolfPackLeader socialGroupsManager,
+			ICache<Map<Profile,List<Post>>> newsFeedCache,
+			ICacheWithParameter<Profile, String> profilesCache) {
 		this.socialGroupsManager = socialGroupsManager;
-		this.userIDFactory = userIDFactory;
 
-		newsFeedCache = cache;
+		this.newsFeedCache = newsFeedCache;
+		this.profilesCache = profilesCache;
 	}
 
 	private static final String POST_OWNER_NOT_FOUND_MESSAGE = "Not found";
@@ -149,9 +146,6 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 				return new NewsFeedResponse(RES_BAD_REQUEST,
 						"Request type should be either \"user\" or \"wolfpack\"");
 			}
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-			return new NewsFeedResponse(RES_BAD_REQUEST, "Illegal user ID.");
 		} catch (ProfileNotFoundException e) {
 			e.printStackTrace();
 			return new NewsFeedResponse(RES_NOT_FOUND, "User with given ID wasn't found.");
@@ -210,8 +204,13 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 			List<Profile> profiles = wp.getMembers();
 
 			for (Profile p : profiles) {
-				//TODO prevent null
-				posts.addAll(allPosts.get(p));
+				List<Post> profilePosts = allPosts.get(p);
+				if (profilePosts != null) {
+					posts.addAll(profilePosts);
+				} else {
+					//TODO temp logging info. remove in the future.
+					System.out.println("No posts found for profile " + p.getUserId().toString());
+				}
 			}
 		}
 
@@ -220,13 +219,13 @@ public class NewsFeedFetcherWithCache implements JsonDataHandler {
 
 	private List<Post> fetchPostsForUser(String strUid) throws ProfileNotFoundException {
 		Map<Profile, List<Post>> allPosts = newsFeedCache.get();
-		Profile profile;
-		if (strUid==null) {
-			profile = socialFS.getCredentials().getProfile();
-		} else {
-			UserID uid = userIDFactory.getFromBase64(strUid);
-			profile = socialFS.findProfile(uid);
+
+		strUid = (strUid==null) ? "-1" : strUid;
+		Profile profile = profilesCache.get(strUid);
+		if (profile == null) {
+			throw new ProfileNotFoundException();
 		}
+
 		return allPosts.get(profile);
 	}
 }
