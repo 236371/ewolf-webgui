@@ -5,13 +5,17 @@ import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
 import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
 import il.technion.ewolf.ewolf.SocialNetwork;
 import il.technion.ewolf.ewolf.WolfPack;
-import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.exceptions.WallNotFound;
+import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
 import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.cache.ICache;
+import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
 import java.io.FileNotFoundException;
+import java.util.List;
+import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -19,16 +23,21 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 public class PostToNewsFeedHandler implements JsonDataHandler {
-	private final WolfPackLeader socialGroupsManager;
 	private final SocialNetwork snet;
 	private final Provider<TextPost> textPostProvider;
 
+	private final ICache<Map<Profile, List<Post>>> newsFeedCache;
+	private final ICache<List<WolfPack>> wolfpacksCache;
+
 	@Inject
-	public PostToNewsFeedHandler(SocialNetwork snet, WolfPackLeader socialGroupsManager,
-			Provider<TextPost> textPostProvider) {
+	public PostToNewsFeedHandler(SocialNetwork snet,
+			Provider<TextPost> textPostProvider,
+			ICache<Map<Profile, List<Post>>> newsFeedCache,
+			ICache<List<WolfPack>> wolfpacksCache) {
 		this.snet = snet;
-		this.socialGroupsManager = socialGroupsManager;
 		this.textPostProvider = textPostProvider;
+		this.newsFeedCache = newsFeedCache;
+		this.wolfpacksCache = wolfpacksCache;
 	}
 
 	private static class JsonReqPostToNewsFeedParams {
@@ -69,15 +78,22 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 					"Must specify both wolfpack name and post text.");
 		}
 
-		WolfPack socialGroup = socialGroupsManager.findSocialGroup(jsonReqParams.wolfpackName);
-		if (socialGroup == null) {
+		List<WolfPack> wolfpacks = wolfpacksCache.get();
+		WolfPack wolfpack = null;
+		for (WolfPack w : wolfpacks) {
+			if (w.getName().equals(jsonReqParams.wolfpackName)) {
+				wolfpack = w;
+			}
+		}
+
+		if (wolfpack == null) {
 			return new PostToNewsFeedResponse(RES_NOT_FOUND, "Given wolfpack wasn't found.");
 		}
 
 		try {
-			snet.getWall().publish(textPostProvider.get().setText(jsonReqParams.post), socialGroup);
+			snet.getWall().publish(textPostProvider.get().setText(jsonReqParams.post), wolfpack);
 		} catch (GroupNotFoundException e) {
-			System.out.println("Wolfpack " + socialGroup.getName() + " not found");
+			System.out.println("Wolfpack " + jsonReqParams.wolfpackName + " not found");
 			e.printStackTrace();
 			return new PostToNewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		} catch (WallNotFound e) {
@@ -89,6 +105,14 @@ public class PostToNewsFeedHandler implements JsonDataHandler {
 			e.printStackTrace();
 			return new PostToNewsFeedResponse(RES_INTERNAL_SERVER_ERROR);
 		}
+
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				newsFeedCache.update();
+			}
+		}).start();
+
 		return new PostToNewsFeedResponse();
 	}
 
