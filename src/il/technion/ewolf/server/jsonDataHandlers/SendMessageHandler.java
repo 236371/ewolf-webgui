@@ -1,33 +1,32 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
+import static il.technion.ewolf.server.EWolfResponse.RES_GENERIC_ERROR;
+import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
+import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
 import il.technion.ewolf.msg.ContentMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.cache.ICacheWithParameter;
 import il.technion.ewolf.socialfs.Profile;
-import il.technion.ewolf.socialfs.SocialFS;
-import il.technion.ewolf.socialfs.UserID;
-import il.technion.ewolf.socialfs.UserIDFactory;
-import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-import static il.technion.ewolf.server.EWolfResponse.*;
-
 public class SendMessageHandler implements JsonDataHandler {
 	private final SocialMail smail;
-	private final SocialFS socialFS;
-	private final UserIDFactory userIDFactory;
+
+	private final ICacheWithParameter<Profile, String> profilesCache;
 
 	@Inject
-	public SendMessageHandler(SocialMail smail, SocialFS socialFS, UserIDFactory userIDFactory) {
+	public SendMessageHandler(SocialMail smail,
+			ICacheWithParameter<Profile, String> profilesCache) {
 		this.smail = smail;
-		this.socialFS = socialFS;
-		this.userIDFactory = userIDFactory;
+		this.profilesCache = profilesCache;
 	}
 
 	private static class JsonReqSendMessageParams {
@@ -78,20 +77,15 @@ public class SendMessageHandler implements JsonDataHandler {
 		List<EWolfResponse> userIDsResult = new ArrayList<EWolfResponse>();
 
 		for (String userID : jsonReqParams.userIDs) {
-			Profile profile;
-			try {
-				UserID uid = userIDFactory.getFromBase64(userID);
-				profile = socialFS.findProfile(uid);
-			} catch (ProfileNotFoundException e) {
-				e.printStackTrace();
+			if (userID == null) continue;
+
+			Profile profile = profilesCache.get(userID);
+			if (profile == null) {
 				userIDsResult.add(new EWolfResponse(RES_NOT_FOUND,
 						"User with given ID wasn't found."));
 				continue;
-			} catch (IllegalArgumentException e) {
-				e.printStackTrace();
-				userIDsResult.add(new EWolfResponse(RES_BAD_REQUEST, "Illegal user ID."));
-				continue;
 			}
+
 			ContentMessage msg = smail.createContentMessage().setMessage(jsonReqParams.message);
 			smail.send(msg, profile);
 			userIDsResult.add(new EWolfResponse());
