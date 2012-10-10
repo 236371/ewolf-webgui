@@ -162,10 +162,10 @@ public class CacheModule extends AbstractModule {
 	@Singleton
 	ICache<Map<Profile,List<Post>>> provideNewsFeedCache(
 			@Named("server.cache.newsfeed.intervalSec") int cachedTimeSec,
-			final SocialFS socialFS,
 			final SocialNetwork snet,
 			final ICache<List<WolfPack>> wolfpacksCache,
-			final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache){
+			final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache,
+			final ICacheWithParameter<Profile, String> profilesCache){
 		return new SelfUpdatingCache<Map<Profile,List<Post>>>(
 				new ICache<Map<Profile,List<Post>>>() {
 					@Override
@@ -184,20 +184,19 @@ public class CacheModule extends AbstractModule {
 						}
 
 						//add self profile
-						profiles.add(socialFS.getCredentials().getProfile());
+						Profile user = profilesCache.get("-1");
+						profiles.add(user);
 
 						for (Profile profile: profiles) {
 							try {
 								List<Post> posts = snet.getWall(profile).getAllPosts();
 								allPosts.put(profile, posts);
 							} catch (WallNotFound e) {
-								Profile user = socialFS.getCredentials().getProfile();
 								System.err.println("User " + user.getName() + ": " + user.getUserId() +
 										" isn't allowed to view posts of " +
 										profile.getName() + ": " + profile.getUserId() + ".");
 								//e.printStackTrace();
 							} catch (FileNotFoundException e) {
-								Profile user = socialFS.getCredentials().getProfile();
 								System.err.println("User " + user.getName() + ": " + user.getUserId() +
 										" isn't allowed to view posts of " +
 										profile.getName() + ": " + profile.getUserId() + ".");
