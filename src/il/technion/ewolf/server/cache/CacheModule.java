@@ -153,6 +153,7 @@ public class CacheModule extends AbstractModule {
 
 					@Override
 					public void update() {
+						wolfpacksCache.update();
 						get();
 					}
 				}, cachedTimeSec);
@@ -208,6 +209,8 @@ public class CacheModule extends AbstractModule {
 
 					@Override
 					public void update() {
+						wolfpacksCache.update();
+						wolfpacksMembersCache.update();
 						get();
 					}
 				}, cachedTimeSec);
