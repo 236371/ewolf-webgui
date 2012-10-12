@@ -1,41 +1,53 @@
 package il.technion.ewolf.server;
 
-import java.util.List;
-
 import il.technion.ewolf.ewolf.WolfPack;
-import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.msg.PokeMessage;
-import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
+import il.technion.ewolf.server.cache.ICache;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
+import java.util.List;
+import java.util.Map;
+
 import com.google.inject.Inject;
 
 public class PokeMessagesAcceptor implements Runnable {
-	private final SocialMail smail;
-	private final WolfPackLeader socialGroupsManager;
+	private final ICache<List<SocialMessage>> inboxCache;
+	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
+	private final ICache<List<WolfPack>> wolfpacksCache;
 
 	@Inject
-	public PokeMessagesAcceptor(SocialMail smail, WolfPackLeader socialGroupsManager) {
-		this.smail = smail;
-		this.socialGroupsManager = socialGroupsManager;
+	public PokeMessagesAcceptor(ICache<List<SocialMessage>> inboxCache,
+			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache,
+			ICache<List<WolfPack>> wolfpacksCache) {
+		this.inboxCache = inboxCache;
+		this.wolfpacksMembersCache = wolfpacksMembersCache;
+		this.wolfpacksCache = wolfpacksCache;
 	}
 
 	@Override
 	public void run() {
 		try {
 			while (true) {
-				List<SocialMessage> messages = smail.readInbox();
+				List<SocialMessage> messages = inboxCache.get();
 				for (SocialMessage m : messages) {
 					if (m.getClass() == PokeMessage.class) {
+						Map<WolfPack,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
+						List<WolfPack> wolfpacks = wolfpacksCache.get();
+						List<Profile> followersList = null;
+						WolfPack followers = null;
+						for (WolfPack w : wolfpacks) {
+							if (w.getName().equals("followers")) {
+								followers = w;
+								followersList = wolfpacksMembersMap.get(w);
+							}
+						}
 						try {
-							WolfPack followers = socialGroupsManager
-									.findSocialGroup("followers");
-							List<Profile> followersList = followers.getMembers();
 							Profile follower = m.getSender();
-							if (!followersList.contains(follower)) {
+							if (followersList != null && !followersList.contains(follower)
+									&& followers != null) {
 								//FIXME adding to followers sends Poke message too
 								followers.addMember(follower);
 							}
