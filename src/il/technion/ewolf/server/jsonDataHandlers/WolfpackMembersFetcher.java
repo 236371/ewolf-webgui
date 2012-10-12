@@ -1,7 +1,6 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
 import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
-import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.cache.ICache;
@@ -85,9 +84,6 @@ public class WolfpackMembersFetcher implements IJsonDataHandler {
 					if (wMembers != null)
 						profiles.addAll(wMembers);
 				}
-			}
-			if (profiles.isEmpty()) {
-				return new WolfpackMembersResponse(RES_NOT_FOUND);
 			}
 		}
 
