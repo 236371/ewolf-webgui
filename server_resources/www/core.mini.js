@@ -528,10 +528,12 @@ var Members = function() {
 	this.createWolfpacks = function(wolfpacks,onComplete) {
 		if(wolfpacks.length > 0) {			
 			var responseHandler = new ResponseHandler("createWolfpack",[],null);
+			var wolfpacksAdded = false;
 			
 			responseHandler.success(function(data, textStatus, postData) {
 				$.each(wolfpacks,function(i,pack) {
 					self.addWolfpack(pack);
+					wolfpacksAdded = true;
 				});
 			}).error(function(data, textStatus, postData) {				
 				if(data.wolfpacksResult == null) {
@@ -540,10 +542,19 @@ var Members = function() {
 					$.each(data.wolfpacksResult, function(i,response) {
 						if(response.result == RESPONSE_RESULT.SUCCESS) {
 							self.addWolfpack(postData.wolfpackNames[i]);
+							wolfpacksAdded = true;
 						}
 					});
 				}
-			}).complete(onComplete);
+			}).complete(function() {
+				if(wolfpacksAdded) {
+					eWolf.trigger("newWolfpack",[self.wolfpacksArray]);
+				}
+				
+				if(onComplete) {
+					onComplete();
+				}	
+			});			
 			
 			eWolf.serverRequest.request("wolfpacks",{
 				createWolfpack: {
@@ -3974,7 +3985,7 @@ var MenuItem = function(id,title) {
 	
 	var refreshContainer = $("<div/>")
 				.addClass("menuItemExtraInfoArea")
-				.css("padding-top","5px")
+				.css("padding-top","3px")
 				.appendTo(aObj).hide();
 	
 	var loadingContainer = $("<div/>")
@@ -5213,7 +5224,11 @@ var Profile = function (id,applicationFrame,userID,userName) {
 	} else {
 		this.title.addFunction("Post", function() {
 			new NewPost(id,applicationFrame).select();
-		}, true);
+		}, true);		
+		
+		eWolf.bind("newWolfpack",function(event,wolfpacksArray) {
+			refreshWolfpackData(wolfpacksArray);
+		});
 	}
 	
 	function onProfileFound() {		
@@ -5249,13 +5264,17 @@ var Profile = function (id,applicationFrame,userID,userName) {
 		onProfileFound();
 	}
 	
-	function handleWolfpacksData(data, textStatus, postData) {		
+	function handleWolfpacksData(data, textStatus, postData) {		 
+		 refreshWolfpackData(data.wolfpacksList);
+	  }
+	
+	function refreshWolfpackData(wolfpacksList) {		
 		wolfpacksContainer.removeAll();		 
-
-		 $.each(data.wolfpacksList,function(i,pack) {
+		
+		$.each(wolfpacksList,function(i,pack) {
 			 wolfpacksContainer.addItem(CreateWolfpackBox(pack),pack);
 		 });
-	  }
+	}
 	
 	function getProfileData() {		
 		return {	profile: { userID: userID	} };
