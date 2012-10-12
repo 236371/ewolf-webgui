@@ -188,6 +188,7 @@ public class HttpConnectorModule extends AbstractModule {
 					new NoConnectionReuseStrategy(),
 					new DefaultHttpResponseFactory(),
 					registry,
+					null,
 					serverParams,
 					httpSessionStore);
 		}

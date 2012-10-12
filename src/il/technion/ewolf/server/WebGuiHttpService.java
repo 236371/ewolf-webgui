@@ -25,16 +25,6 @@ public class WebGuiHttpService extends HttpService {
 	public WebGuiHttpService(HttpProcessor processor,
 			ConnectionReuseStrategy connStrategy,
 			HttpResponseFactory responseFactory,
-			HttpRequestHandlerResolver handlerResolver, HttpParams params,
-			HttpSessionStore sessionStore) {
-		super(processor, connStrategy, responseFactory, handlerResolver, params);
-		this.sessionStore = sessionStore;
-	}
-
-	@Inject
-	public WebGuiHttpService(HttpProcessor processor,
-			ConnectionReuseStrategy connStrategy,
-			HttpResponseFactory responseFactory,
 			HttpRequestHandlerResolver handlerResolver,
 			HttpExpectationVerifier expectationVerifier, HttpParams params,
 			HttpSessionStore sessionStore) {
