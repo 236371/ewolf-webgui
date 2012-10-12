@@ -3,7 +3,7 @@ package il.technion.ewolf.server.handlers;
 import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.HttpSessionStore;
-import il.technion.ewolf.server.jsonDataHandlers.JsonDataHandler;
+import il.technion.ewolf.server.jsonDataHandlers.IJsonDataHandler;
 
 import java.io.IOException;
 import java.util.Date;
@@ -33,7 +33,7 @@ import com.google.gson.JsonParser;
 import com.google.inject.Inject;
 
 public class JsonHandler implements HttpRequestHandler {
-	private Map<String,JsonDataHandler> handlers = new ConcurrentHashMap<String,JsonDataHandler>();
+	private Map<String,IJsonDataHandler> handlers = new ConcurrentHashMap<String,IJsonDataHandler>();
 	HttpSessionStore sessionStore;
 
 	@Inject
@@ -41,7 +41,7 @@ public class JsonHandler implements HttpRequestHandler {
 		this.sessionStore = sessionStore;
 	}
 
-	public JsonHandler addHandler(String key, JsonDataHandler handler) {
+	public JsonHandler addHandler(String key, IJsonDataHandler handler) {
 		handlers.put(key, handler);
 		return this;
 	}
@@ -83,7 +83,7 @@ public class JsonHandler implements HttpRequestHandler {
 				}
 				return;
 			}
-			JsonDataHandler handler = handlers.get(key);
+			IJsonDataHandler handler = handlers.get(key);
 			if (handler != null) {
 				EWolfResponse handlerRes = handler.handleData(obj.getValue());
 				jsonRes.add(key, gson.toJsonTree(handlerRes));

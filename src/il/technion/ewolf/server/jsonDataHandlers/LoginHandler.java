@@ -11,7 +11,7 @@ import org.apache.commons.configuration.ConfigurationException;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 
-public class LoginHandler implements JsonDataHandler {
+public class LoginHandler implements IJsonDataHandler {
 	private String configFile;
 
 	public LoginHandler(String configFile) {

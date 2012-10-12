@@ -17,7 +17,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class WolfpackMembersFetcher implements JsonDataHandler {
+public class WolfpackMembersFetcher implements IJsonDataHandler {
 	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
 	private final ICache<List<WolfPack>> wolfpacksCache;
 

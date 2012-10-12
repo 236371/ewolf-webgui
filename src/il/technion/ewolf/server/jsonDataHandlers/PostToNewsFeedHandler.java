@@ -22,7 +22,7 @@ import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
-public class PostToNewsFeedHandler implements JsonDataHandler {
+public class PostToNewsFeedHandler implements IJsonDataHandler {
 	private final SocialNetwork snet;
 	private final Provider<TextPost> textPostProvider;
 

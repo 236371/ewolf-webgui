@@ -17,7 +17,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class SendMessageHandler implements JsonDataHandler {
+public class SendMessageHandler implements IJsonDataHandler {
 	private final SocialMail smail;
 
 	private final ICacheWithParameter<Profile, String> profilesCache;

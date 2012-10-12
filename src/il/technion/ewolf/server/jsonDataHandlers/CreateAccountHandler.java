@@ -14,7 +14,7 @@ import org.apache.commons.configuration.ConfigurationException;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 
-public class CreateAccountHandler implements JsonDataHandler {
+public class CreateAccountHandler implements IJsonDataHandler {
 
 	private EwolfServer ewolfServer;
 	private String configFile;

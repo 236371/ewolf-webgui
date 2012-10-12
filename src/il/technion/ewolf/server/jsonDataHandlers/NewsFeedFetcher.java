@@ -27,7 +27,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class NewsFeedFetcher implements JsonDataHandler {
+public class NewsFeedFetcher implements IJsonDataHandler {
 	private final SocialFS socialFS;
 	private final WolfPackLeader socialGroupsManager;
 	private final UserIDFactory userIDFactory;

@@ -19,7 +19,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class AddWolfpackMemberHandler implements JsonDataHandler {
+public class AddWolfpackMemberHandler implements IJsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 
 	private final ICacheWithParameter<Profile, String> profilesCache;

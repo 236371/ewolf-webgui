@@ -17,7 +17,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class InboxFetcher implements JsonDataHandler {
+public class InboxFetcher implements IJsonDataHandler {
 	private static final String SENDER_NOT_FOUND_MESSAGE = "Not found";
 
 	private final ICache<List<SocialMessage>> inboxCache;

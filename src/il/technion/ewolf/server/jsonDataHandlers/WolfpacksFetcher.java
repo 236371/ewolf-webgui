@@ -16,7 +16,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class WolfpacksFetcher implements JsonDataHandler {
+public class WolfpacksFetcher implements IJsonDataHandler {
 
 	private final ICache<List<WolfPack>> wolfpacksCache;
 	private final ICacheWithParameter<Profile, String> profilesCache;

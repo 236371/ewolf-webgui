@@ -14,7 +14,7 @@ import com.google.inject.Inject;
 
 import static il.technion.ewolf.server.EWolfResponse.*;
 
-public class CreateWolfpackHandler implements JsonDataHandler {
+public class CreateWolfpackHandler implements IJsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 	private final ICache<List<WolfPack>> wolfpacksCache;
 

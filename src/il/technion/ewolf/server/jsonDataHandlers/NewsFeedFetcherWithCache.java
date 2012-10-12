@@ -24,7 +24,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class NewsFeedFetcherWithCache implements JsonDataHandler {
+public class NewsFeedFetcherWithCache implements IJsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 
 	private final ICache<Map<Profile, List<Post>>> newsFeedCache;
