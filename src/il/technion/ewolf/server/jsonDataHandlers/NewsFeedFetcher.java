@@ -23,7 +23,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
-public class NewsFeedFetcherWithCache implements IJsonDataHandler {
+public class NewsFeedFetcher implements IJsonDataHandler {
 
 	private final ICache<Map<Profile, List<Post>>> newsFeedCache;
 	private final ICacheWithParameter<Profile, String> profilesCache;
@@ -31,7 +31,7 @@ public class NewsFeedFetcherWithCache implements IJsonDataHandler {
 	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
 
 	@Inject
-	public NewsFeedFetcherWithCache(
+	public NewsFeedFetcher(
 			ICache<Map<Profile,List<Post>>> newsFeedCache,
 			ICacheWithParameter<Profile, String> profilesCache,
 			ICache<Map<String, WolfPack>> wolfpacksCache,

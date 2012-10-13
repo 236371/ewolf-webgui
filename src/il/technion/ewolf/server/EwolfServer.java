@@ -23,7 +23,7 @@ import il.technion.ewolf.server.jsonDataHandlers.CreateAccountHandler;
 import il.technion.ewolf.server.jsonDataHandlers.CreateWolfpackHandler;
 import il.technion.ewolf.server.jsonDataHandlers.InboxFetcher;
 import il.technion.ewolf.server.jsonDataHandlers.LoginHandler;
-import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcherWithCache;
+import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher;
 import il.technion.ewolf.server.jsonDataHandlers.PostToNewsFeedHandler;
 import il.technion.ewolf.server.jsonDataHandlers.ProfileFetcher;
 import il.technion.ewolf.server.jsonDataHandlers.SendMessageHandler;
@@ -160,7 +160,7 @@ public class EwolfServer {
 			.addHandler("wolfpackMembers", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
 			.addHandler("wolfpackMembersAll", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
 			.addHandler("wolfpackMembersNotAllowed", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
-			.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcherWithCache.class))
+			.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcher.class))
 			.addHandler("createWolfpack", ewolfInjector.getInstance(CreateWolfpackHandler.class))
 			.addHandler("addWolfpackMember", ewolfInjector.getInstance(AddWolfpackMemberHandler.class))
 			.addHandler("post", ewolfInjector.getInstance(PostToNewsFeedHandler.class))
