@@ -2,6 +2,7 @@ package il.technion.ewolf.server.jsonDataHandlers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
@@ -16,11 +17,11 @@ import static il.technion.ewolf.server.EWolfResponse.*;
 
 public class CreateWolfpackHandler implements IJsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
-	private final ICache<List<WolfPack>> wolfpacksCache;
+	private final ICache<Map<String, WolfPack>> wolfpacksCache;
 
 	@Inject
 	public CreateWolfpackHandler(WolfPackLeader socialGroupsManager,
-			ICache<List<WolfPack>> wolfpacksCache) {
+			ICache<Map<String, WolfPack>> wolfpacksCache) {
 		this.socialGroupsManager = socialGroupsManager;
 		this.wolfpacksCache = wolfpacksCache;
 	}
@@ -64,15 +65,10 @@ public class CreateWolfpackHandler implements IJsonDataHandler {
 		}
 
 		List<EWolfResponse> wolfpacksResult = new ArrayList<EWolfResponse>();
-
-		List<WolfPack> wolfpacks = wolfpacksCache.get();
-		List<String> wolfpacksNames = new ArrayList<String>();
-		for (WolfPack w : wolfpacks) {
-			wolfpacksNames.add(w.getName());
-		}
+		Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
 
 		for (String wolfpackName : jsonReqParams.wolfpackNames) {
-			if (wolfpacksNames.contains(wolfpackName)) {
+			if (wolfpacksMap.containsKey(wolfpackName)) {
 				wolfpacksResult.add(new EWolfResponse(RES_BAD_REQUEST, "Wolfpack already exists"));
 				continue;
 			}

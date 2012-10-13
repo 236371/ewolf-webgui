@@ -1,6 +1,7 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
 import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
+import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.cache.ICache;
@@ -18,12 +19,12 @@ import com.google.inject.Inject;
 
 public class WolfpackMembersFetcher implements IJsonDataHandler {
 	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
-	private final ICache<List<WolfPack>> wolfpacksCache;
+	private final ICache<Map<String, WolfPack>> wolfpacksCache;
 
 	@Inject
 	public WolfpackMembersFetcher(
 			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache,
-			ICache<List<WolfPack>> wolfpacksCache) {
+			ICache<Map<String, WolfPack>> wolfpacksCache) {
 		this.wolfpacksMembersCache = wolfpacksMembersCache;
 		this.wolfpacksCache = wolfpacksCache;
 	}
@@ -71,20 +72,20 @@ public class WolfpackMembersFetcher implements IJsonDataHandler {
 		}
 
 		Map<WolfPack,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
-		List<WolfPack> wolfpacks = wolfpacksCache.get();
+		Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
 		Set<Profile> profiles = new HashSet<Profile>();
 		if (jsonReqParams.wolfpackName == null) {
 			for (Map.Entry<WolfPack,List<Profile>> entry : wolfpacksMembersMap.entrySet()) {
 				profiles.addAll(entry.getValue());
 			}
 		} else {
-			for (WolfPack w : wolfpacks) {
-				if (w.getName().equals(jsonReqParams.wolfpackName)) {
-					List<Profile> wMembers = wolfpacksMembersMap.get(w);
-					if (wMembers != null)
-						profiles.addAll(wMembers);
-				}
+			WolfPack w = wolfpacksMap.get(jsonReqParams.wolfpackName);
+			if (w == null) {
+				return new WolfpackMembersResponse(RES_NOT_FOUND);
 			}
+			List<Profile> wMembers = wolfpacksMembersMap.get(w);
+			if (wMembers != null)
+				profiles.addAll(wMembers);
 		}
 
 		List<ProfileData> resList = new ArrayList<ProfileData>();

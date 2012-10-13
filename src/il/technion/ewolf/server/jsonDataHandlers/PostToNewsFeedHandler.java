@@ -27,13 +27,13 @@ public class PostToNewsFeedHandler implements IJsonDataHandler {
 	private final Provider<TextPost> textPostProvider;
 
 	private final ICache<Map<Profile, List<Post>>> newsFeedCache;
-	private final ICache<List<WolfPack>> wolfpacksCache;
+	private final ICache<Map<String, WolfPack>> wolfpacksCache;
 
 	@Inject
 	public PostToNewsFeedHandler(SocialNetwork snet,
 			Provider<TextPost> textPostProvider,
 			ICache<Map<Profile, List<Post>>> newsFeedCache,
-			ICache<List<WolfPack>> wolfpacksCache) {
+			ICache<Map<String, WolfPack>> wolfpacksCache) {
 		this.snet = snet;
 		this.textPostProvider = textPostProvider;
 		this.newsFeedCache = newsFeedCache;
@@ -78,13 +78,8 @@ public class PostToNewsFeedHandler implements IJsonDataHandler {
 					"Must specify both wolfpack name and post text.");
 		}
 
-		List<WolfPack> wolfpacks = wolfpacksCache.get();
-		WolfPack wolfpack = null;
-		for (WolfPack w : wolfpacks) {
-			if (w.getName().equals(jsonReqParams.wolfpackName)) {
-				wolfpack = w;
-			}
-		}
+		Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
+		WolfPack wolfpack = wolfpacksMap.get(jsonReqParams.wolfpackName);
 
 		if (wolfpack == null) {
 			return new PostToNewsFeedResponse(RES_NOT_FOUND, "Given wolfpack wasn't found.");

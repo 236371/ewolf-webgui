@@ -9,8 +9,10 @@ import il.technion.ewolf.server.cache.ICache;
 import il.technion.ewolf.server.cache.ICacheWithParameter;
 import il.technion.ewolf.socialfs.Profile;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -18,15 +20,18 @@ import com.google.inject.Inject;
 
 public class WolfpacksFetcher implements IJsonDataHandler {
 
-	private final ICache<List<WolfPack>> wolfpacksCache;
+	private final ICache<Map<String, WolfPack>> wolfpacksCache;
 	private final ICacheWithParameter<Profile, String> profilesCache;
+	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
 
 	@Inject
 	public WolfpacksFetcher(
-			ICache<List<WolfPack>> wolfpacksCache,
-			ICacheWithParameter<Profile, String> profilesCache) {
+			ICache<Map<String, WolfPack>> wolfpacksCache,
+			ICacheWithParameter<Profile, String> profilesCache,
+			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache) {
 		this.wolfpacksCache = wolfpacksCache;
 		this.profilesCache = profilesCache;
+		this.wolfpacksMembersCache = wolfpacksMembersCache;
 	}
 
 	private static class JsonReqWolfpacksParams {
@@ -36,10 +41,10 @@ public class WolfpacksFetcher implements IJsonDataHandler {
 	}
 
 	static class WolfpacksResponse extends EWolfResponse {
-		List<String> wolfpacksList;
+		Set<String> wolfpacksList;
 
-		public WolfpacksResponse(List<String> lst) {
-			this.wolfpacksList = lst;
+		public WolfpacksResponse(Set<String> set) {
+			this.wolfpacksList = set;
 		}
 
 		public WolfpacksResponse(String result) {
@@ -60,21 +65,21 @@ public class WolfpacksFetcher implements IJsonDataHandler {
 			return new WolfpacksResponse(RES_BAD_REQUEST);
 		}
 
-		List<WolfPack> wgroups = wolfpacksCache.get();
-		List<String> groups = new ArrayList<String>();
+		Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
+		Map<WolfPack,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
+		Set<String> groups = new HashSet<String>();
 
-		if (jsonReqParams.userID==null) {
-			for (WolfPack w : wgroups) {
-				groups.add(w.getName());
-			}
+		if (jsonReqParams.userID == null) {
+			groups.addAll(wolfpacksMap.keySet());
 		} else {
 			Profile profile = profilesCache.get(jsonReqParams.userID);
 			if (profile == null) {
 				return new WolfpacksResponse(RES_NOT_FOUND);
 			}
 
-			for (WolfPack w : wgroups) {
-				if (w.getMembers().contains(profile)) {
+			for (WolfPack w : wolfpacksMembersMap.keySet()) {
+				List<Profile> wMembers = wolfpacksMembersMap.get(w);
+				if (wMembers.contains(profile)) {
 					groups.add(w.getName());
 				}
 			}

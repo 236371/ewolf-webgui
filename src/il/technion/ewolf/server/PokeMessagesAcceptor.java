@@ -16,12 +16,12 @@ import com.google.inject.Inject;
 public class PokeMessagesAcceptor implements Runnable {
 	private final ICache<List<SocialMessage>> inboxCache;
 	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
-	private final ICache<List<WolfPack>> wolfpacksCache;
+	private final ICache<Map<String, WolfPack>> wolfpacksCache;
 
 	@Inject
 	public PokeMessagesAcceptor(ICache<List<SocialMessage>> inboxCache,
 			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache,
-			ICache<List<WolfPack>> wolfpacksCache) {
+			ICache<Map<String, WolfPack>> wolfpacksCache) {
 		this.inboxCache = inboxCache;
 		this.wolfpacksMembersCache = wolfpacksMembersCache;
 		this.wolfpacksCache = wolfpacksCache;
@@ -35,19 +35,14 @@ public class PokeMessagesAcceptor implements Runnable {
 				for (SocialMessage m : messages) {
 					if (m.getClass() == PokeMessage.class) {
 						Map<WolfPack,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
-						List<WolfPack> wolfpacks = wolfpacksCache.get();
-						List<Profile> followersList = null;
-						WolfPack followers = null;
-						for (WolfPack w : wolfpacks) {
-							if (w.getName().equals("followers")) {
-								followers = w;
-								followersList = wolfpacksMembersMap.get(w);
-							}
-						}
+						Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
+
+						WolfPack followers = wolfpacksMap.get("followers");
+						List<Profile> followersList = wolfpacksMembersMap.get(followers);
+
 						try {
 							Profile follower = m.getSender();
-							if (followersList != null && !followersList.contains(follower)
-									&& followers != null) {
+							if (followersList != null && !followersList.contains(follower)) {
 								//FIXME adding to followers sends Poke message too
 								followers.addMember(follower);
 							}

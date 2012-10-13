@@ -14,6 +14,7 @@ import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
 import java.io.FileNotFoundException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -115,15 +116,20 @@ public class CacheModule extends AbstractModule {
 
 	@Provides
 	@Singleton
-	ICache<List<WolfPack>> provideWolfpacksCache(
+	ICache<Map<String, WolfPack>> provideWolfpacksCache(
 			@Named("server.cache.wolfpacks.intervalSec") int cachedTimeSec,
 			final WolfPackLeader socialGroupsManager) {
-		return new SimpleCache<List<WolfPack>>(
-				new ICache<List<WolfPack>>() {
+		return new SimpleCache<Map<String, WolfPack>>(
+				new ICache<Map<String, WolfPack>>() {
 
 					@Override
-					public List<WolfPack> get() {
-						return socialGroupsManager.getAllSocialGroups();
+					public Map<String, WolfPack> get() {
+						Map<String, WolfPack> wolfpacksMap = new HashMap<String, WolfPack>();
+						List<WolfPack> wolfpacksList = socialGroupsManager.getAllSocialGroups();
+						for (WolfPack w : wolfpacksList) {
+							wolfpacksMap.put(w.getName(), w);
+						}
+						return wolfpacksMap;
 					}
 
 					@Override
@@ -137,14 +143,14 @@ public class CacheModule extends AbstractModule {
 	@Singleton
 	ICache<Map<WolfPack,List<Profile>>> provideWolfpacksMembersCache(
 			@Named("server.cache.wolfpackMembers.intervalSec") int cachedTimeSec,
-			final ICache<List<WolfPack>> wolfpacksCache) {
+			final ICache<Map<String, WolfPack>> wolfpacksCache) {
 		return new SimpleCache<Map<WolfPack,List<Profile>>>(
 				new ICache<Map<WolfPack,List<Profile>>>() {
 
 					@Override
 					public Map<WolfPack, List<Profile>> get() {
 						Map<WolfPack, List<Profile>> membersMap = new HashMap<WolfPack, List<Profile>>();
-						List<WolfPack> wolfpacks = wolfpacksCache.get();
+						Collection<WolfPack> wolfpacks = wolfpacksCache.get().values();
 						for (WolfPack w : wolfpacks) {
 							membersMap.put(w, w.getMembers());
 						}
@@ -164,7 +170,7 @@ public class CacheModule extends AbstractModule {
 	ICache<Map<Profile,List<Post>>> provideNewsFeedCache(
 			@Named("server.cache.newsfeed.intervalSec") int cachedTimeSec,
 			final SocialNetwork snet,
-			final ICache<List<WolfPack>> wolfpacksCache,
+			final ICache<Map<String, WolfPack>> wolfpacksCache,
 			final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache,
 			final ICacheWithParameter<Profile, String> profilesCache){
 		return new SelfUpdatingCache<Map<Profile,List<Post>>>(
