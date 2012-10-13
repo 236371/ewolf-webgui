@@ -160,7 +160,6 @@ public class EwolfServer {
 			.addHandler("wolfpackMembers", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
 			.addHandler("wolfpackMembersAll", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
 			.addHandler("wolfpackMembersNotAllowed", ewolfInjector.getInstance(WolfpackMembersFetcher.class))
-//			.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcher.class))
 			.addHandler("newsFeed", ewolfInjector.getInstance(NewsFeedFetcherWithCache.class))
 			.addHandler("createWolfpack", ewolfInjector.getInstance(CreateWolfpackHandler.class))
 			.addHandler("addWolfpackMember", ewolfInjector.getInstance(AddWolfpackMemberHandler.class))
