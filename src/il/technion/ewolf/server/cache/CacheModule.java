@@ -170,7 +170,6 @@ public class CacheModule extends AbstractModule {
 	ICache<Map<Profile,List<Post>>> provideNewsFeedCache(
 			@Named("server.cache.newsfeed.intervalSec") int cachedTimeSec,
 			final SocialNetwork snet,
-			final ICache<Map<String, WolfPack>> wolfpacksCache,
 			final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache,
 			final ICacheWithParameter<Profile, String> profilesCache){
 		return new SelfUpdatingCache<Map<Profile,List<Post>>>(
@@ -215,7 +214,6 @@ public class CacheModule extends AbstractModule {
 
 					@Override
 					public void update() {
-						wolfpacksCache.update();
 						wolfpacksMembersCache.update();
 						get();
 					}
