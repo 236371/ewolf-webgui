@@ -6,29 +6,30 @@ import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
 import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
 import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
 import il.technion.ewolf.ewolf.WolfPack;
-import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.server.EWolfResponse;
+import il.technion.ewolf.server.cache.ICache;
 import il.technion.ewolf.server.cache.ICacheWithParameter;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.stash.exception.GroupNotFoundException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 
 public class AddWolfpackMemberHandler implements IJsonDataHandler {
-	private final WolfPackLeader socialGroupsManager;
 
 	private final ICacheWithParameter<Profile, String> profilesCache;
+	private final ICache<Map<String, WolfPack>> wolfpacksCache;
 
 	@Inject
-	public AddWolfpackMemberHandler(WolfPackLeader socialGroupsManager,
-			ICacheWithParameter<Profile, String> profilesCache) {
-		this.socialGroupsManager = socialGroupsManager;
+	public AddWolfpackMemberHandler(ICacheWithParameter<Profile, String> profilesCache,
+			ICache<Map<String, WolfPack>> wolfpacksCache) {
 		this.profilesCache = profilesCache;
+		this.wolfpacksCache = wolfpacksCache;
 	}
 
 	private static class JsonReqAddWolfpackMemberParams {
@@ -94,9 +95,11 @@ public class AddWolfpackMemberHandler implements IJsonDataHandler {
 			usersResult.add(new EWolfResponse());
 		}
 
-		WolfPack wallReaders = socialGroupsManager.findSocialGroup("wall-readers");
+		Map<String, WolfPack> wallReadersMap = wolfpacksCache.get();
+		WolfPack wallReaders = wallReadersMap.get("wall-readers");
+
 		for (String wolfpackName : jsonReqParams.wolfpackNames) {
-			WolfPack socialGroup = socialGroupsManager.findSocialGroup(wolfpackName);
+			WolfPack socialGroup = wallReadersMap.get(wolfpackName);
 			if (socialGroup == null) {
 				wolfpacksResult.add(new EWolfResponse(RES_NOT_FOUND,
 						"Given wolfpack wasn't found."));
