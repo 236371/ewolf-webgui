@@ -73,7 +73,10 @@ public class PostToNewsFeedHandler implements IJsonDataHandler {
 			e.printStackTrace();
 			return new PostToNewsFeedResponse(RES_BAD_REQUEST);
 		}
-		if (jsonReqParams.wolfpackName == null || jsonReqParams.post == null) {
+
+		//TODO temporary empty post bug workaround
+		String[] postText = jsonReqParams.post.split("\"");
+		if (jsonReqParams.wolfpackName == null || jsonReqParams.post == null || postText[3].isEmpty()) {
 			return new PostToNewsFeedResponse(RES_BAD_REQUEST,
 					"Must specify both wolfpack name and post text.");
 		}
