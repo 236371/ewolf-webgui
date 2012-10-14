@@ -5,6 +5,7 @@ import il.technion.ewolf.server.ServerResources;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Calendar;
 import java.util.Date;
 
 import org.apache.commons.httpclient.util.DateParseException;
@@ -80,6 +81,9 @@ public class JarResourceHandler implements HttpRequestHandler {
 
 		response.setHeader(HttpHeaders.LAST_MODIFIED,
 				DateUtil.formatDate(ewolfServer.startTime()));
+		Calendar cal = Calendar.getInstance();
+		cal.add(Calendar.YEAR, 1);
+		response.setHeader(HttpHeaders.EXPIRES, DateUtil.formatDate(cal.getTime()));
 
 		response.setHeader(HttpHeaders.CACHE_CONTROL, "public, must-revalidate");
 	}
