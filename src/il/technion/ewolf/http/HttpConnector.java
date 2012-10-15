@@ -106,7 +106,13 @@ public class HttpConnector {
 									httpService.handleRequest(conn, httpContextProvider.get());
 								} catch (Exception e) {
 									// nothing 2 do
-									e.printStackTrace();
+									//e.printStackTrace();
+								} finally {
+									try {
+										conn.close();
+									} catch (IOException e) {
+										// swallow
+									}
 								}
 							}
 						});
