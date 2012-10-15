@@ -68,6 +68,7 @@ public class EwolfServer {
 	}
 
 	public EwolfServer() {
+		this(EWOLF_CONFIG);
 	}
 
 	public static void main(String[] args) throws Exception {
