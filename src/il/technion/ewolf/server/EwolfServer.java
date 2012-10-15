@@ -103,7 +103,7 @@ public class EwolfServer {
 		jsonHandler = serverInjector.getInstance(JsonHandler.class);
 		registerConnectorHandlers();
 		jsonHandler.addHandler("createAccount", new CreateAccountHandler(this, config));
-		jsonHandler.addHandler("login", new LoginHandler(config));
+
 		serverConnector.start();
 
 		startTime = new Date();
@@ -114,7 +114,7 @@ public class EwolfServer {
 			System.out.println("Username and/or password and/or name weren't provided.");
 			this.configurations = ServerResources.getConfigurations(config);
 		}
-
+		jsonHandler.addHandler("login", new LoginHandler(config));
 		this.ewolfInjector = createInjector();
 
 		KeybasedRouting kbr = ewolfInjector.getInstance(KeybasedRouting.class);
