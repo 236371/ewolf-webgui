@@ -1,14 +1,14 @@
 package il.technion.ewolf.server.ewolfHandlers;
 
-import java.io.FileNotFoundException;
-import java.io.Serializable;
-
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SFSFile;
 import il.technion.ewolf.socialfs.SocialFS;
 import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
+
+import java.io.FileNotFoundException;
+import java.io.Serializable;
 
 import com.google.inject.Inject;
 

@@ -16,7 +16,6 @@ import il.technion.ewolf.msg.PokeMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.server.EWolfResponse;
-import il.technion.ewolf.server.jsonDataHandlers.WolfpackMembersFetcher;
 import il.technion.ewolf.server.jsonDataHandlers.WolfpackMembersFetcher.WolfpackMembersResponse;
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SocialFS;

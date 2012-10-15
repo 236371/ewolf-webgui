@@ -18,7 +18,6 @@ import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
-import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher;
 import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher.NewsFeedResponse;
 import il.technion.ewolf.server.jsonDataHandlers.NewsFeedFetcher.PostData;
 import il.technion.ewolf.socialfs.Profile;

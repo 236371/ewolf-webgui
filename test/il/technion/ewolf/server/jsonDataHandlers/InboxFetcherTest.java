@@ -13,7 +13,6 @@ import il.technion.ewolf.kbr.openkad.KadNetModule;
 import il.technion.ewolf.msg.ContentMessage;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
-import il.technion.ewolf.server.jsonDataHandlers.InboxFetcher;
 import il.technion.ewolf.server.jsonDataHandlers.InboxFetcher.InboxMessage;
 import il.technion.ewolf.server.jsonDataHandlers.InboxFetcher.InboxResponse;
 import il.technion.ewolf.socialfs.Profile;

@@ -1,19 +1,21 @@
 package il.technion.ewolf.server.jsonDataHandlers;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
+import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
+import static il.technion.ewolf.server.EWolfResponse.RES_GENERIC_ERROR;
+import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
+import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.cache.ICache;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
-
-import static il.technion.ewolf.server.EWolfResponse.*;
 
 public class CreateWolfpackHandler implements IJsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
