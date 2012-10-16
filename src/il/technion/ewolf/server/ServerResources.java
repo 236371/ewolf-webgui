@@ -1,5 +1,6 @@
 package il.technion.ewolf.server;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -32,16 +33,24 @@ public class ServerResources {
 		return ServerResources.class.getResource(name);
 	}
 
+	public static PropertiesConfiguration getProperties(String fileName) throws ConfigurationException {
+		File f = new File("." + fileName);
+		if (f.canRead())
+			return new PropertiesConfiguration(f);
+
+		URL resourceUrl = getResource(fileName);
+		return new PropertiesConfiguration(resourceUrl);
+	}
 	public static void setUserConfigurations(String configurationFile, String username,
 			String name, String password) throws ConfigurationException {
 		try {
 			synchronized (configLock) {
-				URL configFile = getResource(configurationFile);
-				PropertiesConfiguration config = new PropertiesConfiguration(configFile);
+				PropertiesConfiguration config = getProperties(configurationFile);
 				config.setProperty("username", username);
 				config.setProperty("name", name);
 				config.setProperty("password", password);
 				config.save();
+				configLock.notifyAll();
 			}
 		} catch (ConfigurationException e) {
 			e.printStackTrace();
@@ -56,8 +65,7 @@ public class ServerResources {
 
 		try {
 			synchronized (configLock) {
-				URL configFile = getResource(configurationFile);
-				PropertiesConfiguration config = new PropertiesConfiguration(configFile);
+				PropertiesConfiguration config = getProperties(configurationFile);
 				configurations.username = config.getString("username");
 				configurations.password = config.getString("password");
 				configurations.name = config.getString("name");
@@ -90,5 +98,21 @@ public class ServerResources {
 			map = new MimetypesFileTypeMap();
 		}
 		return map;
+	}
+
+	public static void waitForSignup(String config) {
+		try {
+			EwolfConfigurations c = getConfigurations(config);
+			synchronized (configLock) {
+				while (c.username == null || c.password == null
+						|| c.name == null) {
+					System.out.println("waiting for signup");
+					configLock.wait();
+					c = getConfigurations(config);
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }

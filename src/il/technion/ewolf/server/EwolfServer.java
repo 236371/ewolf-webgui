@@ -109,11 +109,8 @@ public class EwolfServer {
 		startTime = new Date();
 		beforeStartTime = new Date(System.currentTimeMillis()-1000);
 
-		while (configurations.username == null || configurations.password == null
-				|| configurations.name == null) {
-			System.out.println("Username and/or password and/or name weren't provided.");
-			this.configurations = ServerResources.getConfigurations(config);
-		}
+		ServerResources.waitForSignup(config);
+		this.configurations = ServerResources.getConfigurations(config);
 		jsonHandler.addHandler("login", new LoginHandler(config));
 		this.ewolfInjector = createInjector();
 
