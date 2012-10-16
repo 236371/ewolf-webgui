@@ -24,12 +24,15 @@ public class AddWolfpackMemberHandler implements IJsonDataHandler {
 
 	private final ICacheWithParameter<Profile, String> profilesCache;
 	private final ICache<Map<String, WolfPack>> wolfpacksCache;
+	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
 
 	@Inject
 	public AddWolfpackMemberHandler(ICacheWithParameter<Profile, String> profilesCache,
-			ICache<Map<String, WolfPack>> wolfpacksCache) {
+			ICache<Map<String, WolfPack>> wolfpacksCache,
+			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache) {
 		this.profilesCache = profilesCache;
 		this.wolfpacksCache = wolfpacksCache;
+		this.wolfpacksMembersCache = wolfpacksMembersCache;
 	}
 
 	private static class JsonReqAddWolfpackMemberParams {
@@ -118,6 +121,13 @@ public class AddWolfpackMemberHandler implements IJsonDataHandler {
 				wolfpacksResult.add(new EWolfResponse(RES_INTERNAL_SERVER_ERROR));
 			}
 		}
+
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				wolfpacksMembersCache.update();
+			}
+		}).start();
 
 		for (EWolfResponse res : wolfpacksResult) {
 			if (res.getResult() != RES_SUCCESS) {
