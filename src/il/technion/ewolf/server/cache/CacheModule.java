@@ -3,7 +3,6 @@ package il.technion.ewolf.server.cache;
 import il.technion.ewolf.ewolf.SocialNetwork;
 import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
-import il.technion.ewolf.exceptions.WallNotFound;
 import il.technion.ewolf.msg.SocialMail;
 import il.technion.ewolf.msg.SocialMessage;
 import il.technion.ewolf.posts.Post;
@@ -13,7 +12,6 @@ import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
-import java.io.FileNotFoundException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -150,6 +148,7 @@ public class CacheModule extends AbstractModule {
 					@Override
 					public Map<WolfPack, List<Profile>> get() {
 						Map<WolfPack, List<Profile>> membersMap = new HashMap<WolfPack, List<Profile>>();
+						wolfpacksCache.update();
 						Collection<WolfPack> wolfpacks = wolfpacksCache.get().values();
 						for (WolfPack w : wolfpacks) {
 							membersMap.put(w, w.getMembers());
@@ -182,6 +181,7 @@ public class CacheModule extends AbstractModule {
 					private Map<Profile, List<Post>> fetchAllPosts() {
 						Map<Profile, List<Post>> allPosts = new HashMap<Profile, List<Post>>();
 
+						wolfpacksMembersCache.update();
 						Map<WolfPack,List<Profile>> wolfpacksMembers = wolfpacksMembersCache.get();
 						Set<Profile> profiles = new HashSet<Profile>();
 
@@ -197,16 +197,10 @@ public class CacheModule extends AbstractModule {
 							try {
 								List<Post> posts = snet.getWall(profile).getAllPosts();
 								allPosts.put(profile, posts);
-							} catch (WallNotFound e) {
-								System.err.println("User " + user.getName() + ": " + user.getUserId() +
-										" isn't allowed to view posts of " +
+							} catch (Exception e) {
+								System.out.println("User " + user.getName() + ": " + user.getUserId() +
+										" cannot view posts of " +
 										profile.getName() + ": " + profile.getUserId() + ".");
-								//e.printStackTrace();
-							} catch (FileNotFoundException e) {
-								System.err.println("User " + user.getName() + ": " + user.getUserId() +
-										" isn't allowed to view posts of " +
-										profile.getName() + ": " + profile.getUserId() + ".");
-								//e.printStackTrace();
 							}
 						}
 						return allPosts;
