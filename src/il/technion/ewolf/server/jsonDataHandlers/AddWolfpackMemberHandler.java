@@ -95,11 +95,11 @@ public class AddWolfpackMemberHandler implements IJsonDataHandler {
 			usersResult.add(new EWolfResponse());
 		}
 
-		Map<String, WolfPack> wallReadersMap = wolfpacksCache.get();
-		WolfPack wallReaders = wallReadersMap.get("wall-readers");
+		Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
+		WolfPack wallReaders = wolfpacksMap.get("wall-readers");
 
 		for (String wolfpackName : jsonReqParams.wolfpackNames) {
-			WolfPack socialGroup = wallReadersMap.get(wolfpackName);
+			WolfPack socialGroup = wolfpacksMap.get(wolfpackName);
 			if (socialGroup == null) {
 				wolfpacksResult.add(new EWolfResponse(RES_NOT_FOUND,
 						"Given wolfpack wasn't found."));
@@ -107,7 +107,9 @@ public class AddWolfpackMemberHandler implements IJsonDataHandler {
 			}
 			try {
 				for (Profile profile : profiles) {
-					socialGroup.addMember(profile);
+					if (socialGroup != wallReaders) {
+						socialGroup.addMember(profile);
+					}
 					wallReaders.addMember(profile);
 				}
 				wolfpacksResult.add(new EWolfResponse());
