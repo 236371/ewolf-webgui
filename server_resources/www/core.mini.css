@@ -214,7 +214,7 @@ h1, h2
 }
 
 .qq-upload-file {}
-.qq-upload-spinner {display:inline-block; background: url("loading.gif"); width:15px; height:15px; vertical-align:text-bottom;}
+.qq-upload-spinner {display:inline-block; background: url("/static_files/loading.gif"); width:15px; height:15px; vertical-align:text-bottom;}
 .qq-upload-size,.qq-upload-cancel {font-size:11px;}
 
 .qq-upload-failed-text {display:none;}
@@ -320,7 +320,7 @@ h1, h2
 
 .messageListItem:hover {
 	color:#FFFFFF;
-	background-image:url(hover.png);
+	background-image:url(/static_files/hover.png);
 	background-repeat:repeat-x;
 }.loginFieldDescription {
 	vertical-align:text-top;
@@ -442,7 +442,7 @@ h1, h2
 
 #menu ul li a:hover {
 	color:#FFFFFF;
-	background-image:url(hover.png);
+	background-image:url(/static_files/hover.png);
 	background-repeat:repeat-x;
 }
 

@@ -61,7 +61,13 @@ EWOLF_CONSTANTS = {
 	REQUEST_INTERVAL_ACTIVE_MILLISECOUNDS 				: 1 * ONE_MINUTE_IN_MILLISECOUNDS,
 	REQUEST_INTERVAL_AWAY_MILLISECOUNDS 					: 2 * ONE_MINUTE_IN_MILLISECOUNDS ,
 	REQUEST_INTERVAL_AWAY_FOR_LONG_MILLISECOUNDS 	: 3 * ONE_MINUTE_IN_MILLISECOUNDS,
-	REQUEST_INTERVAL_IDLE_MILLISECOUNDS 					: 0
+	REQUEST_INTERVAL_IDLE_MILLISECOUNDS 					: 0,
+	
+	IMAGE_PAPER_CLIP : "/static_files/Paperclip.png",
+	IMAGE_REFRESH : "/static_files/refresh.svg",
+	IMAGE_USER_ADD : "/static_files/user-add.png",
+	IMAGE_USER_BLOCKING : "/static_files/user-blocking.png",
+	IMAGE_PAW : "/static_files/wolf-paw.svg"
 };
 
 WOLFPACK_CONSTANTS = {
@@ -187,9 +193,7 @@ var eWolf = new function() {
 		self.serverRequest.addOnComplete(null,function(appID, response, status) {
 			if(self.mainAppsCreated) {
 				if(response.status != 200 || self.userID == null) {
-					alert("realod now");
-					console.log(response);
-					//document.location.reload(true);
+					document.location.reload(true);
 				}				
 			} else if(response.status == 200 && self.userID != null) {
 				self.serverRequest.restartRefreshInterval();
@@ -1832,7 +1836,7 @@ var IdleMonitor = function(awayTime, awayForLongTime,
 				.addClass("fileItemBox");
 	
 	var attachImage = $("<img/>").attr({
-		"src" : "/Paperclip.png",
+		"src" : eWolf.IMAGE_PAPER_CLIP,
 		"align" : "absmiddle",
 		"vertical-align" : "middle"
 	})	.addClass("fileItemThunmnailImage")
@@ -2465,7 +2469,7 @@ var PendingRequests = function (insideContext) {
 				.appendTo(insideContext);
 	
 	var pendingRequestImage = $("<img/>").attr({
-		"src": "user-add.png",
+		"src": eWolf.IMAGE_USER_ADD,
 	})	.css({
 		"width" : "28px",
 		"height" : "28px"
@@ -2473,7 +2477,7 @@ var PendingRequests = function (insideContext) {
 			.appendTo(this.context);
 	
 	var blockedImage = $("<img/>").attr({
-		"src": "user-blocking.png",
+		"src": eWolf.IMAGE_USER_BLOCKING,
 	})	.css({
 		"width" : "32px",
 		"height" : "28px"
@@ -4000,7 +4004,7 @@ var MenuItem = function(id,title) {
 				.appendTo(aObj).hide();
 	
 	var refresh = $("<img/>").attr({
-		"src": "refresh.svg",
+		"src": eWolf.IMAGE_REFRESH,
 		"class": "refreshButton"
 	})	.appendTo(refreshContainer);
 	
@@ -4601,7 +4605,8 @@ var GenericItem = function(senderID,senderName,timestamp,mail,
 };
 
 var NewsFeedList = function (appID,serverSettings) {
-	var pow = "<img src='wolf-paw.svg' height='18px' style='padding-right:5px;'></img>";
+	var pow = "<img src='" + eWolf.IMAGE_PAW +
+		"' height='18px' style='padding-right:5px;'></img>";
 	GenericMailList.call(this,"newsFeed",appID,serverSettings,
 			eWolf.NEWSFEED_MAX_OLDER_MESSAGES_FETCH,
 			"postListItem","postBox",pow,false);
