@@ -8,6 +8,7 @@ import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.ewolf.WolfPackLeader;
 import il.technion.ewolf.server.EWolfResponse;
 import il.technion.ewolf.server.cache.ICache;
+import il.technion.ewolf.socialfs.Profile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,12 +21,15 @@ import com.google.inject.Inject;
 public class CreateWolfpackHandler implements IJsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 	private final ICache<Map<String, WolfPack>> wolfpacksCache;
+	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
 
 	@Inject
 	public CreateWolfpackHandler(WolfPackLeader socialGroupsManager,
-			ICache<Map<String, WolfPack>> wolfpacksCache) {
+			ICache<Map<String, WolfPack>> wolfpacksCache,
+			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache) {
 		this.socialGroupsManager = socialGroupsManager;
 		this.wolfpacksCache = wolfpacksCache;
+		this.wolfpacksMembersCache = wolfpacksMembersCache;
 	}
 
 	private static class JsonReqCreateWolfpackParams {
@@ -86,7 +90,8 @@ public class CreateWolfpackHandler implements IJsonDataHandler {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				wolfpacksCache.update();
+				//updates also wolfpacksCache
+				wolfpacksMembersCache.update();
 			}
 		}).start();
 
