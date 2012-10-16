@@ -37,14 +37,14 @@ public class PokeMessagesAcceptor implements Runnable {
 						Map<WolfPack,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
 						Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
 
-						WolfPack followers = wolfpacksMap.get("followers");
-						List<Profile> followersList = wolfpacksMembersMap.get(followers);
+						WolfPack inviters = wolfpacksMap.get("inviters");
+						List<Profile> invitersList = wolfpacksMembersMap.get(inviters);
 
 						try {
-							Profile follower = m.getSender();
-							if (followersList != null && !followersList.contains(follower)) {
-								//FIXME adding to followers sends Poke message too
-								followers.addMember(follower);
+							Profile inviter = m.getSender();
+							if (invitersList != null && !invitersList.contains(inviter)) {
+								//FIXME adding to inviterss sends Poke message too
+								inviters.addMember(inviter);
 							}
 						} catch (GroupNotFoundException e) {
 							// TODO Auto-generated catch block
