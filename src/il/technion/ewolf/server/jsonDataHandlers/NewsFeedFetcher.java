@@ -205,13 +205,15 @@ public class NewsFeedFetcher implements IJsonDataHandler {
 			}
 			List<Profile> profiles = wolfpacksMembersCache.get().get(wp);
 
-			for (Profile p : profiles) {
-				List<Post> profilePosts = allPosts.get(p);
-				if (profilePosts != null) {
-					posts.addAll(profilePosts);
-				} else {
-					//TODO temp logging info. remove in the future.
-					System.out.println("No posts found for profile " + p.getUserId().toString());
+			if (profiles != null) {
+				for (Profile p : profiles) {
+					List<Post> profilePosts = allPosts.get(p);
+					if (profilePosts != null) {
+						posts.addAll(profilePosts);
+					} else {
+						//TODO temp logging info. remove in the future.
+						System.out.println("No posts found for profile " + p.getUserId().toString());
+					}
 				}
 			}
 		}
