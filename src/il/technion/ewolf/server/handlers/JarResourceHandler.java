@@ -65,6 +65,11 @@ public class JarResourceHandler implements HttpRequestHandler {
 			if (is == null) return;
 		}
 
+		if (reqUri.startsWith("/static_files")) {
+			Calendar cal = Calendar.getInstance();
+			cal.add(Calendar.YEAR, 1);
+			res.setHeader(HttpHeaders.EXPIRES, DateUtil.formatDate(cal.getTime()));
+		}
 		setResponseEntity(res, is, path);
 	}
 
@@ -81,9 +86,6 @@ public class JarResourceHandler implements HttpRequestHandler {
 
 		response.setHeader(HttpHeaders.LAST_MODIFIED,
 				DateUtil.formatDate(ewolfServer.startTime()));
-		Calendar cal = Calendar.getInstance();
-		cal.add(Calendar.YEAR, 1);
-		response.setHeader(HttpHeaders.EXPIRES, DateUtil.formatDate(cal.getTime()));
 
 		response.setHeader(HttpHeaders.CACHE_CONTROL, "public, must-revalidate");
 	}
