@@ -30,14 +30,15 @@ public class PokeMessagesAcceptor implements Runnable {
 	@Override
 	public void run() {
 		try {
+			Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
+			WolfPack inviters = wolfpacksMap.get("inviters");
 			while (true) {
 				List<SocialMessage> messages = inboxCache.get();
+				Map<WolfPack,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
+				wolfpacksMap = wolfpacksCache.get();
 				for (SocialMessage m : messages) {
 					if (m.getClass() == PokeMessage.class) {
-						Map<WolfPack,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
-						Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
 
-						WolfPack inviters = wolfpacksMap.get("inviters");
 						List<Profile> invitersList = wolfpacksMembersMap.get(inviters);
 
 						try {
@@ -54,6 +55,7 @@ public class PokeMessagesAcceptor implements Runnable {
 							e.printStackTrace();
 						}
 						((PokeMessage)m).accept();
+						wolfpacksMembersCache.update();
 						continue;
 					}
 				}
