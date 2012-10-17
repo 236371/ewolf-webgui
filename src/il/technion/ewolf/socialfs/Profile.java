@@ -87,7 +87,7 @@ public class Profile extends Signable implements KeyHolder {
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 			} catch (GroupNotFoundException e) {
-				e.printStackTrace();
+//				e.printStackTrace();
 			}
 		}
 		

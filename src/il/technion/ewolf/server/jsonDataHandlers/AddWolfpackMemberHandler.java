@@ -85,7 +85,7 @@ public class AddWolfpackMemberHandler implements IJsonDataHandler {
 
 		List<Profile> profiles = new ArrayList<Profile>();
 		for (String userID : jsonReqParams.userIDs) {
-			if (userID == null) continue;
+//			if (userID == null) continue;
 
 			Profile p = profilesCache.get(userID);
 			if (p == null) {
