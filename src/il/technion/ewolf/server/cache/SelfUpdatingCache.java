@@ -14,7 +14,7 @@ public class SelfUpdatingCache<T> implements ICache<T> {
 
 
 	@Override
-	public void update() {
+	public synchronized void update() {
 		set(nextCache.get());
 	}
 

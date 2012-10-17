@@ -13,11 +13,14 @@ public class SimpleCache<T> implements ICache<T> {
 		this.maxAgeSeconds = maxAgeSeconds;
 	}
 
-	@Override
-	public T get() {
+	private static boolean isExpired(long lastModifiedMillis, int maxAgeSeconds) {
 		long now = System.currentTimeMillis();
-		boolean expired = (now - lastModifiedMillis) > (maxAgeSeconds * 1000);
-		if (expired) {
+		return (now - lastModifiedMillis) > (maxAgeSeconds * 1000);
+	}
+
+	@Override
+	public synchronized T get() {
+		if (isExpired(lastModifiedMillis, maxAgeSeconds)) {
 			data = nextCache.get();
 			lastModifiedMillis = System.currentTimeMillis();
 		}
@@ -25,7 +28,7 @@ public class SimpleCache<T> implements ICache<T> {
 	}
 
 	@Override
-	public void update() {
+	public synchronized void update() {
 		lastModifiedMillis = 0;
 		get();
 	}
