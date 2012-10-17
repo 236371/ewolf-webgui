@@ -12,7 +12,6 @@ import il.technion.ewolf.socialfs.UserID;
 import il.technion.ewolf.socialfs.UserIDFactory;
 import il.technion.ewolf.socialfs.exception.ProfileNotFoundException;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -139,19 +138,19 @@ public class CacheModule extends AbstractModule {
 
 	@Provides
 	@Singleton
-	ICache<Map<WolfPack,List<Profile>>> provideWolfpacksMembersCache(
+	ICache<Map<String,List<Profile>>> provideWolfpacksMembersCache(
 			@Named("server.cache.wolfpackMembers.intervalSec") int cachedTimeSec,
 			final ICache<Map<String, WolfPack>> wolfpacksCache) {
-		return new SimpleCache<Map<WolfPack,List<Profile>>>(
-				new ICache<Map<WolfPack,List<Profile>>>() {
+		return new SimpleCache<Map<String,List<Profile>>>(
+				new ICache<Map<String,List<Profile>>>() {
 
 					@Override
-					public Map<WolfPack, List<Profile>> get() {
-						Map<WolfPack, List<Profile>> membersMap = new HashMap<WolfPack, List<Profile>>();
+					public Map<String, List<Profile>> get() {
+						Map<String, List<Profile>> membersMap = new HashMap<String, List<Profile>>();
 						wolfpacksCache.update();
-						Collection<WolfPack> wolfpacks = wolfpacksCache.get().values();
-						for (WolfPack w : wolfpacks) {
-							membersMap.put(w, w.getMembers());
+						Map<String,WolfPack> wolfpacksMap = wolfpacksCache.get();
+						for (Map.Entry<String,WolfPack> entry : wolfpacksMap.entrySet()) {
+							membersMap.put(entry.getKey(), entry.getValue().getMembers());
 						}
 						return membersMap;
 					}
@@ -169,7 +168,7 @@ public class CacheModule extends AbstractModule {
 	ICache<Map<Profile,List<Post>>> provideNewsFeedCache(
 			@Named("server.cache.newsfeed.intervalSec") int cachedTimeSec,
 			final SocialNetwork snet,
-			final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache,
+			final ICache<Map<String,List<Profile>>> wolfpacksMembersCache,
 			final ICacheWithParameter<Profile, String> profilesCache){
 		return new SelfUpdatingCache<Map<Profile,List<Post>>>(
 				new ICache<Map<Profile,List<Post>>>() {
@@ -182,10 +181,10 @@ public class CacheModule extends AbstractModule {
 						Map<Profile, List<Post>> allPosts = new HashMap<Profile, List<Post>>();
 
 						wolfpacksMembersCache.update();
-						Map<WolfPack,List<Profile>> wolfpacksMembers = wolfpacksMembersCache.get();
+						Map<String,List<Profile>> wolfpacksMembers = wolfpacksMembersCache.get();
 						Set<Profile> profiles = new HashSet<Profile>();
 
-						for (Map.Entry<WolfPack,List<Profile>> entry : wolfpacksMembers.entrySet()) {
+						for (Map.Entry<String,List<Profile>> entry : wolfpacksMembers.entrySet()) {
 							profiles.addAll(entry.getValue());
 						}
 

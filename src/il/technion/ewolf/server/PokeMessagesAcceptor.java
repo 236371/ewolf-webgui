@@ -15,12 +15,14 @@ import com.google.inject.Inject;
 
 public class PokeMessagesAcceptor implements Runnable {
 	private final ICache<List<SocialMessage>> inboxCache;
-	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
+	private final ICache<Map<String,List<Profile>>> wolfpacksMembersCache;
 	private final ICache<Map<String, WolfPack>> wolfpacksCache;
+
+	private static final String INVITERS_WOLFPACK = "inviters";
 
 	@Inject
 	public PokeMessagesAcceptor(ICache<List<SocialMessage>> inboxCache,
-			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache,
+			ICache<Map<String,List<Profile>>> wolfpacksMembersCache,
 			ICache<Map<String, WolfPack>> wolfpacksCache) {
 		this.inboxCache = inboxCache;
 		this.wolfpacksMembersCache = wolfpacksMembersCache;
@@ -31,15 +33,15 @@ public class PokeMessagesAcceptor implements Runnable {
 	public void run() {
 		try {
 			Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
-			WolfPack inviters = wolfpacksMap.get("inviters");
+			WolfPack inviters = wolfpacksMap.get(INVITERS_WOLFPACK);
 			while (true) {
 				List<SocialMessage> messages = inboxCache.get();
-				Map<WolfPack,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
+				Map<String,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
 				wolfpacksMap = wolfpacksCache.get();
 				for (SocialMessage m : messages) {
 					if (m.getClass() == PokeMessage.class) {
 
-						List<Profile> invitersList = wolfpacksMembersMap.get(inviters);
+						List<Profile> invitersList = wolfpacksMembersMap.get(INVITERS_WOLFPACK);
 
 						try {
 							Profile inviter = m.getSender();

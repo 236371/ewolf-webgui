@@ -2,7 +2,6 @@ package il.technion.ewolf.server.jsonDataHandlers;
 
 import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import static il.technion.ewolf.server.EWolfResponse.RES_NOT_FOUND;
-import il.technion.ewolf.ewolf.WolfPack;
 import il.technion.ewolf.posts.Post;
 import il.technion.ewolf.posts.TextPost;
 import il.technion.ewolf.server.EWolfResponse;
@@ -27,18 +26,15 @@ public class NewsFeedFetcher implements IJsonDataHandler {
 
 	private final ICache<Map<Profile, List<Post>>> newsFeedCache;
 	private final ICacheWithParameter<Profile, String> profilesCache;
-	private final ICache<Map<String, WolfPack>> wolfpacksCache;
-	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
+	private final ICache<Map<String,List<Profile>>> wolfpacksMembersCache;
 
 	@Inject
 	public NewsFeedFetcher(
 			ICache<Map<Profile,List<Post>>> newsFeedCache,
 			ICacheWithParameter<Profile, String> profilesCache,
-			ICache<Map<String, WolfPack>> wolfpacksCache,
-			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache) {
+			ICache<Map<String,List<Profile>>> wolfpacksMembersCache) {
 		this.newsFeedCache = newsFeedCache;
 		this.profilesCache = profilesCache;
-		this.wolfpacksCache = wolfpacksCache;
 		this.wolfpacksMembersCache = wolfpacksMembersCache;
 	}
 
@@ -199,11 +195,7 @@ public class NewsFeedFetcher implements IJsonDataHandler {
 				posts.addAll(entry.getValue());
 			}
 		} else {
-			WolfPack wp = wolfpacksCache.get().get(socialGroupName);
-			if (wp == null) {
-				return posts;
-			}
-			List<Profile> profiles = wolfpacksMembersCache.get().get(wp);
+			List<Profile> profiles = wolfpacksMembersCache.get().get(socialGroupName);
 
 			if (profiles != null) {
 				for (Profile p : profiles) {

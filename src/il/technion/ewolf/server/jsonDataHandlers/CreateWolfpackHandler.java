@@ -21,12 +21,12 @@ import com.google.inject.Inject;
 public class CreateWolfpackHandler implements IJsonDataHandler {
 	private final WolfPackLeader socialGroupsManager;
 	private final ICache<Map<String, WolfPack>> wolfpacksCache;
-	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
+	private final ICache<Map<String,List<Profile>>> wolfpacksMembersCache;
 
 	@Inject
 	public CreateWolfpackHandler(WolfPackLeader socialGroupsManager,
 			ICache<Map<String, WolfPack>> wolfpacksCache,
-			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache) {
+			ICache<Map<String,List<Profile>>> wolfpacksMembersCache) {
 		this.socialGroupsManager = socialGroupsManager;
 		this.wolfpacksCache = wolfpacksCache;
 		this.wolfpacksMembersCache = wolfpacksMembersCache;

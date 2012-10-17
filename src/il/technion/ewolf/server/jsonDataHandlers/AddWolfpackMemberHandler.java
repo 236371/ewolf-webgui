@@ -24,12 +24,12 @@ public class AddWolfpackMemberHandler implements IJsonDataHandler {
 
 	private final ICacheWithParameter<Profile, String> profilesCache;
 	private final ICache<Map<String, WolfPack>> wolfpacksCache;
-	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
+	private final ICache<Map<String,List<Profile>>> wolfpacksMembersCache;
 
 	@Inject
 	public AddWolfpackMemberHandler(ICacheWithParameter<Profile, String> profilesCache,
 			ICache<Map<String, WolfPack>> wolfpacksCache,
-			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache) {
+			ICache<Map<String,List<Profile>>> wolfpacksMembersCache) {
 		this.profilesCache = profilesCache;
 		this.wolfpacksCache = wolfpacksCache;
 		this.wolfpacksMembersCache = wolfpacksMembersCache;

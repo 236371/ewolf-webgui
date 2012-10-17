@@ -22,13 +22,13 @@ public class WolfpacksFetcher implements IJsonDataHandler {
 
 	private final ICache<Map<String, WolfPack>> wolfpacksCache;
 	private final ICacheWithParameter<Profile, String> profilesCache;
-	private final ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache;
+	private final ICache<Map<String,List<Profile>>> wolfpacksMembersCache;
 
 	@Inject
 	public WolfpacksFetcher(
 			ICache<Map<String, WolfPack>> wolfpacksCache,
 			ICacheWithParameter<Profile, String> profilesCache,
-			ICache<Map<WolfPack,List<Profile>>> wolfpacksMembersCache) {
+			ICache<Map<String,List<Profile>>> wolfpacksMembersCache) {
 		this.wolfpacksCache = wolfpacksCache;
 		this.profilesCache = profilesCache;
 		this.wolfpacksMembersCache = wolfpacksMembersCache;
@@ -66,7 +66,7 @@ public class WolfpacksFetcher implements IJsonDataHandler {
 		}
 
 		Map<String, WolfPack> wolfpacksMap = wolfpacksCache.get();
-		Map<WolfPack,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
+		Map<String,List<Profile>> wolfpacksMembersMap = wolfpacksMembersCache.get();
 		Set<String> groups = new HashSet<String>();
 
 		if (jsonReqParams.userID == null) {
@@ -77,10 +77,10 @@ public class WolfpacksFetcher implements IJsonDataHandler {
 				return new WolfpacksResponse(RES_NOT_FOUND);
 			}
 
-			for (WolfPack w : wolfpacksMembersMap.keySet()) {
+			for (String w : wolfpacksMembersMap.keySet()) {
 				List<Profile> wMembers = wolfpacksMembersMap.get(w);
 				if (wMembers.contains(profile)) {
-					groups.add(w.getName());
+					groups.add(w);
 				}
 			}
 		}
