@@ -32,10 +32,10 @@ public class CacheModule extends AbstractModule {
 	private Properties getDefaultProperties() {
 		Properties defaultProps = new Properties();
 
-		defaultProps.setProperty("server.cache.newsfeed.intervalSec", "30");
-		defaultProps.setProperty("server.cache.wolfpacks.intervalSec", "30");
-		defaultProps.setProperty("server.cache.inbox.intervalSec", "30");
-		defaultProps.setProperty("server.cache.wolfpackMembers.intervalSec", "30");
+		defaultProps.setProperty("server.cache.newsfeed.intervalSec", "10");
+		defaultProps.setProperty("server.cache.wolfpacks.intervalSec", "10");
+		defaultProps.setProperty("server.cache.inbox.intervalSec", "10");
+		defaultProps.setProperty("server.cache.wolfpackMembers.intervalSec", "10");
 
 		return defaultProps;
 	}
