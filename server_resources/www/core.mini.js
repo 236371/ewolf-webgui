@@ -2573,7 +2573,7 @@ var PendingRequests = function (insideContext) {
 		if(pendingApproval.length > 0) {
 			var widget = new UserList(pendingApproval, 400,	"add >>", 
 					function(userID) {
-						return new AddToWolfpack(null, userID, 
+						return new AddToWolfpack(eWolf.selectedApp, userID, 
 								[eWolf.APPROVED_ME_WOLFPACK_NAME]).context;
 					}, 200);
 			new Popup(document.body, pendingRequestImage, "bottom-left", 
