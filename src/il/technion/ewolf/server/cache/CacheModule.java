@@ -71,7 +71,7 @@ public class CacheModule extends AbstractModule {
 			 * @return	profile corresponding to userID or null if not found
 			 */
 			@Override
-			public Profile get(String strUid) {
+			public synchronized Profile get(String strUid) {
 				if (!profilesCache.containsKey(strUid)) {
 					try {
 						UserID uid = userIDFactory.getFromBase64(strUid);
