@@ -46,8 +46,10 @@ public class PokeMessagesAcceptor implements Runnable {
 						try {
 							Profile inviter = m.getSender();
 							if (invitersList != null && !invitersList.contains(inviter)) {
-								//FIXME adding to inviterss sends Poke message too
+								//FIXME adding to inviters sends Poke message too
 								inviters.addMember(inviter);
+								wolfpacksMembersCache.update();
+								wolfpacksMembersMap = wolfpacksMembersCache.get();
 							}
 						} catch (GroupNotFoundException e) {
 							// TODO Auto-generated catch block
@@ -57,8 +59,6 @@ public class PokeMessagesAcceptor implements Runnable {
 							e.printStackTrace();
 						}
 						((PokeMessage)m).accept();
-						wolfpacksMembersCache.update();
-						continue;
 					}
 				}
 				Thread.sleep(2000);
