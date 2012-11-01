@@ -145,13 +145,23 @@ public class CacheModule extends AbstractModule {
 				new ICache<Map<String,List<Profile>>>() {
 
 					@Override
-					public Map<String, List<Profile>> get() {
-						Map<String, List<Profile>> membersMap = new HashMap<String, List<Profile>>();
+					public synchronized Map<String, List<Profile>> get() {
+						Map<String, List<Profile>> membersMap = new ConcurrentHashMap<String, List<Profile>>();
 						wolfpacksCache.update();
 						Map<String,WolfPack> wolfpacksMap = wolfpacksCache.get();
 						for (Map.Entry<String,WolfPack> entry : wolfpacksMap.entrySet()) {
 							membersMap.put(entry.getKey(), entry.getValue().getMembers());
 						}
+						//////////////////////
+						for (Map.Entry<String, List<Profile>> entry : membersMap.entrySet()) {
+							String users = "";
+							for (Profile p: entry.getValue()) {
+								users += "\"" + p.getName() + "\" [" + p.getUserId().toString() + "], ";
+							}
+							System.err.println("CacheModule: wolfpack " + entry.getKey() + ": " +
+									users);
+						}
+						/////////////////////
 						return membersMap;
 					}
 
