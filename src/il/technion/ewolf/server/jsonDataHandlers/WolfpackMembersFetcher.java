@@ -78,12 +78,12 @@ public class WolfpackMembersFetcher implements IJsonDataHandler {
 			if (wMembers != null) {
 				profiles.addAll(wMembers);
 				//////////////////
-				String users = "";
-				for (Profile p: wMembers) {
-					users += "\"" + p.getName() + "\" [" + p.getUserId().toString() + "], ";
-				}
-				System.err.println("WolfpackMembersFetcher: wolfpack " + jsonReqParams.wolfpackName + ": " +
-						users);
+//				String users = "";
+//				for (Profile p: wMembers) {
+//					users += "\"" + p.getName() + "\" [" + p.getUserId().toString() + "], ";
+//				}
+//				System.err.println("WolfpackMembersFetcher: wolfpack " + jsonReqParams.wolfpackName + ": " +
+//						users);
 				//////////////////
 			} else {
 				return new WolfpackMembersResponse(RES_NOT_FOUND);

@@ -153,14 +153,14 @@ public class CacheModule extends AbstractModule {
 							membersMap.put(entry.getKey(), entry.getValue().getMembers());
 						}
 						//////////////////////
-						for (Map.Entry<String, List<Profile>> entry : membersMap.entrySet()) {
-							String users = "";
-							for (Profile p: entry.getValue()) {
-								users += "\"" + p.getName() + "\" [" + p.getUserId().toString() + "], ";
-							}
-							System.err.println("CacheModule: wolfpack " + entry.getKey() + ": " +
-									users);
-						}
+//						for (Map.Entry<String, List<Profile>> entry : membersMap.entrySet()) {
+//							String users = "";
+//							for (Profile p: entry.getValue()) {
+//								users += "\"" + p.getName() + "\" [" + p.getUserId().toString() + "], ";
+//							}
+//							System.err.println("CacheModule: wolfpack " + entry.getKey() + ": " +
+//									users);
+//						}
 						/////////////////////
 						return membersMap;
 					}
