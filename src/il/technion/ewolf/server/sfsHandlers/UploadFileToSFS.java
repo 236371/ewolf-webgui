@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.ewolfHandlers;
+package il.technion.ewolf.server.sfsHandlers;
 
 import static il.technion.ewolf.server.EWolfResponse.RES_BAD_REQUEST;
 import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;

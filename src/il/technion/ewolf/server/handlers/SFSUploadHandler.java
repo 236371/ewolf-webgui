@@ -5,7 +5,7 @@ import static il.technion.ewolf.server.EWolfResponse.RES_INTERNAL_SERVER_ERROR;
 import static il.technion.ewolf.server.EWolfResponse.RES_SUCCESS;
 import static il.technion.ewolf.server.EWolfResponse.RES_UNAVAILBLE_REQUEST;
 import il.technion.ewolf.server.EWolfResponse;
-import il.technion.ewolf.server.ewolfHandlers.UploadFileToSFS;
+import il.technion.ewolf.server.sfsHandlers.UploadFileToSFS;
 
 import java.io.IOException;
 import java.net.URI;

@@ -1,4 +1,4 @@
-package il.technion.ewolf.server.ewolfHandlers;
+package il.technion.ewolf.server.sfsHandlers;
 
 import il.technion.ewolf.socialfs.Profile;
 import il.technion.ewolf.socialfs.SFSFile;

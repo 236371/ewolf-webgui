@@ -2,7 +2,7 @@ package il.technion.ewolf.server.handlers;
 
 import il.technion.ewolf.server.EwolfServer;
 import il.technion.ewolf.server.ServerResources;
-import il.technion.ewolf.server.ewolfHandlers.DownloadFileFromSFS;
+import il.technion.ewolf.server.sfsHandlers.DownloadFileFromSFS;
 
 import java.io.IOException;
 import java.io.InputStream;
